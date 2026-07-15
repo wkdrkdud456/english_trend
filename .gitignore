@@ -1,0 +1,12 @@
+# 시크릿 - 절대 GitHub에 올리면 안 됨
+.streamlit/secrets.toml
+
+# 생성 결과물
+generated/
+
+# 파이썬
+__pycache__/
+*.pyc
+
+# 로그
+streamlit.log
