@@ -62,29 +62,45 @@ def load_academy_profile():
 # 1단계: 네이버 데이터랩 트렌드 스캔
 # ---------------------------------------------------------------
 SEED_KEYWORDS = {
-    "내신/평가": ["영어 수행평가", "영어 서술형", "중학교 내신", "영어 내신", "중학교 시험공부"],
-    "입시/진학": ["고교학점제", "내신 5등급제", "외고 입시", "특목고 입시", "고입 내신"],
-    "공부법/학습법": ["초등 영어 공부", "중학생 영어 공부", "영어 문법 공부", "영어 단어 외우기", "영어 독해"],
+    "내신/평가": ["영어 수행평가", "영어 서술형", "중학교 내신", "기말고사", "중간고사"],
+    "입시/진학": ["고교학점제", "내신 5등급제", "외고 입시", "특목고 입시", "예비 중1", "예비 고1"],
+    "공부법/학습법": [
+        "초등 영어 공부", "중학생 영어 공부", "영어 문법 공부", "영어 단어 외우기",
+        "영어 독해", "영어 문제집 추천", "파닉스",
+    ],
+    "학원/사교육": ["초등 영어학원", "중등 영어학원", "영어 과외", "영어 학원 추천"],
     "트렌드/시즌": ["여름방학 특강", "영어 캠프", "AI 영어 학습", "원서 읽기", "문해력"],
 }
 ANCHOR_KEYWORD = "영어학원"
 SPIKE_THRESHOLD = 1.5
 Z_THRESHOLD = 1.3
 MIN_VOLUME_INDEX = 0.05
-RECENT_WEEKS = 2
+RECENT_DAYS = 14  # 일 단위 조회 - 최근 14일 vs 이전 14일 구간들
 BATCH_SIZE = 4  # 앵커 1 + 씨앗 4 = 5그룹 (데이터랩 호출당 최대치)
 
 
 def _calc_spike(ratio_data):
-    if len(ratio_data) < RECENT_WEEKS + 3:
+    """일 단위 데이터: 최근 14일 평균 vs 이전 14일 구간 평균들의 평균/표준편차"""
+    if len(ratio_data) < RECENT_DAYS * 3:
         latest = ratio_data[-1]["ratio"] if ratio_data else 0.0
-        return {"score": 0.0, "z_score": 0.0, "recent_avg": latest, "baseline_avg": 0.0}
+        return {"score": 0.0, "z_score": 0.0, "recent_avg": round(latest, 2), "baseline_avg": 0.0}
 
-    recent = [d["ratio"] for d in ratio_data[-RECENT_WEEKS:]]
-    baseline = [d["ratio"] for d in ratio_data[:-RECENT_WEEKS]]
+    ratios = [d["ratio"] for d in ratio_data]
+    recent = ratios[-RECENT_DAYS:]
+    baseline_days = ratios[:-RECENT_DAYS]
     recent_avg = sum(recent) / len(recent)
-    baseline_avg = sum(baseline) / len(baseline)
-    baseline_std = statistics.pstdev(baseline) if len(baseline) > 1 else 0.0
+
+    chunk_means = []
+    for i in range(len(baseline_days) - RECENT_DAYS, -1, -RECENT_DAYS):
+        chunk = baseline_days[i : i + RECENT_DAYS]
+        if len(chunk) == RECENT_DAYS:
+            chunk_means.append(sum(chunk) / len(chunk))
+
+    if not chunk_means:
+        return {"score": 0.0, "z_score": 0.0, "recent_avg": round(recent_avg, 2), "baseline_avg": 0.0}
+
+    baseline_avg = sum(chunk_means) / len(chunk_means)
+    baseline_std = statistics.pstdev(chunk_means) if len(chunk_means) > 1 else 0.0
 
     score = (recent_avg / baseline_avg) if baseline_avg > 0 else recent_avg
     z = ((recent_avg - baseline_avg) / baseline_std) if baseline_std > 0 else 0.0
@@ -97,7 +113,8 @@ def _calc_spike(ratio_data):
 
 
 def run_trend_scan(progress_callback=None):
-    """전체 씨앗 키워드 스캔. 반환: 정렬된 결과 리스트 (dict)"""
+    """전체 씨앗 키워드 스캔 (일 단위 - 어제 데이터까지 반영되어 매일 결과가 갱신됨).
+    반환: 급상승 -> 검색량 순으로 정렬된 결과 리스트 (dict)"""
     headers = {
         "X-Naver-Client-Id": get_secret("NAVER_CLIENT_ID"),
         "X-Naver-Client-Secret": get_secret("NAVER_CLIENT_SECRET"),
@@ -120,7 +137,7 @@ def run_trend_scan(progress_callback=None):
         body = {
             "startDate": start.isoformat(),
             "endDate": end.isoformat(),
-            "timeUnit": "week",
+            "timeUnit": "date",
             "keywordGroups": groups,
         }
         res = requests.post(DATALAB_URL, headers=headers, data=json.dumps(body), timeout=30)
@@ -148,10 +165,8 @@ def run_trend_scan(progress_callback=None):
                 }
             )
 
-    results.sort(
-        key=lambda r: (r["is_spike"], r["volume_index"] >= MIN_VOLUME_INDEX, r["spike_score"]),
-        reverse=True,
-    )
+    # 급상승 먼저, 그 다음 검색량 순 ("진짜 많이 검색하는 키워드" 우선)
+    results.sort(key=lambda r: (r["is_spike"], r["volume_index"]), reverse=True)
     return results
 
 
