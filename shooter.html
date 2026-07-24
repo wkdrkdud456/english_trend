@@ -131,6 +131,26 @@
             transition: transform 0.15s;
         }
         .btn:active { transform: scale(0.93); }
+
+        /* 무기 선택 카드 */
+        .wc-btn {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 14px 16px;
+            border: 2px solid #f8a5c8;
+            border-radius: 16px;
+            background: #fff;
+            cursor: pointer;
+            text-align: left;
+            transition: transform 0.12s, box-shadow 0.15s, border-color 0.15s;
+            font-family: inherit;
+        }
+        .wc-btn:active { transform: scale(0.96); }
+        .wc-btn:hover { border-color: #f857a6; box-shadow: 0 4px 14px rgba(248, 87, 166, 0.25); }
+        .wc-name { font-size: 1.05em; font-weight: 800; color: #d6336c; }
+        .wc-lv { font-size: 0.75em; color: #b3688a; font-weight: 700; }
+        .wc-desc { font-size: 0.8em; color: #9b6b80; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -152,14 +172,24 @@
             <div class="sub">by 동훈 ❤️</div>
             <div class="rule">
                 🌉 밤의 다리 위, 좀비 군단의 대행진...<br>
-                🔫 무기 <b>15종 × 150레벨</b>: 당근총부터<br>
-                &nbsp;&nbsp;🔥화염방사·❄️냉동포·🌪️회오리·☠️독가스·☄️유성우까지!<br>
+                🔫 무기 <b>100종 × 1000레벨!</b> 당근총부터<br>
+                &nbsp;&nbsp;지옥 화염방사기·용의 숨결·우주최강 파멸포까지 ✨<br>
+                👑 <b>보스를 잡으면 무기 3개 중 선택!</b><br>
                 🧟 좀비 8종: 방패병·폭탄맨·분열좀비·점퍼...<br>
+                🔴 빨간 게이트 조심: <b>÷2 토끼, 무기 -N, 무기 ÷2</b> 💀<br>
                 🔥 <b>피버 게이지</b>를 채우면 FEVER TIME!<br>
-                💝 좀비가 떨군 아이템을 주워 강해지세요!<br>
-                🚨 주기적으로 <b>대습격</b>이 몰려옵니다. 각오!
+                💝 아이템 드랍 & 🚨 대습격까지. 각오하세요!
             </div>
             <button class="btn" onclick="startGame()">🎮 시작!</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="weaponChoose">
+        <div class="card" style="max-width: 330px; width: 88%;">
+            <div class="emoji">🎁</div>
+            <h2>무기 선택!</h2>
+            <p>보스 보상 — 원하는 무기를 고르세요</p>
+            <div id="wcOpts"></div>
         </div>
     </div>
 
@@ -269,45 +299,59 @@
         }
         document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
 
-        // ── 무기 15티어 × 150레벨 ─────────────────
-        const TIERS = [
-            { name: '당근총',       pattern: 'single' },
-            { name: '더블 당근',    pattern: 'double' },
-            { name: '트리플 당근',  pattern: 'triple' },
-            { name: '당근 샷건',    pattern: 'spread' },
-            { name: '미니건',       pattern: 'minigun' },
-            { name: '🔥화염방사기', pattern: 'flame' },
-            { name: '레이저',       pattern: 'laser' },
-            { name: '로켓포',       pattern: 'rocket' },
-            { name: '⚡번개 지팡이', pattern: 'lightning' },
-            { name: '❄️냉동포',     pattern: 'ice' },
-            { name: '🔮플라즈마포', pattern: 'plasma' },
-            { name: '🌪️회오리포',   pattern: 'tornado' },
-            { name: '☠️독가스포',   pattern: 'poison' },
-            { name: '☄️유성우',     pattern: 'meteor' },
-            { name: '🌈무지개 파멸포', pattern: 'rainbow' },
+        // ── 무기 100종 × 10레벨 = 1000레벨! ──────
+        // 무기마다 이름·색·성격이 전부 다름. n:이름 p:동작 h:색상(hue)
+        const WEAPONS = [
+            { n: '당근총', p: 'single', h: 25 }, { n: '쌍발 당근총', p: 'double', h: 25 }, { n: '트리플 당근포', p: 'triple', h: 30 }, { n: '옥수수 샷건', p: 'spread', h: 48 }, { n: '콩알 미니건', p: 'minigun', h: 60 },
+            { n: '고추장 화염기', p: 'flame', h: 8 }, { n: '민트 레이저', p: 'laser', h: 160 }, { n: '감자 로켓', p: 'rocket', h: 35 }, { n: '찌릿 번개봉', p: 'lightning', h: 55 }, { n: '살얼음포', p: 'ice', h: 200 },
+            { n: '포도 플라즈마', p: 'plasma', h: 280 }, { n: '산들 회오리', p: 'tornado', h: 210 }, { n: '곰팡이 독가스', p: 'poison', h: 120 }, { n: '별똥별 지팡이', p: 'meteor', h: 50 }, { n: '캔디 무지개포', p: 'rainbow', h: 0 },
+            { n: '황금 당근총', p: 'single', h: 45 }, { n: '바나나 쌍발포', p: 'double', h: 55 }, { n: '클로버 트리플', p: 'triple', h: 130 }, { n: '벚꽃 샷건', p: 'spread', h: 335 }, { n: '벌떼 미니건', p: 'minigun', h: 48 },
+            { n: '파랑 화염방사기', p: 'flame', h: 220 }, { n: '루비 레이저', p: 'laser', h: 350 }, { n: '수박 로켓', p: 'rocket', h: 110 }, { n: '천둥 지팡이', p: 'lightning', h: 50 }, { n: '눈꽃포', p: 'ice', h: 195 },
+            { n: '자수정 플라즈마', p: 'plasma', h: 270 }, { n: '모래 회오리', p: 'tornado', h: 40 }, { n: '늪지 독가스', p: 'poison', h: 95 }, { n: '유성 소나기', p: 'meteor', h: 30 }, { n: '오로라 대포', p: 'rainbow', h: 0 },
+            { n: '강철 당근총', p: 'single', h: 215 }, { n: '은빛 쌍발포', p: 'double', h: 220 }, { n: '세쌍둥이포', p: 'triple', h: 180 }, { n: '강철 샷건', p: 'spread', h: 225 }, { n: '드르륵 미니건', p: 'minigun', h: 15 },
+            { n: '용암 화염방사기', p: 'flame', h: 15 }, { n: '에메랄드 레이저', p: 'laser', h: 140 }, { n: '대왕 로켓', p: 'rocket', h: 0 }, { n: '뇌우 지팡이', p: 'lightning', h: 200 }, { n: '빙하포', p: 'ice', h: 205 },
+            { n: '심해 플라즈마', p: 'plasma', h: 240 }, { n: '태풍 회오리', p: 'tornado', h: 195 }, { n: '맹독 살포기', p: 'poison', h: 105 }, { n: '운석 지팡이', p: 'meteor', h: 20 }, { n: '프리즘 파멸포', p: 'rainbow', h: 0 },
+            { n: '크리스탈 당근총', p: 'single', h: 185 }, { n: '쌍둥이 유성포', p: 'double', h: 265 }, { n: '삼지창포', p: 'triple', h: 190 }, { n: '화산 샷건', p: 'spread', h: 12 }, { n: '폭풍 미니건', p: 'minigun', h: 205 },
+            { n: '지옥 화염방사기', p: 'flame', h: 355 }, { n: '사파이어 레이저', p: 'laser', h: 225 }, { n: '핵당근 로켓', p: 'rocket', h: 90 }, { n: '번개 폭풍봉', p: 'lightning', h: 48 }, { n: '절대영도포', p: 'ice', h: 190 },
+            { n: '암흑 플라즈마', p: 'plasma', h: 290 }, { n: '허리케인포', p: 'tornado', h: 185 }, { n: '죽음의 안개', p: 'poison', h: 85 }, { n: '유성 폭풍', p: 'meteor', h: 15 }, { n: '스펙트럼 캐논', p: 'rainbow', h: 0 },
+            { n: '유령 당근총', p: 'single', h: 250 }, { n: '그림자 쌍발포', p: 'double', h: 260 }, { n: '트리플 팬텀', p: 'triple', h: 255 }, { n: '유령 샷건', p: 'spread', h: 245 }, { n: '악령 미니건', p: 'minigun', h: 275 },
+            { n: '도깨비불 방사기', p: 'flame', h: 175 }, { n: '고스트 레이저', p: 'laser', h: 265 }, { n: '유령 로켓', p: 'rocket', h: 250 }, { n: '원혼 번개봉', p: 'lightning', h: 270 }, { n: '서리 유령포', p: 'ice', h: 210 },
+            { n: '영혼 플라즈마', p: 'plasma', h: 285 }, { n: '혼령 회오리', p: 'tornado', h: 250 }, { n: '원귀 독무', p: 'poison', h: 130 }, { n: '혼백 유성우', p: 'meteor', h: 260 }, { n: '환영 무지개포', p: 'rainbow', h: 0 },
+            { n: '드래곤 당근총', p: 'single', h: 0 }, { n: '쌍룡포', p: 'double', h: 145 }, { n: '삼룡포', p: 'triple', h: 155 }, { n: '용비늘 샷건', p: 'spread', h: 150 }, { n: '용틀임 미니건', p: 'minigun', h: 140 },
+            { n: '용의 숨결', p: 'flame', h: 20 }, { n: '드래곤 레이저', p: 'laser', h: 130 }, { n: '용왕 로켓', p: 'rocket', h: 165 }, { n: '청룡 번개', p: 'lightning', h: 185 }, { n: '빙룡의 포효', p: 'ice', h: 200 },
+            { n: '용심 플라즈마', p: 'plasma', h: 300 }, { n: '용오름포', p: 'tornado', h: 160 }, { n: '흑룡 독식', p: 'poison', h: 110 }, { n: '용성 낙하포', p: 'meteor', h: 10 }, { n: '무지개 용왕포', p: 'rainbow', h: 0 },
+            { n: '태양 당근총', p: 'single', h: 42 }, { n: '일월 쌍포', p: 'double', h: 48 }, { n: '삼태성포', p: 'triple', h: 52 }, { n: '은하 샷건', p: 'spread', h: 235 }, { n: '초신성 미니건', p: 'minigun', h: 45 },
+            { n: '태양풍 방사기', p: 'flame', h: 40 }, { n: '감마 레이저', p: 'laser', h: 90 }, { n: '행성파괴 로켓', p: 'rocket', h: 15 }, { n: '신들의 유성우', p: 'meteor', h: 45 }, { n: '우주최강 무지개 파멸포', p: 'rainbow', h: 0 },
         ];
-        const MAX_WLV = 150;
+        const MAX_WLV = 1000;
         const BASE_INT = {
             single: 0.38, double: 0.34, triple: 0.33, spread: 0.42, minigun: 0.13,
             flame: 0.07, laser: 0.28, rocket: 0.5, lightning: 0.34, ice: 0.3,
-            plasma: 0.46, tornado: 0.55, poison: 0.62, meteor: 0.8, rainbow: 0.3
+            plasma: 0.46, tornado: 0.55, poison: 0.62, meteor: 0.6, rainbow: 0.3
+        };
+        const PATTERN_DESC = {
+            single: '단발 사격', double: '2연발', triple: '3연발', spread: '부채꼴 산탄', minigun: '초고속 연사',
+            flame: '근거리 화염 분사', laser: '관통 빔', rocket: '폭발 범위딜', lightning: '체인 번개',
+            ice: '적을 얼려 슬로우', plasma: '거대 관통 오브', tornado: 'S자 다중 관통', poison: '독구름 지속딜',
+            meteor: '하늘에서 유성 낙하', rainbow: '관통+폭발+3갈래'
         };
         function weaponInfo(lv) {
-            const tier = Math.min(TIERS.length - 1, Math.floor((lv - 1) / 10));
+            const widx = Math.min(WEAPONS.length - 1, Math.floor((lv - 1) / 10));
             const sub = (lv - 1) % 10;
-            const t = TIERS[tier];
+            const w = WEAPONS[widx];
+            const round = Math.floor(widx / 15);   // 뒤로 갈수록 같은 계열도 더 강력
             return {
-                tier, sub, name: t.name, pattern: t.pattern,
-                int: Math.max(0.06, BASE_INT[t.pattern] - sub * 0.007),
+                tier: widx, sub, round,
+                name: w.n, pattern: w.p, hue: w.h,
+                int: Math.max(0.05, BASE_INT[w.p] * Math.pow(0.95, round) - sub * 0.007),
                 dmg: 1 + Math.floor(lv / 6),
-                spreadN: t.pattern === 'spread' ? (3 + Math.floor(sub / 4)) : 3,
-                pierce: t.pattern === 'laser' ? 2 + Math.floor(sub / 3)
-                      : t.pattern === 'plasma' ? 4
-                      : t.pattern === 'tornado' ? 6
-                      : t.pattern === 'rainbow' ? 3 : 0,
-                chains: t.pattern === 'lightning' ? 2 + Math.floor(sub / 3) : 0,
-                meteors: t.pattern === 'meteor' ? 2 + Math.floor(sub / 3) : 0,
+                spreadN: w.p === 'spread' ? Math.min(7, 3 + Math.floor(sub / 4) + round) : 3,
+                pierce: w.p === 'laser' ? 2 + Math.floor(sub / 3) + round
+                      : w.p === 'plasma' ? 4 + round
+                      : w.p === 'tornado' ? 6 + round
+                      : w.p === 'rainbow' ? 3 + round : 0,
+                chains: w.p === 'lightning' ? 2 + Math.floor(sub / 3) + round : 0,
+                meteors: w.p === 'meteor' ? Math.min(8, 2 + Math.floor(sub / 3) + round) : 0,
             };
         }
 
@@ -386,6 +430,7 @@
                 combo: 0, comboT: 0,
                 heartT: 0,
                 shake: 0,
+                paused: false,
                 over: false
             };
         }
@@ -431,14 +476,25 @@
                 () => ({ type: 'weapon', val: 3, label: '🌟 무기 +3', color: 'gold' }),
                 () => ({ type: 'mul', val: 2, label: '×2 토끼!', color: 'blue' }),
             ];
+            if (g.t > 120) goodPool.push(() => ({ type: 'weapon', val: 10, label: '💎 무기 +10!!', color: 'gold' }));
             const makeGood = () => {
                 const e = goodPool[Math.floor(Math.random() * goodPool.length)]();
                 if (e.type === 'add') e.label = '+' + e.val + ' 토끼';
                 return e;
             };
             const makeBad = () => {
-                const v = 3 + Math.floor(Math.random() * 6);
-                return { type: 'sub', val: v, label: '-' + v + ' 토끼', color: 'red' };
+                const r = Math.random();
+                if (r < 0.4) {
+                    const v = 3 + Math.floor(Math.random() * 6);
+                    return { type: 'sub', val: v, label: '-' + v + ' 토끼', color: 'red' };
+                } else if (r < 0.65) {
+                    return { type: 'divUnits', val: 2, label: '÷2 토끼 😱', color: 'red' };
+                } else if (r < 0.9) {
+                    const v = 3 + Math.floor(Math.random() * 5);
+                    return { type: 'wminus', val: v, label: '🔻 무기 -' + v, color: 'red' };
+                } else {
+                    return { type: 'wdiv', val: 2, label: '💀 무기 ÷2', color: 'red' };
+                }
             };
             let a, b;
             if (Math.random() < 0.72) { a = makeGood(); b = makeBad(); }
@@ -480,6 +536,18 @@
                 S.bad(); addFloat(p.x, p.y - 60, '-' + gate.val + ' 😱', '#ff6b81');
                 g.shake = 0.25;
                 if (g.units <= 0) gameOver();
+            } else if (gate.type === 'divUnits') {
+                g.units = Math.max(1, Math.floor(g.units / 2));
+                S.bad(); addFloat(p.x, p.y - 60, '토끼 반토막!! 😭', '#ff6b81');
+                g.shake = 0.3;
+            } else if (gate.type === 'wminus') {
+                g.weaponLv = Math.max(1, g.weaponLv - gate.val);
+                S.bad(); addFloat(p.x, p.y - 60, '무기 -' + gate.val + '... 🔻', '#ff6b81');
+                g.shake = 0.25;
+            } else if (gate.type === 'wdiv') {
+                g.weaponLv = Math.max(1, Math.floor(g.weaponLv / 2));
+                S.bad(); addFloat(p.x, p.y - 60, '무기 반토막!!! 💀', '#ff6b81');
+                g.shake = 0.4;
             }
             updateHud();
         }
@@ -580,6 +648,37 @@
             if (mega) g.alarmT = 1.0;
         }
 
+        // 🎁 보스 보상: 무기 3개 중 선택!
+        function openWeaponChoice(mega) {
+            if (g.over) return;
+            g.paused = true;
+            const offs = mega ? [15, 25, 40] : [8, 14, 22];
+            const wrap = document.getElementById('wcOpts');
+            wrap.innerHTML = '';
+            offs.forEach(off => {
+                const lv = Math.min(MAX_WLV, g.weaponLv + off);
+                const info = weaponInfo(lv);
+                const btn = document.createElement('button');
+                btn.className = 'wc-btn';
+                btn.innerHTML = '<div class="wc-name">' + info.name + ' <span class="wc-lv">Lv' + lv + '</span></div>'
+                    + '<div class="wc-desc">' + PATTERN_DESC[info.pattern] + ' · 공격력 ' + info.dmg + '</div>';
+                btn.onclick = () => pickWeapon(lv);
+                wrap.appendChild(btn);
+            });
+            document.getElementById('weaponChoose').classList.add('show');
+        }
+        function pickWeapon(lv) {
+            g.weaponLv = lv;
+            document.getElementById('weaponChoose').classList.remove('show');
+            g.paused = false;
+            lastTime = performance.now();
+            S.tierUp();
+            const info = weaponInfo(lv);
+            addFloat(W / 2, H * 0.45, '🎁 ' + info.name + ' 장착!!', '#ffd43b');
+            g.shake = 0.15;
+            updateHud();
+        }
+
         function addFloat(x, y, txt, color) {
             g.floats.push({ x, y, txt, color, life: 1 });
         }
@@ -591,14 +690,15 @@
             }
         }
 
-        function explode(wx, z, dmg, radius) {
+        function explode(wx, z, dmg, radius, boxW, boxZ) {
             const p = proj(wx, Math.max(0, z));
             g.booms.push({ x: p.x, y: p.y, r: 10 * p.s, max: (radius || 90) * p.s, life: 0.35 });
             addParts(p.x, p.y, '#ffb347', 18, Math.max(0.5, p.s));
             S.boom();
             g.shake = Math.max(g.shake, 0.18);
+            const bw = boxW || 0.3, bz = boxZ || 0.14;
             g.enemies.forEach(e => {
-                if (Math.abs(e.wx - wx) < 0.3 && Math.abs(e.z - z) < 0.14) {
+                if (Math.abs(e.wx - wx) < bw && Math.abs(e.z - z) < bz) {
                     e.hp -= dmg;
                     e.hitT = 0.1;
                 }
@@ -672,9 +772,10 @@
                 addFloat(p.x, p.y, '분열!! 😱', '#c3f584');
             }
             if (e.boss) {
-                addFloat(p.x, p.y, e.mega ? '메가 보스 처치! 무기 +4!' : '보스 처치! 무기 +2!', '#ffd43b');
-                upgradeWeapon(e.mega ? 4 : 2, p.x, p.y - 30);
+                addFloat(p.x, p.y, '👑 보스 처치!! 무기를 고르세요!', '#ffd43b');
                 g.units = Math.min(UNIT_CAP, g.units + 2);
+                const mega = e.mega;
+                setTimeout(() => openWeaponChoice(mega), 450);
             } else if (g.combo > 0 && g.combo % 10 === 0) {
                 addFloat(p.x, p.y, g.combo + ' 콤보!! 🔥', '#ffd43b');
             }
@@ -722,21 +823,27 @@
                 if (!emitters.length && g.dots.length) emitters.push(g.dots[0]);
 
                 if (pat === 'meteor') {
-                    // ☄️ 하늘에서 유성 낙하!
+                    // ☄️ 하늘에서 유성 낙하! (좀비가 이동할 위치를 예측 조준)
+                    const targets = g.enemies.filter(e => e.z > 0.12 && e.z < 1.05);
                     for (let m = 0; m < wp.meteors; m++) {
                         let twx, tz;
-                        const targets = g.enemies.filter(e => e.z > 0.25 && e.z < 1.0);
+                        const dur = 0.32 + m * 0.07;
                         if (targets.length) {
                             const e = targets[Math.floor(Math.random() * targets.length)];
-                            twx = e.wx; tz = e.z;
+                            twx = e.wx;
+                            tz = Math.max(0.08, e.z - e.spd * dur);   // 낙하 시간만큼 앞지점 조준
                         } else {
-                            twx = (Math.random() - 0.5) * 1.4; tz = 0.4 + Math.random() * 0.5;
+                            twx = (Math.random() - 0.5) * 1.4; tz = 0.3 + Math.random() * 0.5;
                         }
-                        g.meteors.push({ twx, tz, t: 0, dur: 0.5 + m * 0.1, dmg: wp.dmg * 2 });
+                        g.meteors.push({ twx, tz, t: 0, dur, dmg: wp.dmg * 2 });
                     }
+                    // 유성 사이사이 보조 당근 사격 (빈틈 없이!)
+                    g.dots.filter(d => d.front).slice(0, 4).forEach(d => {
+                        g.bullets.push({ wx: d.wx, z: d.z + 0.03, spd: 2.1, vwx: 0, dmg: Math.max(1, Math.ceil(wp.dmg / 2)), pat: 'single', hitIds: null });
+                    });
                 } else {
                     emitters.forEach(d => {
-                        const base = { wx: d.wx, z: d.z + 0.03, spd: 2.1, vwx: 0, dmg: wp.dmg, pat, hitIds: null };
+                        const base = { wx: d.wx, z: d.z + 0.03, spd: 2.1, vwx: 0, dmg: wp.dmg, pat, hue: wp.hue, hitIds: null };
                         switch (pat) {
                             case 'single': g.bullets.push({ ...base }); break;
                             case 'double':
@@ -813,12 +920,12 @@
                 }
             }
 
-            // ☄️ 유성 낙하
+            // ☄️ 유성 낙하 (넓은 폭발 판정!)
             for (let i = g.meteors.length - 1; i >= 0; i--) {
                 const m = g.meteors[i];
                 m.t += dt;
                 if (m.t >= m.dur) {
-                    explode(m.twx, m.tz, m.dmg, 100);
+                    explode(m.twx, m.tz, m.dmg, 110, 0.36, 0.2);
                     g.meteors.splice(i, 1);
                 }
             }
@@ -1181,7 +1288,7 @@
             ctx.fill();
         }
 
-        function drawRabbit(x, y, sz, ph, pattern, front, flash, t) {
+        function drawRabbit(x, y, sz, ph, pattern, front, flash, t, hue) {
             ctx.save();
             ctx.translate(x, y);
             const hop = Math.abs(Math.sin(t * 7 + ph)) * sz * 0.14;
@@ -1212,17 +1319,17 @@
                 ctx.restore();
             });
 
-            if (front) drawWeaponShape(0, -sz * 0.72, sz, pattern, flash, t);
+            if (front) drawWeaponShape(0, -sz * 0.72, sz, pattern, flash, t, hue);
             ctx.restore();
         }
 
-        function drawWeaponShape(x, y, sz, pattern, flash, t) {
+        function drawWeaponShape(x, y, sz, pattern, flash, t, hue) {
             ctx.save();
             ctx.translate(x, y);
             const s = sz * 1.1;
             switch (pattern) {
                 case 'single': case 'double': case 'triple':
-                    ctx.fillStyle = '#ff922b';
+                    ctx.fillStyle = 'hsl(' + (hue || 25) + ', 90%, 55%)';
                     ctx.beginPath();
                     ctx.moveTo(0, -s * 0.38); ctx.lineTo(-s * 0.09, s * 0.05); ctx.lineTo(s * 0.09, s * 0.05);
                     ctx.closePath(); ctx.fill();
@@ -1342,12 +1449,12 @@
                     ctx.shadowBlur = 0;
                     break;
                 case 'rainbow':
-                    const hue = (t * 240) % 360;
-                    ctx.shadowColor = 'hsl(' + hue + ',100%,60%)'; ctx.shadowBlur = s * 0.3;
+                    const rhue = (t * 240) % 360;
+                    ctx.shadowColor = 'hsl(' + rhue + ',100%,60%)'; ctx.shadowBlur = s * 0.3;
                     const rg = ctx.createLinearGradient(0, -s * 0.5, 0, s * 0.1);
-                    rg.addColorStop(0, 'hsl(' + hue + ',100%,65%)');
-                    rg.addColorStop(0.5, 'hsl(' + ((hue + 120) % 360) + ',100%,65%)');
-                    rg.addColorStop(1, 'hsl(' + ((hue + 240) % 360) + ',100%,65%)');
+                    rg.addColorStop(0, 'hsl(' + rhue + ',100%,65%)');
+                    rg.addColorStop(0.5, 'hsl(' + ((rhue + 120) % 360) + ',100%,65%)');
+                    rg.addColorStop(1, 'hsl(' + ((rhue + 240) % 360) + ',100%,65%)');
                     ctx.fillStyle = rg;
                     rr(-s * 0.08, -s * 0.5, s * 0.16, s * 0.58, s * 0.08); ctx.fill();
                     ctx.fillStyle = '#fff';
@@ -1679,14 +1786,15 @@
                     ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
                     ctx.shadowBlur = 0;
                 } else if (pat === 'minigun') {
-                    ctx.strokeStyle = '#ffe066';
+                    ctx.strokeStyle = 'hsl(' + (b.hue || 48) + ', 95%, 70%)';
                     ctx.lineWidth = Math.max(1.2, 2.2 * p.s);
                     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + 12 * p.s); ctx.stroke();
                 } else {
+                    // 무기마다 다른 색 탄환!
                     const r = Math.max(2, 4.5 * p.s);
                     ctx.save();
                     ctx.translate(p.x, p.y);
-                    ctx.fillStyle = '#ff922b';
+                    ctx.fillStyle = 'hsl(' + (b.hue || 25) + ', 90%, 58%)';
                     ctx.beginPath();
                     ctx.moveTo(0, -r * 1.6); ctx.lineTo(-r * 0.7, r); ctx.lineTo(r * 0.7, r);
                     ctx.closePath(); ctx.fill();
@@ -1809,7 +1917,7 @@
                 ctx.beginPath();
                 ctx.ellipse(d.x, d.y + size * 0.36, size * 0.3, size * 0.1, 0, 0, Math.PI * 2);
                 ctx.fill();
-                drawRabbit(d.x, d.y, size, d.ph, wInfo.pattern, d.front, g.flashT, t);
+                drawRabbit(d.x, d.y, size, d.ph, wInfo.pattern, d.front, g.flashT, t, wInfo.hue);
             });
             if (g.units > VIS_CAP) {
                 ctx.fillStyle = '#ffd6e8';
@@ -1866,7 +1974,7 @@
             if (!running) return;
             const dt = Math.min(0.05, (ts - lastTime) / 1000);
             lastTime = ts;
-            if (g && !g.over) update(dt);
+            if (g && !g.over && !g.paused) update(dt);
             draw();
             requestAnimationFrame(loop);
         }
