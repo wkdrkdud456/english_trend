@@ -83,6 +83,45 @@
         }
         .stat .label { font-size: 0.72em; opacity: 0.8; }
         .stat .value { font-size: 1.3em; font-weight: 800; }
+        .stat-click {
+            cursor: pointer;
+            transition: transform 0.15s, background 0.2s;
+        }
+        .stat-click:active { transform: scale(0.94); background: rgba(255,255,255,0.25); }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-height: 290px;
+            overflow-y: auto;
+            padding: 4px;
+            margin: 14px 0 4px;
+        }
+        .level-btn {
+            padding: 12px 0;
+            border: 2px solid #f3c4d8;
+            border-radius: 12px;
+            background: #fff;
+            color: #b3688a;
+            font-weight: 800;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.12s;
+        }
+        .level-btn:active { transform: scale(0.9); }
+        .level-btn.cleared {
+            background: linear-gradient(135deg, #ffe9a8, #ffd43b);
+            border-color: #ffc93c;
+            color: #8a5a00;
+        }
+        .level-btn.current {
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            border-color: #f857a6;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(248, 87, 166, 0.5);
+        }
+
         .sound-btn {
             min-width: 56px;
             font-size: 1.4em;
@@ -399,8 +438,8 @@
         <div class="subtitle">🔥 고수 모드 — 같은 색 물약끼리 병에 모아보세요!</div>
 
         <div class="stats">
-            <div class="stat">
-                <div class="label">레벨</div>
+            <div class="stat stat-click" onclick="openLevelSelect()">
+                <div class="label">레벨 ▾</div>
                 <div class="value" id="level">1</div>
             </div>
             <div class="stat">
@@ -427,7 +466,7 @@
             <button class="btn btn-secret" onclick="openSecret()">💋 비밀 코드</button>
         </div>
 
-        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br><b>? 비밀 물약</b>은 맨 위로 올라와야 색이 보여요 👀<br>레벨이 오를수록 비밀 병이 늘어나요 🔥</div>
+        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br><b>? 비밀 물약</b>은 맨 위로 올라와야 색이 보여요 👀<br>위의 <b>레벨 ▾</b>를 누르면 원하는 레벨을 골라 시작할 수 있어요 🎯</div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -442,6 +481,16 @@
                 <button class="btn btn-next" onclick="submitSecret()">확인 💖</button>
                 <button class="btn btn-restart" onclick="closeSecret()">닫기</button>
             </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="levelSelectOverlay">
+        <div class="win-card" style="padding: 30px 28px; max-width: 340px; width: 90%;">
+            <div class="emoji">🎯</div>
+            <h2>레벨 선택</h2>
+            <p>원하는 레벨을 골라 시작하세요!<br>⭐ = 클리어한 레벨</p>
+            <div class="level-grid" id="levelGrid"></div>
+            <button class="btn btn-restart" onclick="closeLevelSelect()" style="margin-top:10px;">닫기</button>
         </div>
     </div>
 
@@ -556,6 +605,8 @@
             document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
             if (soundOn) S.select();
         }
+
+        let maxCleared = safeLoad('potionMax', 0);   // 클리어한 최고 레벨
 
         let state = {
             level: safeLoad('potionLevel3', 1),
@@ -958,6 +1009,36 @@
             dropConfetti();
         }
 
+        // ── 레벨 선택 🎯 ──────────────────────────
+        const MAX_LEVEL = 100;
+        function openLevelSelect() {
+            if (state.busy) return;
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            const showUpTo = Math.max(30, maxCleared + 10, state.level + 10);
+            for (let lv = 1; lv <= Math.min(showUpTo, MAX_LEVEL); lv++) {
+                const b = document.createElement('button');
+                b.className = 'level-btn';
+                if (lv <= maxCleared) { b.classList.add('cleared'); b.textContent = '⭐' + lv; }
+                else b.textContent = lv;
+                if (lv === state.level) b.classList.add('current');
+                b.onclick = () => selectLevel(lv);
+                grid.appendChild(b);
+            }
+            document.getElementById('levelSelectOverlay').classList.add('show');
+        }
+        function closeLevelSelect() {
+            document.getElementById('levelSelectOverlay').classList.remove('show');
+        }
+        function selectLevel(lv) {
+            closeLevelSelect();
+            state.level = lv;
+            safeSave('potionLevel3', lv);
+            S.select();
+            startLevel(lv);
+            toast('🎯 레벨 ' + lv + ' 시작!');
+        }
+
         // ── 비밀 코드 💋 ──────────────────────────
         function openSecret() {
             document.getElementById('secretOverlay').classList.add('show');
@@ -1009,6 +1090,8 @@
 
         function nextLevel() {
             document.getElementById('winOverlay').classList.remove('show');
+            maxCleared = Math.max(maxCleared, state.level);
+            safeSave('potionMax', maxCleared);
             state.level++;
             safeSave('potionLevel3', state.level);
             startLevel(state.level);
