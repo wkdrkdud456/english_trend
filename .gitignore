@@ -10,3 +10,12 @@ __pycache__/
 
 # 로그
 streamlit.log
+
+# Cordova/Android 빌드 파일
+MatchPuzzleApp/node_modules/
+MatchPuzzleApp/platforms/
+MatchPuzzleApp/plugins/
+MatchPuzzleApp/.gradle/
+MatchPuzzleApp/build/
+*.apk
+*.jks
