@@ -445,6 +445,20 @@
         </div>
     </div>
 
+    <div class="overlay" id="gameOverOverlay">
+        <div class="win-card">
+            <div class="emoji">😵💦</div>
+            <h2>게임 오버!</h2>
+            <p>더 이상 물약을 옮길 수 없어요...</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+                <button class="btn btn-undo" id="goUndoBtn" onclick="goUndo()">↩️ 한 수 되돌리기</button>
+                <button class="btn btn-next" id="goTubeBtn" onclick="goTube()">➕ 빈 병으로 부활!</button>
+                <button class="btn btn-next" id="goRainbowBtn" onclick="goRainbow()" style="background:linear-gradient(135deg,#a18cd1,#74a9ff);">🌈 무지개로 부활!</button>
+                <button class="btn btn-restart" onclick="goRestart()">🔄 처음부터 다시</button>
+            </div>
+        </div>
+    </div>
+
     <div class="overlay" id="winOverlay">
         <div class="win-card">
             <div class="emoji">🎉🧪✨</div>
@@ -528,6 +542,11 @@
                 tone(400, 0.12, { slideTo: 900, vol: 0.16 });
                 tone(1100, 0.1, { delay: 0.13, slideTo: 700, type: 'triangle', vol: 0.14 });
                 tone(1400, 0.2, { delay: 0.25, type: 'triangle', vol: 0.12 });
+            },
+            lose() {  // 뚜둔... 😵
+                tone(392, 0.28, { type: 'triangle', vol: 0.15 });
+                tone(330, 0.28, { delay: 0.25, type: 'triangle', vol: 0.15 });
+                tone(262, 0.5, { delay: 0.5, type: 'triangle', vol: 0.16 });
             },
             wrong() { tone(200, 0.18, { type: 'square', vol: 0.07 }); tone(160, 0.22, { delay: 0.15, type: 'square', vol: 0.07 }); }
         };
@@ -618,6 +637,47 @@
         function isWin() {
             return state.tubes.every(t => t.length === 0 || isTubeDone(t));
         }
+
+        // 의미 있는 이동이 하나라도 남아 있는지 검사
+        function hasUsefulMove() {
+            for (let i = 0; i < state.tubes.length; i++) {
+                const src = state.tubes[i];
+                if (!src.length || isTubeDone(src)) continue;
+                const { color } = topRun(i);
+                for (let j = 0; j < state.tubes.length; j++) {
+                    if (i === j) continue;
+                    const dst = state.tubes[j];
+                    if (dst.length >= UNIT) continue;
+                    if (!dst.length) {
+                        // 빈 병으로 붓기: 병 전체가 한 색이고 숨김도 없으면 의미 없는 이동
+                        const uniform = state.hidden[i] === 0 && src.every(c => c === src[0]);
+                        if (!uniform) return true;
+                    } else if (dst[dst.length - 1] === color) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkStuck() {
+            if (isWin() || hasUsefulMove()) return;
+            const canUndo = state.history.length > 0;
+            const canTube = state.items.tube > 0 && state.extraTubesUsed < 2;
+            const canRainbow = state.items.rainbow > 0;
+            document.getElementById('goUndoBtn').style.display = canUndo ? '' : 'none';
+            document.getElementById('goTubeBtn').style.display = canTube ? '' : 'none';
+            document.getElementById('goRainbowBtn').style.display = canRainbow ? '' : 'none';
+            document.getElementById('gameOverOverlay').classList.add('show');
+            S.lose();
+        }
+        function closeGameOver() {
+            document.getElementById('gameOverOverlay').classList.remove('show');
+        }
+        function goUndo() { closeGameOver(); undo(); }
+        function goTube() { closeGameOver(); useExtraTube(); }
+        function goRainbow() { closeGameOver(); useRainbow(); }
+        function goRestart() { closeGameOver(); restart(); }
 
         // 맨 위로 올라온 비밀 물약 공개 + 완성된 병은 전부 공개
         function revealTops() {
@@ -856,6 +916,7 @@
 
                 if (isTubeDone(dst)) S.done();   // 병 하나 완성! 🎵
                 if (isWin()) setTimeout(showWin, 350);
+                else setTimeout(checkStuck, 300);   // 막혔으면 게임 오버
             }, 450);
         }
 
@@ -868,6 +929,7 @@
             state.selected = null;
             S.undo();
             render();
+            setTimeout(checkStuck, 200);
         }
 
         function restart() {
