@@ -277,6 +277,30 @@
         .btn:active { transform: scale(0.94); }
         .btn-undo { background: linear-gradient(135deg, #ff9a9e, #fad0c4); color: #7a2048; }
         .btn-restart { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #4a2c6b; }
+        .btn-secret {
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            animation: heartbeat 2s infinite;
+        }
+        @keyframes heartbeat {
+            0%, 100% { box-shadow: 0 4px 12px rgba(248, 87, 166, 0.4); }
+            50% { box-shadow: 0 4px 20px rgba(248, 87, 166, 0.9); }
+        }
+        .secret-input {
+            width: 100%;
+            padding: 13px;
+            border-radius: 14px;
+            border: 2px solid #f8a5c8;
+            font-size: 1.15em;
+            text-align: center;
+            outline: none;
+            font-weight: 800;
+            color: #d6336c;
+            background: #fff;
+            letter-spacing: 3px;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .secret-input:focus { border-color: #f857a6; box-shadow: 0 0 10px rgba(248,87,166,0.4); }
 
         .toast {
             position: fixed;
@@ -400,12 +424,26 @@
         <div class="btns">
             <button class="btn btn-undo" onclick="undo()">↩️ 되돌리기</button>
             <button class="btn btn-restart" onclick="restart()">🔄 다시하기</button>
+            <button class="btn btn-secret" onclick="openSecret()">💋 비밀 코드</button>
         </div>
 
         <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br><b>? 비밀 물약</b>은 맨 위로 올라와야 색이 보여요 👀<br>레벨이 오를수록 비밀 병이 늘어나요 🔥</div>
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <div class="overlay" id="secretOverlay">
+        <div class="win-card">
+            <div class="emoji">💋🎁</div>
+            <h2>비밀 코드</h2>
+            <p>힌트: 남편(동훈)한테 <b>뽀뽀 한 번</b> 하면<br>코드를 알려준대요 💕</p>
+            <input type="text" id="secretInput" class="secret-input" placeholder="코드 입력" maxlength="12" autocomplete="off">
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+                <button class="btn btn-next" onclick="submitSecret()">확인 💖</button>
+                <button class="btn btn-restart" onclick="closeSecret()">닫기</button>
+            </div>
+        </div>
+    </div>
 
     <div class="overlay" id="winOverlay">
         <div class="win-card">
@@ -485,7 +523,13 @@
                 [523, 659, 784, 1047, 1319].forEach((f, i) =>
                     tone(f, 0.28, { delay: i * 0.13, type: 'triangle', vol: 0.16 }));
                 tone(1568, 0.5, { delay: 0.65, type: 'triangle', vol: 0.14 });
-            }
+            },
+            kiss() {  // 쪽~ 💋
+                tone(400, 0.12, { slideTo: 900, vol: 0.16 });
+                tone(1100, 0.1, { delay: 0.13, slideTo: 700, type: 'triangle', vol: 0.14 });
+                tone(1400, 0.2, { delay: 0.25, type: 'triangle', vol: 0.12 });
+            },
+            wrong() { tone(200, 0.18, { type: 'square', vol: 0.07 }); tone(160, 0.22, { delay: 0.15, type: 'square', vol: 0.07 }); }
         };
         function toggleSound() {
             soundOn = !soundOn;
@@ -504,15 +548,16 @@
             history: [],
             busy: false,
             rainbowActive: false,
-            extraTubeUsed: false
+            extraTubesUsed: 0,
+            secretUsed: false
         };
 
-        // ── 고수 모드: 처음부터 어렵게! ──
+        // ── 초고수 모드: 처음부터 최대한 어렵게! ──
         function numColorsFor(level) {
-            return Math.min(5 + level, 8);   // L1:6색, L2:7색, L3부터 8색 풀난이도
+            return Math.min(6 + level, 8);   // L1:7색, L2부터 8색 풀난이도
         }
         function hiddenTubesFor(level, numColors) {
-            return Math.min(level, numColors);  // L1부터 비밀 물약! 레벨마다 1병씩 증가
+            return Math.min(level + 1, numColors);  // L1부터 비밀 병 2개! 레벨마다 증가
         }
 
         function generateLevel(level) {
@@ -676,10 +721,10 @@
         // ── 아이템 ──────────────────────────────
         function useExtraTube() {
             if (state.busy) return;
-            if (state.items.tube <= 0) { toast('빈 병 아이템이 없어요 😢'); return; }
-            if (state.extraTubeUsed) { toast('빈 병은 레벨당 1번만! 🙅‍♀️'); return; }
+            if (state.items.tube <= 0) { toast('빈 병 아이템이 없어요 😢 (힌트: 💋 비밀 코드!)'); return; }
+            if (state.extraTubesUsed >= 2) { toast('빈 병은 레벨당 2번까지! 🙅‍♀️'); return; }
             state.items.tube--;
-            state.extraTubeUsed = true;
+            state.extraTubesUsed++;
             state.tubes.push([]);
             state.hidden.push(0);
             S.item();
@@ -851,8 +896,43 @@
             dropConfetti();
         }
 
-        function dropConfetti() {
-            const emojis = ['🎉', '💖', '✨', '🌟', '🧪', '💜', '🎊', '⭐'];
+        // ── 비밀 코드 💋 ──────────────────────────
+        function openSecret() {
+            document.getElementById('secretOverlay').classList.add('show');
+            const input = document.getElementById('secretInput');
+            input.value = '';
+            setTimeout(() => input.focus(), 150);
+        }
+        function closeSecret() {
+            document.getElementById('secretOverlay').classList.remove('show');
+        }
+        function submitSecret() {
+            const v = document.getElementById('secretInput').value.trim().toUpperCase();
+            if (v === 'KISS' || v === '뽀뽀') {
+                if (state.secretUsed) {
+                    closeSecret();
+                    toast('이번 레벨에선 이미 썼어요! 다음 레벨에서 또 뽀뽀 💋');
+                    return;
+                }
+                state.secretUsed = true;
+                state.items.tube += 3;
+                safeSave('potionItems', state.items);
+                closeSecret();
+                S.kiss();
+                dropConfetti(['💋', '💖', '💕', '😘', '💗', '🩷']);
+                renderItems();
+                toast('💋 뽀뽀 확인! 빈 병 +3 획득!');
+            } else {
+                S.wrong();
+                toast('땡! 남편한테 뽀뽀부터 하고 오세요 💋ㅋㅋ');
+            }
+        }
+        document.getElementById('secretInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') submitSecret();
+        });
+
+        function dropConfetti(emojiList) {
+            const emojis = emojiList || ['🎉', '💖', '✨', '🌟', '🧪', '💜', '🎊', '⭐'];
             for (let i = 0; i < 36; i++) {
                 const c = document.createElement('div');
                 c.className = 'confetti';
@@ -881,7 +961,8 @@
             state.history = [];
             state.busy = false;
             state.rainbowActive = false;
-            state.extraTubeUsed = false;
+            state.extraTubesUsed = 0;
+            state.secretUsed = false;
             render();
         }
 
