@@ -83,6 +83,16 @@
         }
         .stat .label { font-size: 0.72em; opacity: 0.8; }
         .stat .value { font-size: 1.3em; font-weight: 800; }
+        .sound-btn {
+            min-width: 56px;
+            font-size: 1.4em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s;
+        }
+        .sound-btn:active { transform: scale(0.9); }
 
         /* 아이템 바 */
         .item-bar {
@@ -362,7 +372,7 @@
 
     <div class="wrap">
         <div class="title">🧪 소현이를 위한 물약 게임 💖</div>
-        <div class="subtitle">같은 색 물약끼리 병에 모아보세요!</div>
+        <div class="subtitle">🔥 고수 모드 — 같은 색 물약끼리 병에 모아보세요!</div>
 
         <div class="stats">
             <div class="stat">
@@ -373,6 +383,7 @@
                 <div class="label">이동</div>
                 <div class="value" id="moves">0</div>
             </div>
+            <button class="stat sound-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
         </div>
 
         <div class="item-bar">
@@ -391,7 +402,7 @@
             <button class="btn btn-restart" onclick="restart()">🔄 다시하기</button>
         </div>
 
-        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br>레벨 4부터는 <b>? 비밀 물약</b>이 나와요! 맨 위로 올라와야 색이 보여요 👀</div>
+        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br><b>? 비밀 물약</b>은 맨 위로 올라와야 색이 보여요 👀<br>레벨이 오를수록 비밀 병이 늘어나요 🔥</div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -430,8 +441,61 @@
             try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
         }
 
+        // ── 사운드 (Web Audio — 외부 파일 없이 직접 생성) ──
+        let audioCtx = null;
+        let soundOn = safeLoad('potionSound', true);
+        function actx() {
+            if (!audioCtx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                audioCtx = new AC();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+        function tone(freq, dur, opts) {
+            if (!soundOn) return;
+            const ac = actx(); if (!ac) return;
+            opts = opts || {};
+            const t0 = ac.currentTime + (opts.delay || 0);
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.type = opts.type || 'sine';
+            o.frequency.setValueAtTime(freq, t0);
+            if (opts.slideTo) o.frequency.exponentialRampToValueAtTime(opts.slideTo, t0 + dur);
+            const vol = opts.vol || 0.12;
+            g.gain.setValueAtTime(0, t0);
+            g.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+            o.connect(g); g.connect(ac.destination);
+            o.start(t0); o.stop(t0 + dur + 0.05);
+        }
+        const S = {
+            select() { tone(520, 0.1, { type: 'triangle', vol: 0.15 }); tone(780, 0.08, { delay: 0.05, type: 'triangle', vol: 0.1 }); },
+            deselect() { tone(420, 0.08, { type: 'triangle', vol: 0.1 }); },
+            pour() {  // 꼴꼴꼴 물 붓는 소리
+                tone(340, 0.12, { slideTo: 220, vol: 0.18 });
+                tone(300, 0.12, { delay: 0.12, slideTo: 200, vol: 0.16 });
+                tone(380, 0.14, { delay: 0.24, slideTo: 240, vol: 0.14 });
+            },
+            done() { tone(880, 0.15, { type: 'triangle', vol: 0.16 }); tone(1320, 0.28, { delay: 0.1, type: 'triangle', vol: 0.13 }); },
+            item() { tone(700, 0.09, { type: 'triangle' }); tone(950, 0.09, { delay: 0.07, type: 'triangle' }); tone(1250, 0.16, { delay: 0.14, type: 'triangle' }); },
+            undo() { tone(500, 0.1, { slideTo: 300, vol: 0.1 }); },
+            win() {
+                [523, 659, 784, 1047, 1319].forEach((f, i) =>
+                    tone(f, 0.28, { delay: i * 0.13, type: 'triangle', vol: 0.16 }));
+                tone(1568, 0.5, { delay: 0.65, type: 'triangle', vol: 0.14 });
+            }
+        };
+        function toggleSound() {
+            soundOn = !soundOn;
+            safeSave('potionSound', soundOn);
+            document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+            if (soundOn) S.select();
+        }
+
         let state = {
-            level: safeLoad('potionLevel2', 1),
+            level: safeLoad('potionLevel3', 1),
             items: safeLoad('potionItems', { tube: 1, rainbow: 1, eye: 1 }),
             tubes: [],
             hidden: [],        // 병마다 바닥부터 가려진 칸 수
@@ -443,13 +507,12 @@
             extraTubeUsed: false
         };
 
-        // ── 난이도: 색이 빨리 늘고, 레벨 4부터 비밀 물약 ──
+        // ── 고수 모드: 처음부터 어렵게! ──
         function numColorsFor(level) {
-            return Math.min(2 + level, 8);   // L1:3색 → L6부터 8색
+            return Math.min(5 + level, 8);   // L1:6색, L2:7색, L3부터 8색 풀난이도
         }
         function hiddenTubesFor(level, numColors) {
-            if (level < 4) return 0;
-            return Math.min(level - 3, numColors);  // 점점 많은 병이 비밀로
+            return Math.min(level, numColors);  // L1부터 비밀 물약! 레벨마다 1병씩 증가
         }
 
         function generateLevel(level) {
@@ -619,6 +682,7 @@
             state.extraTubeUsed = true;
             state.tubes.push([]);
             state.hidden.push(0);
+            S.item();
             safeSave('potionItems', state.items);
             render();
             const newEl = document.getElementById('tube-' + (state.tubes.length - 1));
@@ -636,6 +700,7 @@
             }
             if (state.items.rainbow <= 0) { toast('무지개 물약이 없어요 😢'); return; }
             state.rainbowActive = true;
+            S.item();
             renderItems();
             toast('🌈 다음 붓기는 아무 색이나 OK!');
         }
@@ -646,6 +711,7 @@
             if (!state.hidden.some(h => h > 0)) { toast('숨겨진 물약이 없어요 👀'); return; }
             state.items.eye--;
             state.hidden = state.hidden.map(() => 0);
+            S.item();
             safeSave('potionItems', state.items);
             render();
             toast('👁️ 모든 비밀 공개!');
@@ -658,11 +724,13 @@
             if (state.selected === null) {
                 if (state.tubes[idx].length === 0) return;
                 state.selected = idx;
+                S.select();
                 render();
                 return;
             }
             if (state.selected === idx) {
                 state.selected = null;
+                S.deselect();
                 render();
                 return;
             }
@@ -670,6 +738,7 @@
                 pour(state.selected, idx);
             } else {
                 state.selected = state.tubes[idx].length ? idx : null;
+                if (state.selected !== null) S.select(); else S.deselect();
                 render();
             }
         }
@@ -689,6 +758,7 @@
             const amount = Math.min(count, space);
             const usedRainbow = state.rainbowActive;
 
+            S.pour();
             const fromEl = document.getElementById('tube-' + from);
             const toEl = document.getElementById('tube-' + to);
             fromEl.classList.remove('selected');
@@ -739,6 +809,7 @@
                 state.busy = false;
                 render();
 
+                if (isTubeDone(dst)) S.done();   // 병 하나 완성! 🎵
                 if (isWin()) setTimeout(showWin, 350);
             }, 450);
         }
@@ -750,6 +821,7 @@
             state.hidden = prev.hidden;
             state.moves = prev.moves;
             state.selected = null;
+            S.undo();
             render();
         }
 
@@ -775,6 +847,7 @@
             document.getElementById('rewardText').textContent =
                 '🎁 보상: ' + reward.emoji + ' ' + reward.name + ' +1';
             document.getElementById('winOverlay').classList.add('show');
+            S.win();
             dropConfetti();
         }
 
@@ -795,7 +868,7 @@
         function nextLevel() {
             document.getElementById('winOverlay').classList.remove('show');
             state.level++;
-            safeSave('potionLevel2', state.level);
+            safeSave('potionLevel3', state.level);
             startLevel(state.level);
         }
 
@@ -827,6 +900,7 @@
             }
         })();
 
+        document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
         startLevel(state.level);
     </script>
 </body>
