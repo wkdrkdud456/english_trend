@@ -412,16 +412,24 @@ function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"f
         document.getElementById('gameWrap').appendChild(renderer.domElement);
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0d1130);
-        scene.fog = new THREE.Fog(0x141a3e, 26, 52);
-        const camera = new THREE.PerspectiveCamera(58, W / H, 0.1, 200);
-        const CAM = { x: 0, y: 6.8, z: 9 };
+        scene.fog = new THREE.Fog(0x141a3e, 30, 72);
+        const camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 220);
+        const CAM = { x: 0, y: 9.5, z: 13 };
+        // 📐 화면 비율에 맞춰 도로 전체(±7.4)가 항상 화면 안에 들어오도록 화각 자동 조절
+        function fitCamera() {
+            camera.aspect = W / H;
+            const dist = 16.5;                       // 카메라→부대 대략 거리
+            const halfTan = 7.6 / (dist * camera.aspect);
+            camera.fov = Math.max(45, Math.min(100, 2 * Math.atan(halfTan) * 180 / Math.PI));
+            camera.updateProjectionMatrix();
+        }
         camera.position.set(CAM.x, CAM.y, CAM.z);
         camera.lookAt(0, 0.4, -13);
+        fitCamera();
         window.addEventListener('resize', () => {
             W = window.innerWidth; H = window.innerHeight;
             renderer.setSize(W, H);
-            camera.aspect = W / H;
-            camera.updateProjectionMatrix();
+            fitCamera();
         });
 
         scene.add(new THREE.HemisphereLight(0x9aa7ff, 0x1c2436, 1.0));
