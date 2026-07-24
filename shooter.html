@@ -151,6 +151,25 @@
         .wc-name { font-size: 1.05em; font-weight: 800; color: #d6336c; }
         .wc-lv { font-size: 0.75em; color: #b3688a; font-weight: 700; }
         .wc-desc { font-size: 0.8em; color: #9b6b80; margin-top: 3px; }
+
+        /* 룰렛 숫자 */
+        .roulette-num {
+            font-size: 3.6em;
+            font-weight: 900;
+            color: #f857a6;
+            margin: 12px 0;
+            text-shadow: 0 3px 10px rgba(248, 87, 166, 0.35);
+            min-height: 1.2em;
+        }
+        .roulette-num.land {
+            animation: rouletteLand 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #d6336c;
+        }
+        @keyframes rouletteLand {
+            0% { transform: scale(0.6); }
+            60% { transform: scale(1.5); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -190,6 +209,15 @@
             <h2>무기 선택!</h2>
             <p>보스 보상 — 원하는 무기를 고르세요</p>
             <div id="wcOpts"></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="rouletteOverlay">
+        <div class="card" style="max-width: 300px;">
+            <div class="emoji">🎲</div>
+            <h2>운명의 룰렛!</h2>
+            <div class="roulette-num" id="rouletteNum">+?</div>
+            <p id="rouletteMsg">두구두구두구...</p>
         </div>
     </div>
 
@@ -664,7 +692,7 @@
                 () => { const a = Math.round(15 * m); return { t: '⚔️ 순수 화력', l: '무기 +' + a, s: '→ ' + nameAt(a) + ' 장착', f: () => gainW(a) }; },
                 () => { const a = Math.round(8 * m), u = Math.round(4 * m); return { t: '🛡️ 균형 성장', l: '무기 +' + a + ' & 토끼 +' + u, s: '→ ' + nameAt(a) + ' + 부대 보충', f: () => { gainW(a); gainU(u); } }; },
                 () => { const u = Math.round(9 * m); return { t: '🐰 부대 증원', l: '토끼 +' + u + ' & 무기 +3', s: '위기일 땐 머릿수가 최고!', f: () => { gainU(u); gainW(3); } }; },
-                () => { const max = Math.round(30 * m); return { t: '🎲 한방 도박', l: '무기 +3 ~ +' + max + ' 랜덤!', s: '대박이냐 쪽박이냐...', f: () => { const a = 3 + Math.floor(Math.random() * (max - 2)); gainW(a); setTimeout(() => addFloat(W / 2, H * 0.5, '🎲 무기 +' + a + '!!', '#ffd43b'), 100); } }; },
+                () => { const max = Math.round(30 * m); return { t: '🎲 한방 도박', l: '무기 +3 ~ +' + max + ' 랜덤!', s: '룰렛을 돌려라! 대박이냐 쪽박이냐', roulette: { min: 3, max } }; },
                 () => { return { t: '🔥 즉시 피버', l: '피버타임 발동 & 무기 +5', s: '6초간 연사 2배 + 점수 2배!', f: () => { g.feverT = 6; g.fever = 0; S.fever(); gainW(5); } }; },
                 () => { const sc = Math.round(1000 * m); return { t: '💰 대박 점수', l: '점수 +' + sc + ' & 무기 +5', s: '최고기록 노릴 때!', f: () => { g.score += sc; gainW(5); } }; },
             ];
@@ -695,6 +723,7 @@
         }
         function pickCard(card) {
             document.getElementById('weaponChoose').classList.remove('show');
+            if (card.roulette) { runRoulette(card.roulette.min, card.roulette.max); return; }
             g.paused = false;
             lastTime = performance.now();
             card.f();
@@ -702,6 +731,46 @@
             addFloat(W / 2, H * 0.45, '🎁 ' + card.t + ' 선택!', '#ffd43b');
             g.shake = 0.15;
             updateHud();
+        }
+
+        // 🎲 룰렛 연출! 빠르게 돌다가 점점 느려지며 멈춤
+        function runRoulette(min, max) {
+            const ov = document.getElementById('rouletteOverlay');
+            const numEl = document.getElementById('rouletteNum');
+            const msgEl = document.getElementById('rouletteMsg');
+            ov.classList.add('show');
+            numEl.classList.remove('land');
+            msgEl.textContent = '두구두구두구...';
+            const final = min + Math.floor(Math.random() * (max - min + 1));
+            let delay = 45;
+            function spin() {
+                let v = min + Math.floor(Math.random() * (max - min + 1));
+                if (v === final && delay < 300) v = (v === max ? min : v + 1);   // 미리 안 보여주기
+                numEl.textContent = '+' + v;
+                tone(500 + v * 14, 0.03, { type: 'square', vol: 0.05 });
+                delay *= 1.14;
+                if (delay < 420) {
+                    setTimeout(spin, delay);
+                } else {
+                    setTimeout(() => {
+                        numEl.textContent = '+' + final;
+                        numEl.classList.add('land');
+                        const big = final >= min + (max - min) * 0.66;
+                        msgEl.textContent = big ? '🎉 대박!!! 소현이 폼 미쳤다!!' : (final <= min + (max - min) * 0.25 ? '😅 쪽박... 다음 기회에' : '👍 나쁘지 않아!');
+                        if (big) S.fever(); else if (final <= min + (max - min) * 0.25) S.bad(); else S.good();
+                        setTimeout(() => {
+                            ov.classList.remove('show');
+                            gainW(final);
+                            g.paused = false;
+                            lastTime = performance.now();
+                            addFloat(W / 2, H * 0.45, '🎲 무기 +' + final + '!!', '#ffd43b');
+                            g.shake = 0.2;
+                            updateHud();
+                        }, 1400);
+                    }, delay);
+                }
+            }
+            spin();
         }
 
         function addFloat(x, y, txt, color) {
@@ -1391,7 +1460,18 @@
                 ctx.restore();
             });
 
-            if (front) drawWeaponShape(0, -sz * 0.72, sz, pattern, flash, t, hue);
+            if (front) {
+                // 팔로 무기를 꽉 잡기!
+                ctx.strokeStyle = '#e9edf5';
+                ctx.lineWidth = sz * 0.09;
+                ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.moveTo(-sz * 0.24, -sz * 0.08); ctx.lineTo(-sz * 0.07, -sz * 0.5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(sz * 0.24, -sz * 0.08); ctx.lineTo(sz * 0.07, -sz * 0.5); ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(-sz * 0.07, -sz * 0.5, sz * 0.06, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(sz * 0.07, -sz * 0.5, sz * 0.06, 0, Math.PI * 2); ctx.fill();
+                drawWeaponShape(0, -sz * 0.72, sz, pattern, flash, t, hue);
+            }
             ctx.restore();
         }
 
