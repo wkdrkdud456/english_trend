@@ -214,6 +214,9 @@
             cursor: pointer;
             transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
+        /* 병이 많을 땐 살짝 작게 */
+        .board.big .tube { width: 44px; height: 158px; }
+        .board.big { gap: 16px 9px; }
         .tube.selected { transform: translateY(-16px); }
         .tube.pouring { transform: translateY(-22px) rotate(-8deg); }
         .tube.receiving { transform: translateY(-4px); }
@@ -435,7 +438,7 @@
 
     <div class="wrap">
         <div class="title">🧪 소현이를 위한 물약 게임 💖</div>
-        <div class="subtitle">🔥 고수 모드 — 같은 색 물약끼리 병에 모아보세요!</div>
+        <div class="subtitle">🧠 두뇌 모드 — 같은 색 물약끼리 병에 모아보세요!</div>
 
         <div class="stats">
             <div class="stat stat-click" onclick="openLevelSelect()">
@@ -466,7 +469,7 @@
             <button class="btn btn-secret" onclick="openSecret()">💋 비밀 코드</button>
         </div>
 
-        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br><b>? 비밀 물약</b>은 맨 위로 올라와야 색이 보여요 👀<br>위의 <b>레벨 ▾</b>를 누르면 원하는 레벨을 골라 시작할 수 있어요 🎯</div>
+        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br>레벨이 오르면 색이 늘어나 병이 점점 많아져요 🧠<br>레벨 5부터 <b>? 비밀 물약</b>이 살짝 등장! (아래 2칸만)<br>위의 <b>레벨 ▾</b>를 누르면 원하는 레벨을 골라 시작할 수 있어요 🎯</div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -522,14 +525,18 @@
         const UNIT = 4;
         const SEG_H = 25;
         const COLORS = [
-            'linear-gradient(to bottom, #ff8a9b, #ff4d6d)',
-            'linear-gradient(to bottom, #ffc36b, #ff9231)',
-            'linear-gradient(to bottom, #ffe97a, #ffd60a)',
-            'linear-gradient(to bottom, #8ce99a, #40c057)',
-            'linear-gradient(to bottom, #66d9e8, #22b8cf)',
-            'linear-gradient(to bottom, #74a9ff, #3b6cff)',
-            'linear-gradient(to bottom, #c49bff, #9b5de5)',
-            'linear-gradient(to bottom, #ff9ede, #f15bb5)',
+            'linear-gradient(to bottom, #ff8a9b, #ff4d6d)',   // 빨강
+            'linear-gradient(to bottom, #ffc36b, #ff9231)',   // 주황
+            'linear-gradient(to bottom, #ffe97a, #ffd60a)',   // 노랑
+            'linear-gradient(to bottom, #8ce99a, #40c057)',   // 초록
+            'linear-gradient(to bottom, #66d9e8, #22b8cf)',   // 청록
+            'linear-gradient(to bottom, #74a9ff, #3b6cff)',   // 파랑
+            'linear-gradient(to bottom, #c49bff, #9b5de5)',   // 보라
+            'linear-gradient(to bottom, #ff9ede, #f15bb5)',   // 핑크
+            'linear-gradient(to bottom, #d8f5a2, #94d82d)',   // 라임
+            'linear-gradient(to bottom, #d9a679, #a26236)',   // 브라운
+            'linear-gradient(to bottom, #ffffff, #ced4da)',   // 화이트
+            'linear-gradient(to bottom, #c0ebff, #74c0fc)',   // 하늘
         ];
         const MYSTERY_BG = 'linear-gradient(to bottom, #6b7280, #374151)';
 
@@ -622,19 +629,54 @@
             secretUsed: false
         };
 
-        // ── 초고수 모드: 처음부터 최대한 어렵게! ──
+        // ── 두뇌파 모드: 병을 잔뜩 깔고 머리로 승부! ──
         function numColorsFor(level) {
-            return Math.min(6 + level, 8);   // L1:7색, L2부터 8색 풀난이도
+            return Math.min(8 + Math.floor((level - 1) / 2), 12);  // L1:8색(병10개!) → L9부터 12색(병14개)
         }
         function hiddenTubesFor(level, numColors) {
-            return Math.min(level + 1, numColors);  // L1부터 비밀 병 2개! 레벨마다 증가
+            if (level < 5) return 0;                       // 레벨 4까지는 전부 공개 (순수 전략)
+            return Math.min(Math.floor((level - 3) / 2), 2);  // L5부터 비밀 병 최대 2개만
+        }
+        const HIDDEN_DEPTH = 2;   // 비밀 병도 아래 2칸만 가림 (기존 3칸)
+
+        // 미니 솔버: 이 배치가 실제로 풀 수 있는지 전체 탐색으로 확인
+        function isSolvable(startTubes, maxStates) {
+            const kf = ts => ts.map(t => t.join(',')).sort().join('|');
+            const done = t => t.length === UNIT && t.every(c => c === t[0]);
+            const stack = [startTubes];
+            const seen = new Set([kf(startTubes)]);
+            let expanded = 0;
+            while (stack.length) {
+                if (++expanded > maxStates) return false;   // 탐색 한계 → 재생성
+                const cur = stack.pop();
+                if (cur.every(t => t.length === 0 || done(t))) return true;
+                for (let i = 0; i < cur.length; i++) {
+                    const src = cur[i];
+                    if (!src.length || done(src)) continue;
+                    const color = src[src.length - 1];
+                    let run = 0;
+                    for (let k = src.length - 1; k >= 0 && src[k] === color; k--) run++;
+                    for (let j = 0; j < cur.length; j++) {
+                        if (i === j) continue;
+                        const dst = cur[j];
+                        if (dst.length >= UNIT) continue;
+                        if (dst.length && dst[dst.length - 1] !== color) continue;
+                        if (!dst.length && run === src.length) continue;
+                        const amount = Math.min(run, UNIT - dst.length);
+                        const ns = cur.map(t => [...t]);
+                        for (let k = 0; k < amount; k++) { ns[i].pop(); ns[j].push(color); }
+                        const kk = kf(ns);
+                        if (!seen.has(kk)) { seen.add(kk); stack.push(ns); }
+                    }
+                }
+            }
+            return false;
         }
 
         function generateLevel(level) {
             const n = numColorsFor(level);
-            let tubes;
-            let tries = 0;
-            do {
+            let tubes = null;
+            for (let attempt = 0; attempt < 12; attempt++) {
                 const pool = [];
                 for (let c = 0; c < n; c++)
                     for (let k = 0; k < UNIT; k++) pool.push(c);
@@ -642,24 +684,37 @@
                     const j = Math.floor(Math.random() * (i + 1));
                     [pool[i], pool[j]] = [pool[j], pool[i]];
                 }
-                tubes = [];
+                const cand = [];
                 for (let t = 0; t < n; t++)
-                    tubes.push(pool.slice(t * UNIT, (t + 1) * UNIT));
-                tries++;
-            } while (tries < 30 && tubes.some(t => t.every(c => c === t[0])));
+                    cand.push(pool.slice(t * UNIT, (t + 1) * UNIT));
+                cand.push([]); cand.push([]);
 
-            // 비밀 물약: 무작위 병 몇 개는 맨 위 빼고 전부 ? 처리
+                if (cand.some(t => t.length && t.every(c => c === t[0]))) { continue; }  // 이미 완성된 병 금지
+                if (isSolvable(cand.map(t => [...t]), 150000)) { tubes = cand; break; }  // 풀리는 판만 채택!
+            }
+            if (!tubes) {  // 만일의 폴백 (사실상 발생 안 함)
+                const pool = [];
+                for (let c = 0; c < n; c++) for (let k = 0; k < UNIT; k++) pool.push(c);
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                tubes = [];
+                for (let t = 0; t < n; t++) tubes.push(pool.slice(t * UNIT, (t + 1) * UNIT));
+                tubes.push([]); tubes.push([]);
+            }
+
+            // 비밀 물약: 채워진 병 중 무작위로 골라 아래 2칸만 ? 처리
             const hidden = tubes.map(() => 0);
             const numHidden = hiddenTubesFor(level, n);
-            const order = tubes.map((_, i) => i);
+            const order = [];
+            for (let i = 0; i < n; i++) order.push(i);   // 빈 병은 제외
             for (let i = order.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [order[i], order[j]] = [order[j], order[i]];
             }
-            for (let k = 0; k < numHidden; k++) hidden[order[k]] = UNIT - 1;
+            for (let k = 0; k < numHidden; k++) hidden[order[k]] = HIDDEN_DEPTH;
 
-            tubes.push([]); tubes.push([]);
-            hidden.push(0); hidden.push(0);
             return { tubes, hidden };
         }
 
@@ -746,6 +801,7 @@
 
             const board = document.getElementById('board');
             board.innerHTML = '';
+            board.classList.toggle('big', state.tubes.length > 11);
 
             state.tubes.forEach((tube, idx) => {
                 const el = document.createElement('div');
