@@ -72,7 +72,7 @@
 <div class="hud">
     <div class="box"><div class="l">레벨</div><div class="v" id="lv">1</div></div>
     <div class="box"><div class="l">남은 나사</div><div class="v" id="left">0</div></div>
-    <div class="box btn-hud" onclick="doUndo()"><div class="l">되돌리기</div><div class="v" id="undoN">3</div></div>
+    <div class="box btn-hud" onclick="doUndo()"><div class="l">되돌리기</div><div class="v" id="undoN">2</div></div>
     <div class="box btn-hud" onclick="restart()"><div class="l">다시</div><div class="v">🔄</div></div>
     <div class="box btn-hud" onclick="toggleSound()"><div class="l">소리</div><div class="v" id="sndIcon">🔊</div></div>
 </div>
@@ -197,8 +197,9 @@ function boardRect() {
 
 function makeLevel(level) {
     const R = boardRect();
-    const plateCount = Math.min(4 + Math.floor(level * 0.8), 9);
-    const colorCount = Math.min(3 + Math.floor(level / 2), 8);
+    // 🔥 난이도 상향
+    const plateCount = Math.min(5 + Math.floor(level * 1.1), 13);
+    const colorCount = Math.min(3 + Math.floor(level / 1.4), 8);
 
     const plates = [];
     const screws = [];
@@ -212,12 +213,18 @@ function makeLevel(level) {
     let idx = 0;
     for (let r = 0; r < rows && idx < plateCount; r++) {
         for (let c = 0; c < cols && idx < plateCount; c++, idx++) {
-            const cx = R.x + cellW * (c + 0.5) + (Math.random() - 0.5) * cellW * 0.3;
-            const cy = R.y + thick * 0.7 + (R.h - thick * 1.4) * (rows === 1 ? 0.5 : r / (rows - 1))
-                       + (Math.random() - 0.5) * cellH * 0.22;
             const long = long0 * (0.82 + Math.random() * 0.24);
             // 홀수 판은 크게 기울여서 아래 판 위로 가로지르게
             const ang = (idx % 2 ? 1 : -1) * (0.35 + Math.random() * 0.75) * (Math.random() < 0.35 ? -1 : 1);
+            // 회전된 판의 실제 경계상자를 계산해서, 어떤 각도/길이여도
+            // 캔버스(R) 밖으로 튀어나가지 않도록 중심 좌표를 클램프한다.
+            const halfExX = Math.abs(Math.cos(ang)) * long / 2 + Math.abs(Math.sin(ang)) * thick / 2;
+            const halfExY = Math.abs(Math.sin(ang)) * long / 2 + Math.abs(Math.cos(ang)) * thick / 2;
+            const targetCx = R.x + cellW * (c + 0.5) + (Math.random() - 0.5) * cellW * 0.3;
+            const targetCy = R.y + thick * 0.7 + (R.h - thick * 1.4) * (rows === 1 ? 0.5 : r / (rows - 1))
+                       + (Math.random() - 0.5) * cellH * 0.22;
+            const cx = Math.min(R.x + R.w - halfExX - 4, Math.max(R.x + halfExX + 4, targetCx));
+            const cy = Math.min(R.y + R.h - halfExY - 4, Math.max(R.y + halfExY + 4, targetCy));
             plates.push({
                 cx, cy, w: long, h: thick, ang,
                 z: idx, screws: [], falling: 0, gone: false,
@@ -274,7 +281,7 @@ function newGame(level) {
         boxes: Array.from({ length: BOX_N }, () => ({ color: -1, items: [], clearT: 0 })),
         flying: [],
         parts: [],
-        undos: 3,
+        undos: 2,
         history: [],
         busy: false,
         over: false,
