@@ -12,6 +12,7 @@ on:
       - 'shooter.html'
       - 'shooter3d.html'
       - 'screw.html'
+      - 'screw3d.html'
       - 'android/**'
       - 'scripts/prepare_apk_assets.sh'
       - '.github/workflows/build-apk.yml'

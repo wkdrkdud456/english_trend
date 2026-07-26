@@ -11,6 +11,7 @@ cp "$ROOT/index.html"                  "$ASSETS/potion.html"  # 물약 퍼즐
 cp "$ROOT/shooter.html"                "$ASSETS/shooter.html"
 cp "$ROOT/shooter3d.html"              "$ASSETS/shooter3d.html"
 cp "$ROOT/screw.html"                  "$ASSETS/screw.html"
+cp "$ROOT/screw3d.html"                "$ASSETS/screw3d.html"
 
 echo "assets 준비 완료:"
 ls -la "$ASSETS"
