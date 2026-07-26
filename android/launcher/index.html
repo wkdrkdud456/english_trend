@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>소현이의 게임</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { width:100%; min-height:100%; }
+    body {
+        font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+        background:linear-gradient(165deg,#2b1055 0%,#4a2b8a 55%,#7597de 100%);
+        display:flex; flex-direction:column; align-items:center;
+        padding:34px 20px 40px;
+        user-select:none; -webkit-user-select:none;
+        overflow-x:hidden;
+    }
+    .stars { position:fixed; inset:0; pointer-events:none; }
+    .star { position:absolute; background:#fff; border-radius:50%; animation:tw 3s infinite ease-in-out; }
+    @keyframes tw { 0%,100%{opacity:.2; transform:scale(.8);} 50%{opacity:.9; transform:scale(1.2);} }
+
+    .wrap { position:relative; z-index:1; width:100%; max-width:440px; }
+    .title { text-align:center; font-size:1.9em; font-weight:900; color:#fff;
+             text-shadow:0 3px 14px rgba(255,105,180,.65); }
+    .sub { text-align:center; color:#ffd6e8; font-size:.92em; margin:6px 0 26px; font-weight:700; }
+
+    .card {
+        display:block; width:100%; text-decoration:none;
+        background:rgba(255,255,255,.13);
+        border:1px solid rgba(255,255,255,.28);
+        border-radius:22px; padding:20px 20px;
+        margin-bottom:16px;
+        backdrop-filter:blur(6px);
+        transition:transform .15s, box-shadow .2s;
+        display:flex; align-items:center; gap:16px;
+    }
+    .card:active { transform:scale(.96); }
+    .icon { font-size:2.6em; line-height:1; filter:drop-shadow(0 3px 6px rgba(0,0,0,.35)); }
+    .meta { flex:1; }
+    .name { font-size:1.18em; font-weight:800; color:#fff; margin-bottom:3px; }
+    .desc { font-size:.82em; color:rgba(255,255,255,.75); line-height:1.5; }
+    .go { color:#ffd6e8; font-size:1.4em; font-weight:800; }
+
+    .c1 { background:linear-gradient(135deg, rgba(116,192,252,.28), rgba(155,93,229,.28)); }
+    .c2 { background:linear-gradient(135deg, rgba(248,87,166,.28), rgba(255,88,88,.28)); }
+    .c3 { background:linear-gradient(135deg, rgba(105,219,124,.26), rgba(34,184,207,.28)); }
+
+    .footer { text-align:center; color:rgba(255,255,255,.6); font-size:.78em; margin-top:14px; line-height:1.7; }
+    .heart { color:#ff8fab; }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="wrap">
+    <div class="title">🐰 소현이의 게임</div>
+    <div class="sub">동훈이가 만든 게임 모음 <span class="heart">❤️</span></div>
+
+    <a class="card c1" href="potion.html">
+        <div class="icon">🧪</div>
+        <div class="meta">
+            <div class="name">물약 정리 퍼즐</div>
+            <div class="desc">같은 색 물약끼리 모으기 · 두뇌 모드<br>비밀 코드 💋 있음!</div>
+        </div>
+        <div class="go">▶</div>
+    </a>
+
+    <a class="card c2" href="shooter.html">
+        <div class="icon">🧟</div>
+        <div class="meta">
+            <div class="name">좀비 다리 대전</div>
+            <div class="desc">토끼 부대 슈팅 · 무기 100종<br>가볍고 빠름 (2D)</div>
+        </div>
+        <div class="go">▶</div>
+    </a>
+
+    <a class="card c3" href="shooter3d.html">
+        <div class="icon">🧊</div>
+        <div class="meta">
+            <div class="name">좀비 다리 대전 3D</div>
+            <div class="desc">진짜 3D 입체 그래픽<br>팔다리 움직이는 좀비!</div>
+        </div>
+        <div class="go">▶</div>
+    </a>
+
+    <a class="card c1" href="screw.html">
+        <div class="icon">🔩</div>
+        <div class="meta">
+            <div class="name">나사 풀기</div>
+            <div class="desc">판때기 속 나사를 색깔별로 상자에!<br>가려진 나사는 위 판부터 치우기</div>
+        </div>
+        <div class="go">▶</div>
+    </a>
+
+    <div class="footer">
+        게임 중 <b>뒤로가기</b>를 누르면 이 화면으로 돌아와요<br>
+        made by 동훈 for 소현 <span class="heart">💕</span>
+    </div>
+</div>
+<script>
+    const w = document.getElementById('stars');
+    for (let i = 0; i < 45; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        const sz = 1 + Math.random() * 2.4;
+        s.style.width = s.style.height = sz + 'px';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top = Math.random() * 100 + '%';
+        s.style.animationDelay = (Math.random() * 3) + 's';
+        w.appendChild(s);
+    }
+</script>
+</body>
+</html>
