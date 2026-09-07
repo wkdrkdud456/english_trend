@@ -69,14 +69,44 @@ SEED_KEYWORDS = {
         "영어 독해", "영어 문제집 추천", "파닉스",
     ],
     "학원/사교육": ["초등 영어학원", "중등 영어학원", "영어 과외", "영어 학원 추천"],
-    "트렌드/시즌": ["여름방학 특강", "영어 캠프", "AI 영어 학습", "원서 읽기", "문해력"],
+    "트렌드/학습": ["AI 영어 학습", "원서 읽기", "문해력", "영어 인강"],
 }
+
+# 시즌 키워드 (이번 달 + 다음 달만 자동으로 합쳐서 조회).
+# 고정 키워드만 쓰면 9월에도 "여름방학 특강" 같은 철 지난 키워드가 계속 후보로 올라옴.
+SEASONAL_KEYWORDS = {
+    1: ["겨울방학 특강", "예비 중1", "예비 고1", "새학기 준비"],
+    2: ["새학기 준비", "예비 중1", "반배치고사", "학원 상담"],
+    3: ["새학기 영어", "3월 모의고사", "학원 등록"],
+    4: ["중간고사", "1학기 중간고사", "수행평가"],
+    5: ["중간고사", "수행평가", "기말고사 준비"],
+    6: ["기말고사", "여름방학 특강", "1학기 기말고사"],
+    7: ["여름방학 특강", "여름방학 공부", "영어 캠프"],
+    8: ["2학기 준비", "개학", "여름방학 숙제"],
+    9: ["2학기 중간고사", "중간고사", "2학기 영어"],
+    10: ["중간고사", "기말고사 준비", "겨울방학 특강"],
+    11: ["기말고사", "2학기 기말고사", "겨울방학 특강"],
+    12: ["겨울방학 특강", "겨울방학 공부", "예비 중1", "새학기 준비"],
+}
+
 ANCHOR_KEYWORD = "영어학원"
 SPIKE_THRESHOLD = 1.5
 Z_THRESHOLD = 1.3
-MIN_VOLUME_INDEX = 0.05
+MIN_VOLUME_INDEX = 0.02  # 이 아래는 "원래 아무도 안 찾던 키워드" (노이즈 컷)
+RISE_CLAMP_MIN = 0.7     # 기회점수에 반영되는 상승세 하한
+RISE_CLAMP_MAX = 2.0     # 상한 (검색량 적은 키워드가 폭등률로 1등 하는 것 방지)
 RECENT_DAYS = 14  # 일 단위 조회 - 최근 14일 vs 이전 14일 구간들
 BATCH_SIZE = 4  # 앵커 1 + 씨앗 4 = 5그룹 (데이터랩 호출당 최대치)
+
+
+def seasonal_keywords_for(today):
+    """이번 달 + 다음 달 시즌 키워드 (학부모는 보통 한 달쯤 앞서 검색함)"""
+    next_month = today.month % 12 + 1
+    merged = []
+    for kw in SEASONAL_KEYWORDS.get(today.month, []) + SEASONAL_KEYWORDS.get(next_month, []):
+        if kw not in merged:
+            merged.append(kw)
+    return merged
 
 
 def _calc_spike(ratio_data):
@@ -124,6 +154,11 @@ def run_trend_scan(progress_callback=None):
     start = end - timedelta(days=90)
 
     flat = [(cat, kw) for cat, kws in SEED_KEYWORDS.items() for kw in kws]
+    seen = {kw for _, kw in flat}
+    for kw in seasonal_keywords_for(end):
+        if kw not in seen:
+            flat.append(("시즌", kw))
+            seen.add(kw)
     results = []
 
     total_batches = (len(flat) + BATCH_SIZE - 1) // BATCH_SIZE
@@ -146,14 +181,19 @@ def run_trend_scan(progress_callback=None):
         if not group_results:
             continue
 
+        # 앵커도 "최근 14일 평균"으로 비교 (키워드와 같은 기준이어야 비율이 정확함)
         anchor_ratios = [d["ratio"] for d in group_results[0].get("data", [])]
-        anchor_avg = sum(anchor_ratios) / len(anchor_ratios) if anchor_ratios else 0.0
+        anchor_recent = anchor_ratios[-RECENT_DAYS:] if anchor_ratios else []
+        anchor_avg = sum(anchor_recent) / len(anchor_recent) if anchor_recent else 0.0
 
         for j, gr in enumerate(group_results[1:]):
             category, keyword = batch[j]
             stats = _calc_spike(gr.get("data", []))
             volume_index = round(stats["recent_avg"] / anchor_avg, 3) if anchor_avg > 0 else 0.0
             rising = stats["score"] >= SPIKE_THRESHOLD or stats["z_score"] >= Z_THRESHOLD
+
+            # 기회 점수 = 검색량 x 상승세(0.7~2.0배로 제한)
+            rise = min(max(stats["score"], RISE_CLAMP_MIN), RISE_CLAMP_MAX)
             results.append(
                 {
                     "category": category,
@@ -161,12 +201,13 @@ def run_trend_scan(progress_callback=None):
                     "spike_score": stats["score"],
                     "z_score": stats["z_score"],
                     "volume_index": volume_index,
+                    "opportunity": round(volume_index * rise, 4),
                     "is_spike": rising and volume_index >= MIN_VOLUME_INDEX,
                 }
             )
 
-    # 급상승 먼저, 그 다음 검색량 순 ("진짜 많이 검색하는 키워드" 우선)
-    results.sort(key=lambda r: (r["is_spike"], r["volume_index"]), reverse=True)
+    # 기회 점수(검색량 x 상승세) 높은 순
+    results.sort(key=lambda r: r["opportunity"], reverse=True)
     return results
 
 

@@ -144,9 +144,10 @@ with tab_scan:
                     "급상승": "🔥" if r["is_spike"] else "",
                     "카테고리": r["category"],
                     "키워드": r["keyword"],
+                    "기회점수": r.get("opportunity", 0),
+                    "검색량(%)": round(r["volume_index"] * 100, 1),
                     "상승배율": r["spike_score"],
                     "z-score": r["z_score"],
-                    "검색량지수": r["volume_index"],
                 }
                 for r in results
             ],
@@ -158,7 +159,8 @@ with tab_scan:
             "제작할 키워드 선택",
             [r["keyword"] for r in candidates],
             format_func=lambda kw: next(
-                ("🔥 " if r["is_spike"] else "") + f"{kw}  (배율 {r['spike_score']}, 검색량 {r['volume_index']})"
+                ("🔥 " if r["is_spike"] else "")
+                + f"{kw}  (검색량 {round(r['volume_index'] * 100, 1)}%, 추세 {r['spike_score']}배)"
                 for r in candidates
                 if r["keyword"] == kw
             ),
