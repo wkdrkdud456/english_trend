@@ -37,7 +37,7 @@
     }
 
     .toast {
-        position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(16px);
+        position:fixed; bottom:88px; left:50%; transform:translateX(-50%) translateY(16px);
         background:rgba(20,10,50,.92); color:#ffd6e8; padding:11px 22px; border-radius:18px;
         font-size:.92em; font-weight:700; opacity:0; transition:opacity .25s, transform .25s;
         pointer-events:none; z-index:60; white-space:nowrap;
@@ -71,6 +71,39 @@
     .btn.grey { background:linear-gradient(135deg,#a18cd1,#fbc2eb); color:#4a2c6b; }
     .rule { background:rgba(248,87,166,.09); border-radius:13px; padding:12px 14px;
             text-align:left; font-size:.85em; color:#85566b; line-height:1.7; margin:12px 0 4px; }
+
+    /* 오른쪽 세로 아이템 바 */
+    .actions {
+        position:fixed; left:50%; bottom:16px; transform:translateX(-50%);
+        display:flex; flex-direction:row; gap:12px; z-index:12;
+    }
+    .act {
+        width:52px; height:52px; border-radius:17px; cursor:pointer;
+        background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.32);
+        color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        backdrop-filter:blur(5px); transition:transform .12s, opacity .2s;
+    }
+    .act:active { transform:scale(.9); }
+    .act .i { font-size:1.3em; line-height:1; }
+    .act .n { font-size:.6em; font-weight:800; opacity:.92; margin-top:2px; }
+    .act.off { opacity:.32; }
+
+    /* 콤보 연출 */
+    .combo {
+        position:fixed; top:36%; left:50%; z-index:40; opacity:0; pointer-events:none;
+        font-size:2.1em; font-weight:900; color:#ffd43b; white-space:nowrap;
+        text-shadow:0 3px 12px rgba(0,0,0,.75), 0 0 24px rgba(255,212,59,.85);
+        transform:translate(-50%,-50%) scale(.5);
+    }
+    .combo.pop { animation:comboPop .85s cubic-bezier(.2,1.4,.5,1) forwards; }
+    @keyframes comboPop {
+        0%   { opacity:0; transform:translate(-50%,-50%) scale(.4) rotate(-9deg); }
+        22%  { opacity:1; transform:translate(-50%,-50%) scale(1.18) rotate(4deg); }
+        62%  { opacity:1; transform:translate(-50%,-52%) scale(1) rotate(0deg); }
+        100% { opacity:0; transform:translate(-50%,-64%) scale(.92); }
+    }
+    .starline { font-size:2.1em; letter-spacing:5px; margin:2px 0 6px; }
+    .scoreline { color:#d6336c; font-weight:900; font-size:1.15em; margin-bottom:4px; }
 </style>
 </head>
 <body>
@@ -79,12 +112,19 @@
 <div class="hud">
     <div class="box"><div class="l">레벨</div><div class="v" id="lv">1</div></div>
     <div class="box"><div class="l">남은 나사</div><div class="v" id="left">0</div></div>
-    <div class="box btn-hud" onclick="doUndo()"><div class="l">되돌리기</div><div class="v" id="undoN">2</div></div>
+    <div class="box"><div class="l">점수</div><div class="v" id="score">0</div></div>
     <div class="box btn-hud" onclick="restart()"><div class="l">다시</div><div class="v">🔄</div></div>
     <div class="box btn-hud" onclick="toggleSound()"><div class="l">소리</div><div class="v" id="sndIcon">🔊</div></div>
 </div>
 <div class="hint" id="shapeHint">🌀 손가락으로 돌려보세요</div>
 
+<div class="actions">
+    <div class="act" id="actUndo" onclick="doUndo()"><div class="i">↩️</div><div class="n" id="undoN">2</div></div>
+    <div class="act" id="actMag" onclick="useMagnet()"><div class="i">🧲</div><div class="n" id="magN">1</div></div>
+    <div class="act" id="actSlot" onclick="useSlot()"><div class="i">➕</div><div class="n" id="slotN">1</div></div>
+</div>
+
+<div class="combo" id="comboUi"></div>
 <div class="toast" id="toast"></div>
 
 <div class="overlay show" id="startOv">
@@ -92,12 +132,17 @@
         <div class="em">🔩🌀</div>
         <h2>소현이의 나사 뽑기 3D</h2>
         <p>by 동훈 ❤️ — 입체를 돌려서 찾아라!</p>
+        <p id="bestLine" style="color:#d6336c;font-weight:800"></p>
         <div class="rule">
             🌀 <b>드래그해서 입체를 돌리며</b> 나사를 찾으세요<br>
             🔩 보이는 나사를 <b>탭</b>하면 상자로 쏙!<br>
             📦 같은 색 <b>3개</b>를 모으면 상자가 비워져요<br>
-            🧊 구·큐브·원기둥·원뿔·도넛... 매 레벨 모양이 바뀌어요<br>
-            💀 상자 4칸이 막히면 게임 오버! (색을 잘 기억해두세요😈)
+            🔥 <b>2.5초 안에 연속</b>으로 뽑으면 콤보 점수 폭발!<br>
+            ✨ <b>황금 나사</b>를 뽑으면 랜덤 보너스 아이템!<br>
+            🧲 자석은 안 보이는 나사도 뽑고, ➕는 상자를 하나 늘려요<br>
+            ⭐ 빠르고 아이템 없이 깨면 <b>별 3개</b>!<br>
+            💎 유리구슬·나무상자·드럼통·캔디콘·다이아... 매 레벨 모양이 바뀌어요<br>
+            💀 상자가 다 막히면 게임 오버! (색을 잘 기억해두세요😈)
         </div>
         <button class="btn" onclick="startGame()">🎮 시작!</button>
     </div>
@@ -107,6 +152,8 @@
     <div class="card">
         <div class="em">🎉🔩</div>
         <h2>레벨 클리어!</h2>
+        <div class="starline" id="clearStars">⭐⭐⭐</div>
+        <div class="scoreline" id="clearScore">0점</div>
         <p id="clearMsg">소현이 최고! 💕</p>
         <button class="btn" onclick="nextLevel()">다음 레벨 ➡️</button>
     </div>
@@ -166,7 +213,13 @@ const S = {
     blocked() { tone(200, 0.12, { type: 'square', vol: 0.06 }); },
     undo()    { tone(500, 0.1, { slideTo: 300, vol: 0.09 }); },
     win()     { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { delay: i * 0.1, type: 'triangle', vol: 0.15 })); },
-    over()    { [392, 330, 262].forEach((f, i) => tone(f, 0.32, { delay: i * 0.28, type: 'triangle', vol: 0.14 })); }
+    over()    { [392, 330, 262].forEach((f, i) => tone(f, 0.32, { delay: i * 0.28, type: 'triangle', vol: 0.14 })); },
+    // 콤보가 쌓일수록 음이 높아진다 — 손맛의 핵심
+    combo(n)  { const base = 520 * Math.pow(1.09, Math.min(n, 14)); tone(base, 0.1, { type:'square', vol:0.07 }); tone(base*1.5, 0.13, { delay:0.05, type:'triangle', vol:0.09 }); },
+    golden()  { [784, 988, 1319, 1568].forEach((f, i) => tone(f, 0.18, { delay: i*0.06, type:'triangle', vol:0.13 })); },
+    magnet()  { tone(240, 0.28, { slideTo: 900, type:'sawtooth', vol:0.07 }); },
+    slot()    { tone(330, 0.16, { slideTo: 660, type:'triangle', vol:0.11 }); },
+    star(i)   { tone(660 * Math.pow(1.26, i), 0.3, { delay: i*0.22, type:'triangle', vol:0.16 }); }
 };
 function toggleSound() {
     soundOn = !soundOn; sSave('screwSpin3dSound', soundOn);
@@ -180,6 +233,9 @@ let W = window.innerWidth, H = window.innerHeight;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.getElementById('gameWrap').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -190,27 +246,54 @@ const camera = new THREE.PerspectiveCamera(48, W / H, 0.1, 60);
 // 회전 오브젝트의 바운딩 반경은 항상 고정(BOUND_R)이므로, 카메라 거리 고정 + FOV만 화면비로 미세조정
 const CAM_DIST = 8.4;
 const BOUND_R = 2.55;     // 입체+나사가 어떤 각도로 돌아가도 넘지 않는 반경
+const TARGET_R = 2.5;    // 모든 도형을 이 반경에 맞춰 확대 — 화면을 고르게 채운다
 function fitCamera() {
     camera.aspect = W / H;
     const halfTan = BOUND_R * 1.18 / (CAM_DIST * camera.aspect);
     camera.fov = Math.max(38, Math.min(78, 2 * Math.atan(halfTan) * 180 / Math.PI));
-    camera.position.set(0, 1.05, CAM_DIST);
-    camera.lookAt(0, 0.55, 0);
+    camera.position.set(0, 0.9, CAM_DIST);
+    camera.lookAt(0, 0.35, 0);
     camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', () => { W = innerWidth; H = innerHeight; renderer.setSize(W, H); fitCamera(); });
 fitCamera();
 
-scene.add(new THREE.HemisphereLight(0xaebbff, 0x1c1436, 1.1));
-const sun = new THREE.DirectionalLight(0xfff3d8, 1.0);
+scene.add(new THREE.HemisphereLight(0xaebbff, 0x1c1436, 0.95));
+const sun = new THREE.DirectionalLight(0xfff6e0, 1.35);
 sun.position.set(4, 8, 5);
 scene.add(sun);
-const rim = new THREE.PointLight(0xff6bb0, 0.55, 16);
+const rim = new THREE.PointLight(0xff6bb0, 0.6, 16);
 rim.position.set(-3, 2, -2);
 scene.add(rim);
-const fill = new THREE.PointLight(0x6bb0ff, 0.35, 16);
+const fill = new THREE.PointLight(0x6bb0ff, 0.4, 16);
 fill.position.set(3, -1, 3);
 scene.add(fill);
+// 카메라 뒤쪽 백라이트 — 금속/보석 재질 하이라이트를 또렷하게
+const backlight = new THREE.PointLight(0xffffff, 0.5, 20);
+backlight.position.set(0, 4, 9);
+scene.add(backlight);
+// 금속/유리 재질은 반사할 게 없으면 새까맣게 보인다.
+// 작은 그라데이션 하늘을 만들어 환경맵으로 넣어주면 드럼통·보석이 제대로 빛난다.
+try {
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 128;
+    const c2 = cv.getContext('2d');
+    const g2 = c2.createLinearGradient(0, 0, 0, 128);
+    g2.addColorStop(0, '#eef3ff'); g2.addColorStop(0.42, '#9d90e0');
+    g2.addColorStop(0.58, '#4a3a80'); g2.addColorStop(1, '#150c30');
+    c2.fillStyle = g2; c2.fillRect(0, 0, 256, 128);
+    c2.fillStyle = 'rgba(255,255,255,.95)';
+    c2.beginPath(); c2.ellipse(66, 28, 28, 15, 0, 0, 7); c2.fill();
+    c2.fillStyle = 'rgba(255,160,215,.75)';
+    c2.beginPath(); c2.ellipse(192, 42, 22, 12, 0, 0, 7); c2.fill();
+    c2.fillStyle = 'rgba(150,220,255,.6)';
+    c2.beginPath(); c2.ellipse(128, 96, 34, 14, 0, 0, 7); c2.fill();
+    const envTex = new THREE.CanvasTexture(cv);
+    envTex.mapping = THREE.EquirectangularReflectionMapping;
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromEquirectangular(envTex).texture;
+    pmrem.dispose(); envTex.dispose();
+} catch (e) { /* 환경맵을 못 만들어도 게임은 그대로 동작한다 */ }
+
 {
     const starGeo = new THREE.BufferGeometry();
     const pos = [];
@@ -227,33 +310,121 @@ const COLORS = [
     { n:'주황', c:0xffa94d, d:0xe8590c }, { n:'민트', c:0x63e6be, d:0x0ca678 },
 ];
 const BOX_N = 4, BOX_CAP = 3;
-const PIN_LEN = 0.34;      // 나사가 표면 위로 튀어나온 길이
-const PIN_R = 0.145;
+// 나사 치수 — 표면에 딱 붙는 회색 워셔가 "여기가 표면" 기준선을 만들고,
+// 그 위로 확실히 굵은 색깔 머리가 튀어나와서 위/아래가 한눈에 구분된다.
+const WASHER_R = 0.155, WASHER_H = 0.05;
+const HEAD_R = 0.205, HEAD_H = 0.16;
+const PIN_LEN = 0.34;   // (기존 좌표 계산 호환용)
 
 const screwMatCache = {};
 function screwMat(ci) {
-    if (!screwMatCache[ci]) screwMatCache[ci] = new THREE.MeshStandardMaterial({ color: COLORS[ci].c, metalness:0.35, roughness:0.35 });
+    if (!screwMatCache[ci]) screwMatCache[ci] = new THREE.MeshStandardMaterial({ color: COLORS[ci].c, metalness:0.55, roughness:0.28 });
     return screwMatCache[ci];
 }
-const HEAD_GEO = new THREE.CylinderGeometry(PIN_R, PIN_R, 0.1, 14);
-const SHAFT_GEO = new THREE.CylinderGeometry(PIN_R*0.55, PIN_R*0.55, PIN_LEN, 10);
-function buildScrewMesh(colorIdx) {
+let _washerMat = null;
+function washerMat() {
+    if (!_washerMat) _washerMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, metalness:0.8, roughness:0.3 });
+    return _washerMat;
+}
+const WASHER_GEO = new THREE.CylinderGeometry(WASHER_R, WASHER_R, WASHER_H, 16);
+const HEAD_GEO = new THREE.CylinderGeometry(HEAD_R, HEAD_R, HEAD_H, 18);
+const BEVEL_GEO = new THREE.TorusGeometry(HEAD_R*0.93, HEAD_R*0.1, 8, 18);
+const SLOT_GEO_A = new THREE.BoxGeometry(HEAD_R*1.3, 0.028, HEAD_R*0.34);
+
+// 표면에 드리우는 부드러운 그림자 데칼 — 있고 없고에 따라
+// "떠있는 스티커"처럼 보이는지 "박혀있는 나사"처럼 보이는지가 갈린다
+let _shadowTex = null;
+function shadowTexture() {
+    if (_shadowTex) return _shadowTex;
+    const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+    const c2 = cv.getContext('2d');
+    const g2 = c2.createRadialGradient(32, 32, 3, 32, 32, 31);
+    g2.addColorStop(0, 'rgba(0,0,0,0.55)');
+    g2.addColorStop(0.7, 'rgba(0,0,0,0.22)');
+    g2.addColorStop(1, 'rgba(0,0,0,0)');
+    c2.fillStyle = g2; c2.fillRect(0, 0, 64, 64);
+    _shadowTex = new THREE.CanvasTexture(cv);
+    return _shadowTex;
+}
+let _shadowMat = null;
+function shadowMat() {
+    if (!_shadowMat) _shadowMat = new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent:true, depthWrite:false });
+    return _shadowMat;
+}
+const SHADOW_GEO = new THREE.CircleGeometry(0.27, 16);
+let _goldMat = null;
+function goldMat() {
+    if (!_goldMat) _goldMat = new THREE.MeshStandardMaterial({ color: 0xffd43b, metalness:0.95, roughness:0.15, emissive:0x4a3800, emissiveIntensity:0.5 });
+    return _goldMat;
+}
+
+const GOLD_RING_GEO = new THREE.TorusGeometry(HEAD_R*1.22, 0.032, 8, 20);
+function buildScrewMesh(colorIdx, golden) {
     const g = new THREE.Group();
-    const shaft = new THREE.Mesh(SHAFT_GEO, screwMat(colorIdx));
-    shaft.position.y = -PIN_LEN/2 + 0.05;
-    g.add(shaft);
-    const head = new THREE.Mesh(HEAD_GEO, screwMat(colorIdx));
-    head.position.y = 0.05;
+    // 황금 나사도 머리 색은 그대로 둔다 — 색을 못 알아보면 퍼즐이 불공정해지니까
+    // 대신 밑동에 금테를 둘러서 "특별한 나사"라는 걸 한눈에 알 수 있게 했다
+    const mat = screwMat(colorIdx);
+
+    const shadow = new THREE.Mesh(SHADOW_GEO, shadowMat());
+    shadow.name = 'shadowDecal';
+    shadow.rotation.x = -Math.PI/2;
+    shadow.position.y = 0.004;
+    g.add(shadow);
+
+    if (golden) {
+        const ring = new THREE.Mesh(GOLD_RING_GEO, goldMat());
+        ring.rotation.x = Math.PI/2;
+        ring.position.y = 0.035;
+        g.add(ring);
+    }
+
+    const washer = new THREE.Mesh(WASHER_GEO, golden ? goldMat() : washerMat());
+    washer.position.y = WASHER_H/2 + 0.012;
+    g.add(washer);
+
+    const headY = WASHER_H + 0.012 + HEAD_H/2;
+    const head = new THREE.Mesh(HEAD_GEO, mat);
+    head.position.y = headY;
     g.add(head);
-    const slotMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-    const s1 = new THREE.Mesh(new THREE.BoxGeometry(PIN_R*1.35, 0.042, PIN_R*0.32), slotMat);
-    s1.position.y = 0.101;
+
+    const bevel = new THREE.Mesh(BEVEL_GEO, mat);
+    bevel.rotation.x = Math.PI/2;
+    bevel.position.y = headY + HEAD_H/2 - HEAD_R*0.06;
+    g.add(bevel);
+
+    const slotMat = new THREE.MeshBasicMaterial({ color: 0x14141a });
+    const slotY = headY + HEAD_H/2 + 0.002;
+    const s1 = new THREE.Mesh(SLOT_GEO_A, slotMat);
+    s1.position.y = slotY;
     const s2 = s1.clone(); s2.rotation.y = Math.PI/2;
     g.add(s1, s2);
     return g;
 }
 
 // ───────── 도형별 표면 점 분포 (여러가지 모양!) ─────────
+// 생성기를 그냥 쓰면 나사가 한쪽에 뭉쳐서 머리끼리 겹친다.
+// 후보를 넉넉히 뽑은 뒤 "이미 고른 점들에서 가장 먼 후보"를 반복해서 고르면
+// (farthest-point sampling) 어떤 도형이든 고르게 퍼진다.
+function spreadPoints(gen, n) {
+    const cand = gen(Math.max(n * 5, 40));
+    if (cand.length <= n) return cand;
+    const d2 = (a, b) => {
+        const dx=a.pos[0]-b.pos[0], dy=a.pos[1]-b.pos[1], dz=a.pos[2]-b.pos[2];
+        return dx*dx + dy*dy + dz*dz;
+    };
+    const first = Math.floor(Math.random() * cand.length);
+    const chosen = [cand[first]];
+    const taken = new Uint8Array(cand.length); taken[first] = 1;
+    const mind = cand.map(c => d2(c, cand[first]));
+    while (chosen.length < n) {
+        let bi = -1, bd = -1;
+        for (let i = 0; i < cand.length; i++) if (!taken[i] && mind[i] > bd) { bd = mind[i]; bi = i; }
+        if (bi < 0) break;
+        taken[bi] = 1; chosen.push(cand[bi]);
+        for (let i = 0; i < cand.length; i++) { const v = d2(cand[i], cand[bi]); if (v < mind[i]) mind[i] = v; }
+    }
+    return chosen;
+}
 function fibonacciSphere(n) {
     const pts = [];
     const golden = Math.PI * (3 - Math.sqrt(5));
@@ -287,8 +458,8 @@ function cubePoints(n) {
 function cylinderPoints(n) {
     const pts = [];
     for (let i = 0; i < n; i++) {
-        const theta = (i / n) * Math.PI * 2 + (Math.floor(i / 9) * 0.35);
-        const y = -0.82 + (Math.random()) * 1.64;
+        const theta = i * 2.39996;              // 황금각 — 옆면을 균일하게 감는다
+        const y = -0.82 + ((i + 0.5) / n) * 1.64;
         const x = Math.cos(theta), z = Math.sin(theta);
         pts.push({ pos:[x, y, z], nrm:[x, 0, z] });
     }
@@ -297,8 +468,9 @@ function cylinderPoints(n) {
 function conePoints(n) {
     const pts = [];
     for (let i = 0; i < n; i++) {
-        const theta = (i / n) * Math.PI * 2 + (Math.floor(i / 8) * 0.4);
-        const t = 0.12 + Math.random() * 0.8;   // 0=꼭짓점쪽, 1=밑면쪽
+        const theta = i * 2.39996;
+        // 원뿔은 밑으로 갈수록 둘레가 길어지니 sqrt로 뽑아야 면적당 밀도가 같다
+        const t = 0.16 + Math.sqrt((i + 0.5) / n) * 0.78;   // 0=꼭짓점쪽, 1=밑면쪽
         const y = 1 - t*2;
         const rad = t;
         const x = Math.cos(theta)*rad, z = Math.sin(theta)*rad;
@@ -321,28 +493,183 @@ function octahedronPoints(n) {
         const sgn = signs[i % signs.length];
         let a = Math.random(), b = Math.random(), c = Math.random();
         const sum = a + b + c; a /= sum; b /= sum; c /= sum;
-        const pull = 0.3;   // 모서리/꼭짓점 근처에 몰리지 않도록 중심 쪽으로 살짝 당김
+        const pull = 0.52;  // 모서리/꼭짓점 근처에 몰리지 않도록 중심 쪽으로 당김
+                            // (너무 작으면 나사 머리가 실루엣 밖으로 삐져나온다)
         a = a*(1-pull) + pull/3; b = b*(1-pull) + pull/3; c = c*(1-pull) + pull/3;
         pts.push({ pos:[a*sgn[0], b*sgn[1], c*sgn[2]], nrm:[sgn[0]/nlen, sgn[1]/nlen, sgn[2]/nlen] });
     }
     return pts;
 }
+// ───────── 도형 재질 (그리기용 캔버스 텍스처를 즉석에서 생성) ─────────
+function makeTex(draw, n, repX, repY) {
+    n = n || 128;
+    const cv = document.createElement('canvas'); cv.width = cv.height = n;
+    draw(cv.getContext('2d'), n);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(repX || 1, repY || 1);
+    if ('colorSpace' in t) t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+}
+const texCache = {};
+function tex(key, draw, n, rx, ry) {
+    if (!texCache[key]) texCache[key] = makeTex(draw, n, rx, ry);
+    return texCache[key];
+}
+// 나무 결
+function woodTex() {
+    return tex('wood', (c, n) => {
+        c.fillStyle = '#b3854f'; c.fillRect(0, 0, n, n);
+        for (let i = 0; i < 90; i++) {
+            const y = Math.random() * n;
+            c.strokeStyle = 'rgba(110,72,36,' + (0.06 + Math.random() * 0.16) + ')';
+            c.lineWidth = 0.6 + Math.random() * 2.1;
+            c.beginPath();
+            for (let x = 0; x <= n; x += 8) c.lineTo(x, y + Math.sin(x * 0.06 + i) * 2.6);
+            c.stroke();
+        }
+        // 판자 이음새
+        c.strokeStyle = 'rgba(74,46,20,.55)'; c.lineWidth = 3;
+        for (let k = 1; k < 4; k++) { c.beginPath(); c.moveTo(0, k * n / 4); c.lineTo(n, k * n / 4); c.stroke(); }
+    }, 128, 1, 1);
+}
+// 금속 드럼통 (가로 밴드 + 세로 하이라이트)
+function metalTex() {
+    return tex('metal', (c, n) => {
+        const g = c.createLinearGradient(0, 0, n, 0);
+        g.addColorStop(0, '#5d6470'); g.addColorStop(0.32, '#aeb7c4');
+        g.addColorStop(0.5, '#e6ecf5'); g.addColorStop(0.72, '#98a2b0'); g.addColorStop(1, '#5d6470');
+        c.fillStyle = g; c.fillRect(0, 0, n, n);
+        [0.2, 0.5, 0.8].forEach(p => {
+            c.fillStyle = 'rgba(40,48,60,.55)'; c.fillRect(0, n * p - n * 0.035, n, n * 0.07);
+            c.fillStyle = 'rgba(255,255,255,.28)'; c.fillRect(0, n * p - n * 0.045, n, n * 0.012);
+        });
+        for (let i = 0; i < 40; i++) {
+            c.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.1) + ')';
+            c.fillRect(Math.random() * n, Math.random() * n, 3, 3);
+        }
+    }, 128, 1, 1);
+}
+// 캔디 사선 줄무늬 — 띠 폭보다 간격이 커야 바탕색이 보인다(폭 n/4, 간격 n/2)
+function candyTex() {
+    return tex('candy', (c, n) => {
+        c.fillStyle = '#ff5f8d'; c.fillRect(0, 0, n, n);
+        const band = n / 4, step = band * 2;
+        c.fillStyle = '#fff3f8';
+        for (let x = -n; x < n * 2; x += step) {
+            c.beginPath();
+            c.moveTo(x, 0); c.lineTo(x + band, 0); c.lineTo(x + band + n, n); c.lineTo(x + n, n);
+            c.closePath(); c.fill();
+        }
+        c.fillStyle = 'rgba(255,255,255,.16)'; c.fillRect(0, 0, n, n * 0.12);
+    }, 128, 3, 1);
+}
+// 유리구슬 속 소용돌이
+function marbleTex() {
+    return tex('marble', (c, n) => {
+        const g = c.createRadialGradient(n * 0.35, n * 0.3, 4, n * 0.5, n * 0.5, n * 0.72);
+        g.addColorStop(0, '#eafcff'); g.addColorStop(0.45, '#7ad7f0'); g.addColorStop(1, '#2f6ecb');
+        c.fillStyle = g; c.fillRect(0, 0, n, n);
+        c.lineWidth = 7; c.lineCap = 'round';
+        ['rgba(255,255,255,.75)', 'rgba(255,143,199,.7)', 'rgba(177,151,252,.7)'].forEach((col, k) => {
+            c.strokeStyle = col;
+            c.beginPath();
+            for (let a = 0; a < Math.PI * 4; a += 0.15) {
+                const r = 6 + a * (n / 26);
+                c.lineTo(n / 2 + Math.cos(a + k * 2.1) * r, n / 2 + Math.sin(a + k * 2.1) * r * 0.72);
+            }
+            c.stroke();
+        });
+    }, 128, 1, 1);
+}
+
 const SHAPES = [
-    { name:'구슬',      icon:'⚪', build: buildCoreSphere,     points: fibonacciSphere,  scale: 1.35 },
-    { name:'큐브',      icon:'🧊', build: buildCoreCube,       points: cubePoints,       scale: 1.55 },
-    { name:'원기둥',    icon:'🥫', build: buildCoreCylinder,   points: cylinderPoints,   scale: 1.35 },
-    { name:'원뿔',      icon:'🍦', build: buildCoreCone,       points: conePoints,       scale: 1.45 },
-    { name:'다이아몬드', icon:'💎', build: buildCoreOctahedron, points: octahedronPoints, scale: 1.5 },
+    { name:'유리구슬',   icon:'🔮', build: buildCoreMarble, points: fibonacciSphere,  scale: 1.35 },
+    { name:'나무상자',   icon:'📦', build: buildCoreCrate,  points: cubePoints,       scale: 1.55 },
+    { name:'드럼통',     icon:'🛢️', build: buildCoreDrum,   points: cylinderPoints,   scale: 1.35 },
+    { name:'캔디콘',     icon:'🍬', build: buildCoreCandy,  points: conePoints,       scale: 1.45 },
+    { name:'다이아몬드', icon:'💎', build: buildCoreGem,    points: octahedronPoints, scale: 1.5 },
 ];
-function buildCoreSphere(s)      { return new THREE.Mesh(new THREE.SphereGeometry(s, 28, 20), coreMat()); }
-function buildCoreCube(s)        { return new THREE.Mesh(new THREE.BoxGeometry(s*1.62, s*1.62, s*1.62), coreMat()); }
-function buildCoreCylinder(s)    { return new THREE.Mesh(new THREE.CylinderGeometry(s, s, s*1.64, 26), coreMat()); }
-function buildCoreCone(s)        { return new THREE.Mesh(new THREE.ConeGeometry(s, s*2, 26), coreMat()); }
-function buildCoreOctahedron(s)  { return new THREE.Mesh(new THREE.OctahedronGeometry(s, 0), coreMat()); }
-let _coreMat = null;
-function coreMat() {
-    if (!_coreMat) _coreMat = new THREE.MeshStandardMaterial({ color: 0x8a7358, roughness:0.65, metalness:0.12 });
-    return _coreMat;
+
+function buildCoreMarble(s) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(s, 40, 28), new THREE.MeshPhysicalMaterial({
+        map: marbleTex(), roughness:0.12, metalness:0.05, clearcoat:1, clearcoatRoughness:0.05
+    })));
+    // 바깥 유리껍질 — 살짝 크게 겹쳐서 진짜 구슬 같은 반짝임을 만든다
+    const shell = new THREE.Mesh(new THREE.SphereGeometry(s*1.012, 32, 22), new THREE.MeshPhysicalMaterial({
+        color:0xffffff, transparent:true, opacity:0.18, roughness:0.02, metalness:0,
+        clearcoat:1, clearcoatRoughness:0, side:THREE.FrontSide, depthWrite:false
+    }));
+    shell.raycast = function () {};
+    g.add(shell);
+    return g;
+}
+function buildCoreCrate(s) {
+    const g = new THREE.Group();
+    const w = s*1.62;
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w, w, w), new THREE.MeshStandardMaterial({
+        map: woodTex(), roughness:0.78, metalness:0.05
+    })));
+    // 모서리 쇠 프레임
+    const frameMat = new THREE.MeshStandardMaterial({ color:0x4b3a26, roughness:0.5, metalness:0.55 });
+    const t = w*0.055, h = w + t*0.6;
+    [[0,0,1],[0,1,0],[1,0,0]].forEach(ax => {
+        for (let a = -1; a <= 1; a += 2) for (let b = -1; b <= 1; b += 2) {
+            const geo = ax[0] ? new THREE.BoxGeometry(h, t, t) : ax[1] ? new THREE.BoxGeometry(t, h, t) : new THREE.BoxGeometry(t, t, h);
+            const m = new THREE.Mesh(geo, frameMat);
+            if (ax[0]) m.position.set(0, a*w/2, b*w/2);
+            else if (ax[1]) m.position.set(a*w/2, 0, b*w/2);
+            else m.position.set(a*w/2, b*w/2, 0);
+            m.raycast = function () {};
+            g.add(m);
+        }
+    });
+    return g;
+}
+function buildCoreDrum(s) {
+    const g = new THREE.Group();
+    const h = s*1.64;
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(s, s, h, 40, 1, true), new THREE.MeshStandardMaterial({
+        map: metalTex(), roughness:0.34, metalness:0.62, side:THREE.DoubleSide
+    })));
+    const capMat = new THREE.MeshStandardMaterial({ color:0xb8c2d0, roughness:0.38, metalness:0.6 });
+    for (let a = -1; a <= 1; a += 2) {
+        const cap = new THREE.Mesh(new THREE.CircleGeometry(s, 40), capMat);
+        cap.rotation.x = -a*Math.PI/2;
+        cap.position.y = a*h/2;
+        g.add(cap);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(s*0.99, s*0.045, 10, 40), capMat);
+        rim.rotation.x = Math.PI/2; rim.position.y = a*h/2;
+        rim.raycast = function () {};
+        g.add(rim);
+    }
+    return g;
+}
+function buildCoreCandy(s) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.ConeGeometry(s, s*2, 40, 1, true), new THREE.MeshPhysicalMaterial({
+        map: candyTex(), roughness:0.22, metalness:0.02, clearcoat:0.9, clearcoatRoughness:0.1, side:THREE.DoubleSide
+    })));
+    const base = new THREE.Mesh(new THREE.CircleGeometry(s, 40), new THREE.MeshStandardMaterial({ color:0xffe3ee, roughness:0.4 }));
+    base.rotation.x = Math.PI/2; base.position.y = -s;
+    g.add(base);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(s*0.1, 14, 10), new THREE.MeshStandardMaterial({ color:0xfff0f6, roughness:0.2, metalness:0.1 }));
+    tip.position.y = s; tip.raycast = function () {};
+    g.add(tip);
+    return g;
+}
+function buildCoreGem(s) {
+    const g = new THREE.Group();
+    const geo = new THREE.OctahedronGeometry(s, 0);
+    g.add(new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({
+        color:0xa06bff, roughness:0.05, metalness:0.25, flatShading:true,
+        clearcoat:1, clearcoatRoughness:0.02, emissive:0x2a0a55, emissiveIntensity:0.5
+    })));
+    const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color:0xffe0ff, transparent:true, opacity:0.55 }));
+    edge.raycast = function () {};   // 라인은 레이캐스트 임계값이 커서 나사 탭을 가로챈다
+    g.add(edge);
+    return g;
 }
 
 // ───────── 게임 상태 ─────────
@@ -368,6 +695,9 @@ function snapshot() {
 function restore(snap) {
     G.screws.forEach((s,i) => { s.gone = snap.screws[i].gone; if (s.mesh) s.mesh.visible = !s.gone; });
     G.boxes = snap.boxes.map(b => ({ color:b.color, items:[...b.items], clearT:0 }));
+    // ➕로 늘린 상자는 되돌려도 사라지지 않는다 (아이템을 이미 썼으니까)
+    while (G.boxes.length < boxSlotWorld.length) G.boxes.push({ color:-1, items:[], clearT:0 });
+    G.combo = 0;
     for (let i=0;i<G.boxes.length;i++) refreshBoxVisual(i);
     G.rig.rotation.x = snap.rigRotX; G.rig.rotation.y = snap.rigRotY;
     G.flying.length = 0;
@@ -377,23 +707,26 @@ function restore(snap) {
 }
 
 // ───────── 상자 (3D 크레이트, 화면 하단 고정) ─────────
-let boxGroup = null, boxSlotWorld = [];
+let boxGroup = null, boxSlotWorld = [], boxScale = 1;
 function buildBoxMeshes() {
     if (boxGroup) scene.remove(boxGroup);
     boxGroup = new THREE.Group();
-    const n = BOX_N, gap = 0.16, w = 1.0, dep = 0.8;
+    // 상자 수가 늘어나도(➕ 아이템) 화면 폭을 넘지 않도록 전체 폭을 고정하고 칸을 좁힌다
+    const n = G ? G.boxes.length : BOX_N, gap = 0.16, dep = 0.8;
+    const w = (4.48 - (n-1)*gap) / n;
+    boxScale = w;
     const total = n*w + (n-1)*gap;
     const x0 = -total/2 + w/2;
-    const boxY = -2.15;
+    const boxY = -3.05;
     boxSlotWorld = [];
     for (let i = 0; i < n; i++) {
         const cx = x0 + i*(w+gap);
         const g = new THREE.Group();
         g.position.set(cx, boxY, 1.55);
         g.rotation.x = -0.5;
-        const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, dep), new THREE.MeshLambertMaterial({ color:0x241a44 }));
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, dep), new THREE.MeshStandardMaterial({ color:0x4b3b86, roughness:0.6, emissive:0x1d1040 }));
         g.add(floor);
-        const wallMat = new THREE.MeshLambertMaterial({ color:0x3a2b66, transparent:true, opacity:0.85 });
+        const wallMat = new THREE.MeshStandardMaterial({ color:0x6a55a8, roughness:0.5, transparent:true, opacity:0.9 });
         [[-w/2+0.03,0,0,0.06,0.36,dep],[w/2-0.03,0,0,0.06,0.36,dep],[0,0,-dep/2,w,0.36,0.06]].forEach(a=>{
             const wall = new THREE.Mesh(new THREE.BoxGeometry(a[3],a[4],a[5]), wallMat);
             wall.position.set(a[0], 0.2, a[2]);
@@ -420,9 +753,13 @@ function refreshBoxVisual(i) {
     slot.itemMeshes = [];
     b.items.forEach((col, k) => {
         const m = buildScrewMesh(col);
-        m.rotation.x = -Math.PI/2 + 0.02;
-        m.position.set((k-1)*0.3, 0.14, 0);
-        m.scale.setScalar(0.85);
+        // 상자 안에서는 나사 머리가 카메라를 향해야 색이 잘 보인다
+        // (상자 그룹 자체가 x축으로 -0.5 기울어져 있는 걸 감안한 각도)
+        m.rotation.x = Math.PI/2 - 0.12;
+        const sd = m.getObjectByName('shadowDecal');
+        if (sd) sd.visible = false;   // 표면 그림자는 박혀있을 때만 의미가 있다
+        m.position.set((k-1)*0.265*boxScale, 0.14, 0);
+        m.scale.setScalar(0.6*boxScale);   // 3개가 상자 폭 안에 겹치지 않고 들어가는 크기
         slot.group.add(m);
         slot.itemMeshes.push(m);
     });
@@ -438,8 +775,8 @@ function makeLevel(level) {
     const pinCount = Math.min(9 + Math.floor(level * 2.1), 42);
     const colorCount = Math.min(3 + Math.floor(level / 1.3), 8);
 
-    const raw = shape.points(pinCount);
-    const screws = raw.map((p, i) => ({ id:i, pos:p.pos, nrm:p.nrm, color:0, gone:false, mesh:null }));
+    const raw = spreadPoints(shape.points, pinCount);
+    const screws = raw.map((p, i) => ({ id:i, pos:p.pos, nrm:p.nrm, color:0, gone:false, mesh:null, golden:false }));
 
     while (screws.length % 3 !== 0) screws.pop();
 
@@ -451,6 +788,12 @@ function makeLevel(level) {
     }
     for (let i = pool.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
     screws.forEach((s,i) => s.color = pool[i]);
+
+    // ✨ 황금 나사 — 뽑으면 랜덤 보너스. 나사가 많은 레벨일수록 더 많이 숨겨둔다
+    const goldN = Math.max(1, Math.min(3, Math.floor(screws.length / 12)));
+    const idxs = screws.map((_, i) => i);
+    for (let i = idxs.length-1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [idxs[i],idxs[j]]=[idxs[j],idxs[i]]; }
+    idxs.slice(0, goldN).forEach(i => screws[i].golden = true);
 
     return { shape, shapeIdx, screws };
 }
@@ -471,7 +814,7 @@ function buildSceneForLevel() {
     G.rig.add(coreMesh);
 
     G.screws.forEach(sc => {
-        const m = buildScrewMesh(sc.color);
+        const m = buildScrewMesh(sc.color, sc.golden);
         const nx=sc.nrm[0], ny=sc.nrm[1], nz=sc.nrm[2];
         const px = sc.pos[0]*s, py = sc.pos[1]*s, pz = sc.pos[2]*s;
         m.position.set(px, py, pz);
@@ -485,6 +828,29 @@ function buildSceneForLevel() {
         sceneObjs.push(m);
         sc.mesh = m;
     });
+
+    // 도형마다 크기가 제각각이라 그대로 두면 구슬은 작고 큐브는 꽉 찬다.
+    // 실제 바운딩 반경을 재서 화면을 항상 비슷하게 채우도록 rig 자체를 확대/축소한다.
+    // AABB 대각선이나 바운딩 스피어는 길쭉한 프레임 막대에서 크게 과대평가된다.
+    // 정점 자체를 훑어서 실제 최대 반경을 구한다 (도형당 수천 개 · 레벨당 1회라 부담 없음)
+    let maxR = 0;
+    const vtmp = new THREE.Vector3();
+    coreMesh.traverse(o => {
+        const pa = o.isMesh && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
+        if (!pa) return;
+        o.updateMatrix();
+        for (let i = 0; i < pa.count; i++) {
+            vtmp.fromBufferAttribute(pa, i).applyMatrix4(o.matrix);
+            const d = vtmp.length();
+            if (d > maxR) maxR = d;
+        }
+    });
+    G.screws.forEach(sc => {
+        const d = Math.hypot(sc.pos[0]*s, sc.pos[1]*s, sc.pos[2]*s) + 0.34;
+        maxR = Math.max(maxR, d);
+    });
+    G.rig.scale.setScalar(maxR > 0.01 ? Math.min(1.8, TARGET_R / maxR) : 1);
+
     buildBoxMeshes();
 }
 
@@ -556,28 +922,121 @@ function onTap(clientX, clientY) {
         toast('📦 넣을 상자가 없어요! 다른 색을 먼저 완성하세요');
         return;
     }
+    takeScrew(hit, bi, true);
+}
 
+// 나사 하나를 뽑아 상자로 날려보낸다 (탭 / 자석 공용)
+function takeScrew(sc, bi, countCombo) {
     G.history.push(snapshot());
     if (G.history.length > 20) G.history.shift();
 
-    hit.gone = true;
-    if (hit.mesh) hit.mesh.visible = false;
+    sc.gone = true;
     S.unscrew();
+
+    if (countCombo) {
+        if (G.t - G.lastTakeT <= COMBO_WINDOW) G.combo++; else G.combo = 1;
+        G.lastTakeT = G.t;
+        if (G.combo > G.maxCombo) G.maxCombo = G.combo;
+        if (G.combo >= 3) { showCombo(G.combo); S.combo(G.combo); }
+    } else {
+        G.combo = 0;
+    }
+    addScore(10 * Math.max(1, G.combo));
+
     const w0 = new THREE.Vector3();
-    hit.mesh.getWorldPosition(w0);
+    sc.mesh.getWorldPosition(w0);
     const slot = boxWorldPos(bi);
     const n = G.boxes[bi].items.length;
     G.flying.push({
-        s: hit, t: 0, dur: 0.4,
+        s: sc, t: 0, dur: 0.42,
         x0:w0.x, y0:w0.y, z0:w0.z,
-        x1: slot.x + (n-1)*0.28, y1: slot.y, z1: slot.z,
+        x1: slot.x + (n-1)*0.28*boxScale, y1: slot.y, z1: slot.z,
+        q0: sc.mesh.quaternion.clone(),
         box: bi
     });
+    if (sc.golden) goldenBonus(sc);
+    updateHud();
+}
+
+// ───────── 콤보 / 점수 ─────────
+const COMBO_WINDOW = 2.5;
+const COMBO_WORDS = ['좋아!', '나이스!', '굿굿!', '대단해!', '미쳤다!', '천재야!', '소현이 최고!'];
+let comboTimer = null;
+function showCombo(n) {
+    const el = document.getElementById('comboUi');
+    el.textContent = '🔥 ' + n + ' COMBO  ' + COMBO_WORDS[Math.min(n-3, COMBO_WORDS.length-1)];
+    el.classList.remove('pop');
+    void el.offsetWidth;   // 애니메이션 재시작 트릭
+    el.classList.add('pop');
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => el.classList.remove('pop'), 900);
+}
+function addScore(n) {
+    G.score += n;
+    const el = document.getElementById('score');
+    if (el) el.textContent = G.score;
+}
+
+// ───────── 아이템 ─────────
+function useMagnet() {
+    if (!G || G.over || G.cleared || G.busy) return;
+    if (G.magnets <= 0) { toast('자석을 다 썼어요 😢'); return; }
+    // 안 보이는 나사라도, 지금 상자에 들어갈 수 있는 것 중 하나를 뽑아준다
+    // (이미 색이 정해진 상자를 채우는 쪽을 우선 — 그래야 판이 실제로 풀린다)
+    let best = null, bestScore = -1;
+    for (const s of G.screws) {
+        if (s.gone) continue;
+        const bi = findBoxFor(s.color);
+        if (bi === -1) continue;
+        const b = G.boxes[bi];
+        const sc = (b.color === s.color ? 10 + b.items.length : 0) + (s.golden ? 3 : 0);
+        if (sc > bestScore) { bestScore = sc; best = { s, bi }; }
+    }
+    if (!best) { toast('자석이 붙을 나사가 없어요'); return; }
+    G.magnets--; G.helpUsed++;
+    S.magnet();
+    toast('🧲 자석이 나사를 뽑았어요!');
+    takeScrew(best.s, best.bi, false);
+}
+function useSlot() {
+    if (!G || G.over || G.cleared || G.busy) return;
+    if (G.slots <= 0) { toast('상자 추가를 다 썼어요 😢'); return; }
+    if (G.boxes.length >= 6) { toast('상자가 이미 가득이에요'); return; }
+    G.slots--; G.helpUsed++;
+    G.boxes.push({ color:-1, items:[], clearT:0 });
+    buildBoxMeshes();
+    for (let i = 0; i < G.boxes.length; i++) refreshBoxVisual(i);
+    S.slot();
+    toast('➕ 상자가 하나 늘었어요!');
+    if (G.over) {   // 막혔던 판이 다시 풀린다
+        G.over = false;
+        document.getElementById('overOv').classList.remove('show');
+    }
+    updateHud();
+}
+const GOLD_BONUS = [
+    { k:'undo',   m:'✨ 황금 나사! 되돌리기 +1' },
+    { k:'magnet', m:'✨ 황금 나사! 자석 +1' },
+    { k:'slot',   m:'✨ 황금 나사! 상자 추가 +1' },
+    { k:'score',  m:'✨ 황금 나사! 보너스 300점!' },
+];
+function goldenBonus(sc) {
+    const b = GOLD_BONUS[Math.floor(Math.random()*GOLD_BONUS.length)];
+    if (b.k === 'undo') G.undos++;
+    else if (b.k === 'magnet') G.magnets++;
+    else if (b.k === 'slot') G.slots++;
+    else addScore(300);
+    S.golden();
+    toast(b.m);
+    const w = new THREE.Vector3();
+    if (sc.mesh) sc.mesh.getWorldPosition(w);
+    burst(w.x, w.y, w.z, 0xffd43b, 22);
     updateHud();
 }
 
 function landScrew(f) {
     const b = G.boxes[f.box];
+    if (f.s.mesh) f.s.mesh.visible = false;   // 날아간 원본은 상자 안 아이템 메시로 대체된다
     if (b.color === -1) b.color = f.s.color;
     b.items.push(f.s.color);
     S.drop();
@@ -585,6 +1044,7 @@ function landScrew(f) {
     if (b.items.length >= BOX_CAP) {
         b.clearT = 0.45;
         S.complete();
+        addScore(60);
         const p = boxWorldPos(f.box);
         burst(p.x, p.y, p.z, COLORS[b.color].c, 16);
     }
@@ -595,9 +1055,29 @@ function checkState() {
     if (G.screws.every(s => s.gone) && G.flying.length === 0) {
         G.cleared = true;
         S.win();
+        // ⭐ 별점 — 빠르고(par 시간 안) 아이템을 안 쓸수록 별이 많다
+        const par = 5 + G.screws.length * 2.6;
+        let stars = 1;
+        if (G.t <= par * 1.6 && G.helpUsed <= 1) stars = 2;
+        if (G.t <= par && G.helpUsed === 0) stars = 3;
+        addScore(Math.round(Math.max(0, par*1.8 - G.t) * 12) + stars * 150);
+
+        const bestS = sLoad('screwSpinStars', {});
+        const key = String(G.level);
+        const isNewBest = !bestS[key] || stars > bestS[key];
+        if (isNewBest) { bestS[key] = stars; sSave('screwSpinStars', bestS); }
+        const bestScore = sLoad('screwSpinBest', 0);
+        if (G.score > bestScore) sSave('screwSpinBest', G.score);
+
         setTimeout(() => {
-            document.getElementById('clearMsg').textContent = '레벨 ' + G.level + ' (' + G.shape.name + ') 클리어! 소현이 최고 💕';
+            document.getElementById('clearStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+            document.getElementById('clearScore').textContent = G.score.toLocaleString() + '점' +
+                (G.maxCombo >= 3 ? '  ·  최고 ' + G.maxCombo + '콤보 🔥' : '');
+            document.getElementById('clearMsg').textContent =
+                (stars === 3 ? '완벽해! ' : isNewBest ? '기록 경신! ' : '') +
+                '레벨 ' + G.level + ' (' + G.shape.name + ') 클리어! 소현이 최고 💕';
             document.getElementById('clearOv').classList.add('show');
+            for (let i = 0; i < stars; i++) S.star(i);
         }, 420);
         return;
     }
@@ -618,7 +1098,7 @@ function doUndo() {
     if (!G || G.cleared) return;
     if (G.undos <= 0) { toast('되돌리기를 다 썼어요 😢'); return; }
     if (!G.history.length) { toast('되돌릴 수가 없어요'); return; }
-    G.undos--;
+    G.undos--; G.helpUsed++;
     restore(G.history.pop());
     S.undo();
     toast('↩️ 한 수 되돌렸어요');
@@ -655,8 +1135,17 @@ function toast(msg) {
 function updateHud() {
     document.getElementById('lv').textContent = G.level;
     document.getElementById('left').textContent = G.screws.filter(s => !s.gone).length;
-    document.getElementById('undoN').textContent = G.undos;
-    document.getElementById('shapeHint').textContent = G.shape.icon + ' ' + G.shape.name + ' — 돌려서 나사를 찾아보세요';
+    document.getElementById('score').textContent = G.score;
+    const set = (id, n, btn) => {
+        document.getElementById(id).textContent = n;
+        document.getElementById(btn).classList.toggle('off', n <= 0);
+    };
+    set('undoN', G.undos, 'actUndo');
+    set('magN', G.magnets, 'actMag');
+    set('slotN', G.slots, 'actSlot');
+    const gold = G.screws.filter(s => !s.gone && s.golden).length;
+    document.getElementById('shapeHint').textContent =
+        G.shape.icon + ' ' + G.shape.name + (gold ? ' — 황금 나사 ' + gold + '개 숨어있어요 ✨' : ' — 돌려서 나사를 찾아보세요');
 }
 
 // ───────── 업데이트 ─────────
@@ -685,6 +1174,7 @@ function update(dt) {
         if (p.life <= 0) { scene.remove(p.m); parts.splice(i,1); }
     }
 }
+const SPIN_AXIS = new THREE.Vector3(0,1,0), SPIN_Q = new THREE.Quaternion();
 function updateFlying() {
     G.flying.forEach(f => {
         const k = Math.min(1, f.t/f.dur);
@@ -698,6 +1188,11 @@ function updateFlying() {
             const local = G.rig.worldToLocal(new THREE.Vector3(x, y, z));
             f.s.mesh.position.copy(local);
             f.s.mesh.scale.setScalar(1 - k*0.3);
+            // 🌀 풀리면서 빙글빙글 — "나사를 뽑았다"는 손맛을 눈으로도 보여준다
+            if (f.q0) {
+                SPIN_Q.setFromAxisAngle(SPIN_AXIS, f.t * 34);
+                f.s.mesh.quaternion.copy(f.q0).multiply(SPIN_Q);
+            }
         }
     });
 }
@@ -719,16 +1214,28 @@ let level = sLoad('screwSpinLevel', 1);
 function newGameState(lv) {
     const gen = makeLevel(lv);
     const rig = new THREE.Group();
-    rig.position.set(0, 0.75, 0);
+    rig.position.set(0, 1.3, 0);
     scene.add(rig);
     return {
         level: lv, shape: gen.shape, shapeIdx: gen.shapeIdx, screws: gen.screws, rig,
         boxes: Array.from({length:BOX_N}, () => ({ color:-1, items:[], clearT:0 })),
-        flying: [], undos: 2, history: [], busy:false, over:false, cleared:false, t:0
+        flying: [], undos: 2, magnets: 1, slots: 1, helpUsed: 0,
+        score: 0, combo: 0, maxCombo: 0, lastTakeT: -99,
+        history: [], busy:false, over:false, cleared:false, t:0
     };
 }
+function refreshBestLine() {
+    const stars = sLoad('screwSpinStars', {});
+    let total = 0; for (const k in stars) total += stars[k];
+    const best = sLoad('screwSpinBest', 0);
+    const el = document.getElementById('bestLine');
+    if (el) el.textContent = (best ? '최고 ' + best.toLocaleString() + '점' : '') + (total ? '  ·  ⭐ ' + total + '개' : '');
+}
+refreshBestLine();
+
 function startGame() {
     document.getElementById('startOv').classList.remove('show');
+    document.getElementById('comboUi').classList.remove('pop');
     document.getElementById('clearOv').classList.remove('show');
     document.getElementById('overOv').classList.remove('show');
     parts.forEach(p => scene.remove(p.m)); parts.length = 0;

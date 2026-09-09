@@ -64,6 +64,37 @@
     .btn.grey { background:linear-gradient(135deg,#a18cd1,#fbc2eb); color:#4a2c6b; }
     .rule { background:rgba(248,87,166,.09); border-radius:13px; padding:12px 14px;
             text-align:left; font-size:.85em; color:#85566b; line-height:1.7; margin:12px 0 4px; }
+
+    .actions {
+        position:fixed; right:9px; top:50%; transform:translateY(-50%);
+        display:flex; flex-direction:column; gap:9px; z-index:12;
+    }
+    .act {
+        width:52px; height:52px; border-radius:17px; cursor:pointer;
+        background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.32);
+        color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
+        backdrop-filter:blur(5px); transition:transform .12s, opacity .2s;
+    }
+    .act:active { transform:scale(.9); }
+    .act .i { font-size:1.3em; line-height:1; }
+    .act .n { font-size:.6em; font-weight:800; opacity:.92; margin-top:2px; }
+    .act.off { opacity:.32; }
+
+    .combo {
+        position:fixed; top:34%; left:50%; z-index:40; opacity:0; pointer-events:none;
+        font-size:2.1em; font-weight:900; color:#ffd43b; white-space:nowrap;
+        text-shadow:0 3px 12px rgba(0,0,0,.75), 0 0 24px rgba(255,212,59,.85);
+        transform:translate(-50%,-50%) scale(.5);
+    }
+    .combo.pop { animation:comboPop .85s cubic-bezier(.2,1.4,.5,1) forwards; }
+    @keyframes comboPop {
+        0%   { opacity:0; transform:translate(-50%,-50%) scale(.4) rotate(-9deg); }
+        22%  { opacity:1; transform:translate(-50%,-50%) scale(1.18) rotate(4deg); }
+        62%  { opacity:1; transform:translate(-50%,-52%) scale(1) rotate(0deg); }
+        100% { opacity:0; transform:translate(-50%,-64%) scale(.92); }
+    }
+    .starline { font-size:2.1em; letter-spacing:5px; margin:2px 0 6px; }
+    .scoreline { color:#d6336c; font-weight:900; font-size:1.15em; margin-bottom:4px; }
 </style>
 </head>
 <body>
@@ -72,11 +103,18 @@
 <div class="hud">
     <div class="box"><div class="l">레벨</div><div class="v" id="lv">1</div></div>
     <div class="box"><div class="l">남은 나사</div><div class="v" id="left">0</div></div>
-    <div class="box btn-hud" onclick="doUndo()"><div class="l">되돌리기</div><div class="v" id="undoN">2</div></div>
+    <div class="box"><div class="l">점수</div><div class="v" id="score">0</div></div>
     <div class="box btn-hud" onclick="restart()"><div class="l">다시</div><div class="v">🔄</div></div>
     <div class="box btn-hud" onclick="toggleSound()"><div class="l">소리</div><div class="v" id="sndIcon">🔊</div></div>
 </div>
 
+<div class="actions">
+    <div class="act" id="actUndo" onclick="doUndo()"><div class="i">↩️</div><div class="n" id="undoN">2</div></div>
+    <div class="act" id="actMag" onclick="useMagnet()"><div class="i">🧲</div><div class="n" id="magN">1</div></div>
+    <div class="act" id="actSlot" onclick="useSlot()"><div class="i">➕</div><div class="n" id="slotN">1</div></div>
+</div>
+
+<div class="combo" id="comboUi"></div>
 <div class="toast" id="toast"></div>
 
 <div class="overlay show" id="startOv">
@@ -84,12 +122,16 @@
         <div class="em">🔩🐰</div>
         <h2>소현이의 나사 풀기</h2>
         <p>by 동훈 ❤️</p>
+        <p id="bestLine" style="color:#d6336c;font-weight:800"></p>
         <div class="rule">
             🔩 <b>나사를 눌러서</b> 아래 상자에 넣으세요<br>
             📦 같은 색 <b>3개</b>를 모으면 상자가 비워져요<br>
-            🪵 판때기에 <b>가려진 나사</b>는 못 빼요!<br>
-            &nbsp;&nbsp;&nbsp;위에 있는 판부터 치우세요<br>
-            💀 상자 4칸이 전부 막히면 게임 오버!
+            🪵 판때기에 <b>가려진 나사</b>는 못 빼요! 위 판부터 치우세요<br>
+            🔥 <b>2.5초 안에 연속</b>으로 빼면 콤보 점수 폭발!<br>
+            ✨ <b>황금 나사</b>를 빼면 랜덤 보너스 아이템!<br>
+            🧲 자석은 <b>가려진 나사</b>도 빼고, ➕는 상자를 하나 늘려요<br>
+            ⭐ 빠르고 아이템 없이 깨면 <b>별 3개</b>!<br>
+            💀 상자가 전부 막히면 게임 오버!
         </div>
         <button class="btn" onclick="startGame()">🎮 시작!</button>
     </div>
@@ -99,6 +141,8 @@
     <div class="card">
         <div class="em">🎉🔩</div>
         <h2>레벨 클리어!</h2>
+        <div class="starline" id="clearStars">⭐⭐⭐</div>
+        <div class="scoreline" id="clearScore">0점</div>
         <p id="clearMsg">소현이 최고! 💕</p>
         <button class="btn" onclick="nextLevel()">다음 레벨 ➡️</button>
     </div>
@@ -149,7 +193,12 @@ const S = {
     blocked() { tone(200, 0.12, { type: 'square', vol: 0.06 }); },
     undo()    { tone(500, 0.1, { slideTo: 300, vol: 0.09 }); },
     win()     { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.22, { delay: i * 0.1, type: 'triangle', vol: 0.15 })); },
-    over()    { [392, 330, 262].forEach((f, i) => tone(f, 0.32, { delay: i * 0.28, type: 'triangle', vol: 0.14 })); }
+    over()    { [392, 330, 262].forEach((f, i) => tone(f, 0.32, { delay: i * 0.28, type: 'triangle', vol: 0.14 })); },
+    combo(n)  { const b = 520 * Math.pow(1.09, Math.min(n, 14)); tone(b, 0.1, { type:'square', vol:0.07 }); tone(b*1.5, 0.13, { delay:0.05, type:'triangle', vol:0.09 }); },
+    golden()  { [784, 988, 1319, 1568].forEach((f, i) => tone(f, 0.18, { delay: i*0.06, type:'triangle', vol:0.13 })); },
+    magnet()  { tone(240, 0.28, { slideTo: 900, type:'sawtooth', vol:0.07 }); },
+    slot()    { tone(330, 0.16, { slideTo: 660, type:'triangle', vol:0.11 }); },
+    star(i)   { tone(660 * Math.pow(1.26, i), 0.3, { delay: i*0.22, type:'triangle', vol:0.16 }); }
 };
 function toggleSound() {
     soundOn = !soundOn; sSave('screwSound', soundOn);
@@ -192,14 +241,15 @@ let running = false, lastT = 0;
 
 function boardRect() {
     const top = 78, bottom = H - 150;
-    return { x: 16, y: top, w: W - 32, h: Math.max(180, bottom - top) };
+    // 오른쪽 아이템 바(52px) 아래에 나사가 깔리면 못 누르니 그만큼 비워둔다
+    return { x: 16, y: top, w: W - 32 - 62, h: Math.max(180, bottom - top) };
 }
 
 function makeLevel(level) {
     const R = boardRect();
     // 🔥 난이도 상향
-    const plateCount = Math.min(5 + Math.floor(level * 1.1), 13);
-    const colorCount = Math.min(3 + Math.floor(level / 1.4), 8);
+    const plateCount = Math.min(9 + Math.floor(level * 0.9), 15);
+    const colorCount = Math.min(5 + Math.floor(level / 1.2), 8);
 
     const plates = [];
     const screws = [];
@@ -242,7 +292,7 @@ function makeLevel(level) {
             const lx = t, ly = (Math.random() - 0.5) * (p.h / 2 - SCREW_R - 4) * 1.2;
             const wx = p.cx + Math.cos(p.ang) * lx - Math.sin(p.ang) * ly;
             const wy = p.cy + Math.sin(p.ang) * lx + Math.cos(p.ang) * ly;
-            const s = { id: sid++, x: wx, y: wy, plate: p, color: 0, gone: false, spin: Math.random() * 6, wob: 0 };
+            const s = { id: sid++, x: wx, y: wy, plate: p, color: 0, gone: false, golden: false, spin: Math.random() * 6, wob: 0 };
             p.screws.push(s);
             screws.push(s);
         }
@@ -269,6 +319,12 @@ function makeLevel(level) {
     }
     screws.forEach((s, i) => s.color = pool[i]);
 
+    // ✨ 황금 나사 — 빼면 랜덤 보너스. 나사가 많을수록 더 많이 숨긴다
+    const goldN = Math.max(1, Math.min(3, Math.floor(screws.length / 12)));
+    const idxs = screws.map((_, i) => i);
+    for (let i = idxs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idxs[i], idxs[j]] = [idxs[j], idxs[i]]; }
+    idxs.slice(0, goldN).forEach(i => screws[i].golden = true);
+
     return { plates, screws };
 }
 
@@ -281,7 +337,8 @@ function newGame(level) {
         boxes: Array.from({ length: BOX_N }, () => ({ color: -1, items: [], clearT: 0 })),
         flying: [],
         parts: [],
-        undos: 2,
+        undos: 2, magnets: 1, slots: 1, helpUsed: 0,
+        score: 0, combo: 0, maxCombo: 0, lastTakeT: -99,
         history: [],
         busy: false,
         over: false,
@@ -309,9 +366,10 @@ function isExposed(s) {
 
 // ───────── 상자 ─────────
 function boxSlots() {
-    const bw = Math.min((W - 40) / BOX_N - 10, 88);
+    const n = G ? G.boxes.length : BOX_N;   // ➕ 아이템으로 상자가 늘어날 수 있다
     const gap = 10;
-    const total = BOX_N * bw + (BOX_N - 1) * gap;
+    const bw = Math.min((W - 40 - (n - 1) * gap) / n, 88);
+    const total = n * bw + (n - 1) * gap;
     const x0 = (W - total) / 2;
     const y = H - 118;
     return G.boxes.map((b, i) => ({ b, x: x0 + i * (bw + gap), y, w: bw, h: 74 }));
@@ -337,7 +395,11 @@ function snapshot() {
 function restore(snap) {
     G.screws.forEach((s, i) => { s.gone = snap.screws[i].gone; });
     G.plates.forEach((p, i) => { p.gone = snap.plates[i].gone; p.falling = 0; });
+    const boxN = Math.max(G.boxes.length, snap.boxes.length);
     G.boxes = snap.boxes.map(b => ({ color: b.color, items: [...b.items], clearT: 0 }));
+    // ➕로 늘린 상자는 되돌려도 사라지지 않는다 (아이템을 이미 썼으니까)
+    while (G.boxes.length < boxN) G.boxes.push({ color: -1, items: [], clearT: 0 });
+    G.combo = 0;
     G.flying.length = 0;
     G.over = false;
     document.getElementById('overOv').classList.remove('show');
@@ -347,13 +409,21 @@ function restore(snap) {
 // ───────── 조작 ─────────
 function onTap(px, py) {
     if (!G || G.busy || G.over || G.cleared) return;
-    let hit = null, bestZ = -1;
+    // 손가락 반경 안의 후보들 중에서 고른다.
+    // 그냥 z가 제일 높은 걸 고르면, 옆에 붙어있는 "가려진 나사"가 뽑을 수 있는 나사를
+    // 계속 가로채서 영영 못 뽑는 상황이 생긴다 → 뽑을 수 있는 나사를 최우선으로.
+    const cands = [];
     for (const s of G.screws) {
         if (s.gone) continue;
         const d = Math.hypot(s.x - px, s.y - py);
-        if (d <= SCREW_R + 9 && s.plate.z > bestZ) { hit = s; bestZ = s.plate.z; }
+        if (d <= SCREW_R + 9) cands.push({ s, d, ex: isExposed(s) });
     }
-    if (!hit) return;
+    if (!cands.length) return;
+    cands.sort((a, b) =>
+        (b.ex - a.ex) ||
+        (b.s.plate.z - a.s.plate.z) ||
+        (a.d - b.d));
+    const hit = cands[0].s;
 
     if (!isExposed(hit)) {
         S.blocked();
@@ -368,20 +438,108 @@ function onTap(px, py) {
         return;
     }
 
+    takeScrew(hit, bi, true);
+}
+
+// 나사 하나를 빼서 상자로 날려보낸다 (탭 / 자석 공용)
+function takeScrew(sc, bi, countCombo) {
     G.history.push(snapshot());
     if (G.history.length > 25) G.history.shift();
 
-    hit.gone = true;
+    sc.gone = true;
     S.unscrew();
+
+    if (countCombo) {
+        if (G.t - G.lastTakeT <= COMBO_WINDOW) G.combo++; else G.combo = 1;
+        G.lastTakeT = G.t;
+        if (G.combo > G.maxCombo) G.maxCombo = G.combo;
+        if (G.combo >= 3) { showCombo(G.combo); S.combo(G.combo); }
+    } else {
+        G.combo = 0;
+    }
+    addScore(10 * Math.max(1, G.combo));
+
     const slot = boxSlots()[bi];
     const n = G.boxes[bi].items.length;
     G.flying.push({
-        s: hit, t: 0, dur: 0.42,
-        x0: hit.x, y0: hit.y,
-        x1: slot.x + slot.w / 2 + (n - 1) * 22,
+        s: sc, t: 0, dur: 0.42,
+        x0: sc.x, y0: sc.y,
+        x1: slot.x + slot.w / 2 + (n - 1) * Math.min(22, slot.w / 3.4),
         y1: slot.y + slot.h / 2 + 6,
         box: bi
     });
+    if (sc.golden) goldenBonus(sc);
+    updateHud();
+}
+
+// ───────── 콤보 / 점수 ─────────
+const COMBO_WINDOW = 2.5;
+const COMBO_WORDS = ['좋아!', '나이스!', '굿굿!', '대단해!', '미쳤다!', '천재야!', '소현이 최고!'];
+let comboTimer = null;
+function showCombo(n) {
+    const el = document.getElementById('comboUi');
+    el.textContent = '🔥 ' + n + ' COMBO  ' + COMBO_WORDS[Math.min(n - 3, COMBO_WORDS.length - 1)];
+    el.classList.remove('pop');
+    void el.offsetWidth;   // 애니메이션 재시작 트릭
+    el.classList.add('pop');
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => el.classList.remove('pop'), 900);
+}
+function addScore(n) {
+    G.score += n;
+    const el = document.getElementById('score');
+    if (el) el.textContent = G.score;
+}
+
+// ───────── 아이템 ─────────
+function useMagnet() {
+    if (!G || G.over || G.cleared || G.busy) return;
+    if (G.magnets <= 0) { toast('자석을 다 썼어요 😢'); return; }
+    // 판때기에 가려진 나사도 뽑아준다 — 대신 상자에 들어갈 수 있는 것만
+    let best = null, bestScore = -1;
+    for (const s of G.screws) {
+        if (s.gone) continue;
+        const bi = findBoxFor(s.color);
+        if (bi === -1) continue;
+        const b = G.boxes[bi];
+        const v = (b.color === s.color ? 10 + b.items.length : 0) + (s.golden ? 3 : 0) + (isExposed(s) ? 0 : 2);
+        if (v > bestScore) { bestScore = v; best = { s, bi }; }
+    }
+    if (!best) { toast('자석이 붙을 나사가 없어요'); return; }
+    G.magnets--; G.helpUsed++;
+    S.magnet();
+    toast('🧲 자석이 가려진 나사를 뽑았어요!');
+    takeScrew(best.s, best.bi, false);
+}
+function useSlot() {
+    if (!G || G.over || G.cleared || G.busy) return;
+    if (G.slots <= 0) { toast('상자 추가를 다 썼어요 😢'); return; }
+    if (G.boxes.length >= 6) { toast('상자가 이미 가득이에요'); return; }
+    G.slots--; G.helpUsed++;
+    G.boxes.push({ color: -1, items: [], clearT: 0 });
+    S.slot();
+    toast('➕ 상자가 하나 늘었어요!');
+    if (G.over) {   // 막혔던 판이 다시 풀린다
+        G.over = false;
+        document.getElementById('overOv').classList.remove('show');
+    }
+    updateHud();
+}
+const GOLD_BONUS = [
+    { k:'undo',   m:'✨ 황금 나사! 되돌리기 +1' },
+    { k:'magnet', m:'✨ 황금 나사! 자석 +1' },
+    { k:'slot',   m:'✨ 황금 나사! 상자 추가 +1' },
+    { k:'score',  m:'✨ 황금 나사! 보너스 300점!' },
+];
+function goldenBonus(sc) {
+    const b = GOLD_BONUS[Math.floor(Math.random() * GOLD_BONUS.length)];
+    if (b.k === 'undo') G.undos++;
+    else if (b.k === 'magnet') G.magnets++;
+    else if (b.k === 'slot') G.slots++;
+    else addScore(300);
+    S.golden();
+    toast(b.m);
+    burst(sc.x, sc.y, '#ffd43b', 22);
     updateHud();
 }
 
@@ -400,6 +558,7 @@ function landScrew(f) {
     if (b.items.length >= BOX_CAP) {
         b.clearT = 0.45;
         S.complete();
+        addScore(60);
         const slot = boxSlots()[f.box];
         burst(slot.x + slot.w / 2, slot.y + slot.h / 2, COLORS[b.color].c, 16);
     }
@@ -410,10 +569,28 @@ function checkState() {
     if (G.screws.every(s => s.gone) && G.flying.length === 0) {
         G.cleared = true;
         S.win();
+        // ⭐ 별점 — 빠르고 아이템을 안 쓸수록 별이 많다
+        const par = 5 + G.screws.length * 2.2;
+        let stars = 1;
+        if (G.t <= par * 1.6 && G.helpUsed <= 1) stars = 2;
+        if (G.t <= par && G.helpUsed === 0) stars = 3;
+        addScore(Math.round(Math.max(0, par * 1.8 - G.t) * 12) + stars * 150);
+
+        const bestS = sLoad('screwStars', {});
+        const key = String(G.level);
+        const isNewBest = !bestS[key] || stars > bestS[key];
+        if (isNewBest) { bestS[key] = stars; sSave('screwStars', bestS); }
+        if (G.score > sLoad('screwBest', 0)) sSave('screwBest', G.score);
+
         setTimeout(() => {
+            document.getElementById('clearStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+            document.getElementById('clearScore').textContent = G.score.toLocaleString() + '점' +
+                (G.maxCombo >= 3 ? '  ·  최고 ' + G.maxCombo + '콤보 🔥' : '');
             document.getElementById('clearMsg').textContent =
+                (stars === 3 ? '완벽해! ' : isNewBest ? '기록 경신! ' : '') +
                 '레벨 ' + G.level + ' 클리어! 소현이 최고 💕';
             document.getElementById('clearOv').classList.add('show');
+            for (let i = 0; i < stars; i++) S.star(i);
         }, 420);
         return;
     }
@@ -435,7 +612,7 @@ function doUndo() {
     if (!G || G.cleared) return;
     if (G.undos <= 0) { toast('되돌리기를 다 썼어요 😢'); return; }
     if (!G.history.length) { toast('되돌릴 수가 없어요'); return; }
-    G.undos--;
+    G.undos--; G.helpUsed++;
     restore(G.history.pop());
     S.undo();
     toast('↩️ 한 수 되돌렸어요');
@@ -464,7 +641,21 @@ function toast(msg) {
 function updateHud() {
     document.getElementById('lv').textContent = G.level;
     document.getElementById('left').textContent = G.screws.filter(s => !s.gone).length;
-    document.getElementById('undoN').textContent = G.undos;
+    document.getElementById('score').textContent = G.score;
+    const set = (id, n, btn) => {
+        document.getElementById(id).textContent = n;
+        document.getElementById(btn).classList.toggle('off', n <= 0);
+    };
+    set('undoN', G.undos, 'actUndo');
+    set('magN', G.magnets, 'actMag');
+    set('slotN', G.slots, 'actSlot');
+}
+function refreshBestLine() {
+    const stars = sLoad('screwStars', {});
+    let total = 0; for (const k in stars) total += stars[k];
+    const best = sLoad('screwBest', 0);
+    const el = document.getElementById('bestLine');
+    if (el) el.textContent = (best ? '최고 ' + best.toLocaleString() + '점' : '') + (total ? '  ·  ⭐ ' + total + '개' : '');
 }
 
 // ───────── 업데이트 ─────────
@@ -506,7 +697,7 @@ function roundRect(x, y, w, h, r) {
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
 }
-function drawScrew(x, y, color, scale, spin, dim) {
+function drawScrew(x, y, color, scale, spin, dim, golden) {
     const r = SCREW_R * (scale || 1);
     const c = COLORS[color];
     ctx.save();
@@ -515,6 +706,17 @@ function drawScrew(x, y, color, scale, spin, dim) {
     // 그림자
     ctx.fillStyle = 'rgba(0,0,0,.28)';
     ctx.beginPath(); ctx.arc(1.5, 2.5, r, 0, 7); ctx.fill();
+    // 황금 나사는 머리 색은 그대로 두고 금테만 두른다 (색을 못 알아보면 불공정하니까)
+    if (golden) {
+        const t = (G ? G.t : 0) * 3;
+        ctx.save();
+        ctx.shadowColor = '#ffd43b';
+        ctx.shadowBlur = 8 + Math.sin(t) * 5;
+        ctx.strokeStyle = '#ffd43b';
+        ctx.lineWidth = Math.max(2.4, r * 0.24);
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.16, 0, 7); ctx.stroke();
+        ctx.restore();
+    }
     // 머리
     const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.15, 0, 0, r);
     g.addColorStop(0, '#ffffff');
@@ -590,7 +792,7 @@ function draw() {
             const blocked = !isExposed(s);
             const wob = s.wob > 0 ? Math.sin(s.wob * 40) * 3 : 0;
             drawScrew(s.x + wob, s.y + (p.falling > 0 ? Math.min(1, p.falling / 0.65) ** 2 * 220 : 0),
-                      s.color, 1, 0, blocked);
+                      s.color, 1, 0, blocked, s.golden);
         });
         ctx.globalAlpha = 1;
     });
@@ -601,7 +803,7 @@ function draw() {
         const e = 1 - Math.pow(1 - k, 2);
         const x = f.x0 + (f.x1 - f.x0) * e;
         const y = f.y0 + (f.y1 - f.y0) * e - Math.sin(k * Math.PI) * 70;
-        drawScrew(x, y, f.s.color, 1 - k * 0.25, k * 14, false);
+        drawScrew(x, y, f.s.color, 1 - k * 0.25, k * 18, false, f.s.golden);
     });
 
     // 상자
@@ -625,14 +827,16 @@ function draw() {
             ctx.shadowBlur = 0;
         }
         // 담긴 나사
+        const step = Math.min(22, slot.w / 3.4);
+        const isc = Math.min(0.62, slot.w / 3.4 / (SCREW_R * 2.1));
         for (let k = 0; k < b.items.length; k++) {
-            drawScrew(slot.w / 2 + (k - 1) * 22, slot.h / 2 + 6, b.items[k], 0.62, 0, false);
+            drawScrew(slot.w / 2 + (k - 1) * step, slot.h / 2 + 6, b.items[k], isc, 0, false);
         }
         // 남은 칸 표시
         for (let k = b.items.length; k < BOX_CAP; k++) {
             ctx.fillStyle = 'rgba(255,255,255,.13)';
             ctx.beginPath();
-            ctx.arc(slot.w / 2 + (k - 1) * 22, slot.h / 2 + 6, SCREW_R * 0.6, 0, 7);
+            ctx.arc(slot.w / 2 + (k - 1) * step, slot.h / 2 + 6, SCREW_R * isc, 0, 7);
             ctx.fill();
         }
         ctx.restore();
@@ -661,6 +865,7 @@ function loop(ts) {
 let level = sLoad('screwLevel', 1);
 function startGame() {
     document.getElementById('startOv').classList.remove('show');
+    document.getElementById('comboUi').classList.remove('pop');
     document.getElementById('clearOv').classList.remove('show');
     document.getElementById('overOv').classList.remove('show');
     G = newGame(level);
@@ -677,6 +882,7 @@ function nextLevel() {
     startGame();
 }
 
+refreshBestLine();
 cvs.addEventListener('pointerdown', e => {
     const r = cvs.getBoundingClientRect();
     onTap(e.clientX - r.left, e.clientY - r.top);
