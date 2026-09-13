@@ -10,3 +10,6 @@ __pycache__/
 
 # 로그
 streamlit.log
+
+# 당근 로그인 세션 / 게시 기록 - 절대 GitHub에 올리면 안 됨
+.daangn/

@@ -1,0 +1,59 @@
+{
+  "_readme": [
+    "당근 페이지 구조가 바뀌어서 자동 게시가 실패할 때 쓰는 파일입니다.",
+    "이 파일을 daangn_selectors.json 으로 복사한 뒤 값을 고치면 코드 수정 없이 대응됩니다.",
+    "각 항목은 '후보 목록'이고, 위에서부터 차례로 시도해서 처음 보이는 요소를 씁니다.",
+    "실제 페이지의 입력칸/버튼 이름을 모를 때는 `python daangn_poster.py probe` 를 실행하세요.",
+    ".daangn/probe_*.json 에 입력칸·버튼 목록이, probe_*.png 에 화면이 저장됩니다.",
+    "셀렉터는 Playwright 문법입니다. 예) button:has-text('등록'), input[placeholder*='제목']"
+  ],
+  "urls": {
+    "home": "https://business.daangn.com/",
+    "post_write": "https://business.daangn.com/business-profile/posts/new"
+  },
+  "logged_in": [
+    "a[href*='/business-profile']",
+    "button:has-text('소식')",
+    "a:has-text('소식')",
+    "text=비즈프로필 관리"
+  ],
+  "logged_out": [
+    "button:has-text('로그인')",
+    "a:has-text('로그인')",
+    "text=QR"
+  ],
+  "write_entry": [
+    "button:has-text('소식 쓰기')",
+    "button:has-text('소식 작성')",
+    "a:has-text('소식 쓰기')",
+    "button:has-text('새 소식')"
+  ],
+  "title_input": [
+    "input[placeholder*='제목']",
+    "textarea[placeholder*='제목']",
+    "input[name='title']"
+  ],
+  "body_input": [
+    "textarea[placeholder*='내용']",
+    "textarea[placeholder*='소식']",
+    "textarea[name='content']",
+    "div[contenteditable='true']",
+    "textarea"
+  ],
+  "image_input": [
+    "input[type='file'][accept*='image']",
+    "input[type='file']"
+  ],
+  "submit": [
+    "button:has-text('등록')",
+    "button:has-text('발행')",
+    "button:has-text('게시')",
+    "button:has-text('올리기')",
+    "button[type='submit']"
+  ],
+  "posted": [
+    "text=소식이 등록",
+    "text=등록되었",
+    "text=게시되었"
+  ]
+}
