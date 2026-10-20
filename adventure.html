@@ -424,6 +424,72 @@ const ITEMS = [
 
 
 
+
+// ───────── 펫 (잡은 몬스터) & 전설 몬스터 ─────────
+// 같은 유형을 5번 반복하는 게 지루한 원인 → 도시를 깰 때마다 "할 수 있는 행동"을 하나씩 연다.
+const PET_DB = {
+    ghost:     { n:'꼬마 유령',     e:'heal',  v:0.035, d:'매 턴 HP 3.5% 회복' },
+    bird:      { n:'빵 도둑 비둘기', e:'extra', v:0.22,  d:'22% 확률로 추가타' },
+    mime:      { n:'작은 마임',     e:'gold',  v:0.3,   d:'전투 보상 돈 +30%' },
+    ninja:     { n:'초밥 닌자',     e:'atk',   v:0.12,  d:'공격력 +12%' },
+    fox:       { n:'여우 신령',     e:'extra', v:0.3,   d:'30% 확률로 추가타' },
+    bamboo:    { n:'대나무 정령',   e:'def',   v:0.12,  d:'받는 피해 -12%' },
+    mummy:     { n:'아기 미라',     e:'def',   v:0.16,  d:'받는 피해 -16%' },
+    scorpion:  { n:'사막 전갈',     e:'atk',   v:0.16,  d:'공격력 +16%' },
+    sphinx:    { n:'작은 스핑크스', e:'mat',   v:0.5,   d:'전투 후 재료를 더 줍는다' },
+    gladiator: { n:'꼬마 검투사',   e:'atk',   v:0.2,   d:'공격력 +20%' },
+    fairy:     { n:'분수 요정',     e:'mana',  v:0.06,  d:'매 턴 기력 6% 회복' },
+    wraith:    { n:'작은 망령',     e:'heal',  v:0.06,  d:'매 턴 HP 6% 회복' },
+    taxi:      { n:'장난감 택시',   e:'gold',  v:0.6,   d:'전투 보상 돈 +60%' },
+    squirrel:  { n:'다람쥐 갱',     e:'crit',  v:0.18,  d:'치명타 확률 +18%' },
+    wzombie:   { n:'퇴근한 좀비',   e:'def',   v:0.22,  d:'받는 피해 -22%' },
+};
+function petOf(kind) { return PET_DB[kind]; }
+function activePet() {
+    if (!G.pet) return null;
+    const p = (G.pets || []).find(x => x.kind === G.pet);
+    if (!p) return null;
+    const db = PET_DB[p.kind];
+    return db ? { kind: p.kind, n: p.n, legend: p.legend, e: db.e, v: db.v * (p.legend ? 2 : 1) * (1 + (p.lv - 1) * 0.2), d: db.d, lv: p.lv } : null;
+}
+function petBonus(e) { const a = activePet(); return a && a.e === e ? a.v : 0; }
+
+// 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
+function legendRate() { return 0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0); }
+const LEGEND_PRE = ['✨전설의 ', '👑황금 ', '🌟신화의 '];
+
+function catchChance(e) {
+    const hpR = e.hp / e.max;
+    let c = 0.2 + (1 - hpR) * 0.62;
+    if (e.legend) c *= 0.4;
+    if (G.charm) c += 0.12;
+    return Math.max(0.05, Math.min(0.95, c));
+}
+function tryCatch() {
+    if (!B || B.phase !== 'menu' || B.busy > 0) return;
+    if (B.e.boss) { S.deny(); blog('보스는 잡을 수 없어요!'); return; }
+    if (B.e.hp / B.e.max > 0.4) { S.deny(); blog('아직 기운이 넘쳐요! 체력을 40% 밑으로 깎아야 해요'); return; }
+    B.phase = 'anim'; B.busy = 0.9; B.menu = 'root';
+    B.ring = 0.9;
+    S.encount();
+    const ok = Math.random() < catchChance(B.e);
+    if (ok) {
+        const db = PET_DB[B.e.draw];
+        const have = (G.pets || []).find(x => x.kind === B.e.draw);
+        if (have) { have.lv++; blog('🪄 또 잡았다! ' + have.n + ' Lv' + have.lv + '!'); }
+        else {
+            const np = { kind: B.e.draw, n: (B.e.legend ? '✨' : '') + (db ? db.n : B.e.n), lv: 1, legend: !!B.e.legend };
+            G.pets.push(np);
+            if (!G.pet) G.pet = np.kind;
+            blog('🪄 ' + np.n + ' 을(를) 잡았다!');
+        }
+        B.caught = true; B.result = 'catch'; B.phase = 'end'; B.busy = 1.1;
+        save();
+    } else {
+        blog('🪄 ...아슬아슬하게 빠져나갔다! (성공률 ' + Math.round(catchChance(B.e) * 100) + '%)');
+    }
+}
+
 // ───────── 전투 연출 ─────────
 // 숫자가 안 뜨고 이펙트가 없으면 "눌렀는데 뭐가 일어났는지" 알 수가 없다.
 const FX = [];          // 도트 파티클 (가상 해상도 좌표)
@@ -823,7 +889,7 @@ let G = null, scene = 'title', running = false, lastT = 0, gameT = 0;
 
 function maxHp() { return 60 + G.lv * 20; }
 function maxMp() { return 22 + G.lv * 7; }
-function atkOf() { return 11 + G.lv * 4.4; }
+function atkOf() { return (11 + G.lv * 4.4) * (1 + petBonus('atk')) * (1 + (G.ringLv || 0) * 0.08); }
 function defOf() { return 5 + G.lv * 2.4; }
 function expNeed() { return Math.round(20 * Math.pow(G.lv, 1.4)); }
 function city() { return CITIES[G.cityIdx]; }
@@ -835,6 +901,7 @@ function newGame() {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
         up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, learned: {}, story: {}, partT: 0,
+        pets: [], pet: null, unlock: {}, charm: false, merch: {},
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
@@ -1109,6 +1176,17 @@ function placeNpcs(c) {
             }
         if (best) npcs.push(Object.assign({}, list[i], { x: best.tx * TS + TS / 2, y: best.ty * TS + TS - 2 }));
     });
+    // 🏺 떠돌이 상인 — 도시 어딘가에 숨어 있다
+    if (G.unlock && G.unlock.merchant) {
+        for (let k = 0; k < 400; k++) {
+            const tx = 2 + ((Math.random() * (MW - 4)) | 0), ty = 8 + ((Math.random() * (MH - 16)) | 0);
+            if (!WALKABLE[tileAt(tx, ty)] || tileAt(tx, ty) === T.DOOR || tileAt(tx, ty) === T.PORT) continue;
+            if (npcs.some(n => Math.abs(n.x / TS - tx) < 4 && Math.abs(n.y / TS - ty) < 4)) continue;
+            npcs.push({ n:'떠돌이 상인', merchant:true, look:{ t:'old', hair:'#5c3620', cloth:'#6b4a8a' },
+                        lines:['…조용히 하게.'], x: tx * TS + TS / 2, y: ty * TS + TS - 2 });
+            break;
+        }
+    }
 }
 function enterCity(idx, keepPos) {
     G.cityIdx = idx;
@@ -1116,6 +1194,7 @@ function enterCity(idx, keepPos) {
     TH = THEME[c.id] || THEME.paris;
     MAP = buildMap(c);
     placeNpcs(c);
+    custs = []; petP = null;
     nodes = []; spawnNodes(c, 26);
     buildHearts(c);
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
@@ -1164,6 +1243,51 @@ function endStick(e) {
 }
 window.addEventListener('pointerup', endStick);
 window.addEventListener('pointercancel', endStick);
+
+
+// ───────── 펫 따라다니기 / 손님 / 떠돌이 상인 ─────────
+let petP = null;
+const petTrail = { length: 0 };   // (도시 이동 시 초기화용 더미)
+function updatePetTrail(dt) {
+    if (!G.pet) { petP = null; return; }
+    const bx = P.x - Math.cos(P.dir) * 16, by = P.y - Math.sin(P.dir) * 13 + 2;
+    if (!petP) { petP = { x: bx, y: by }; return; }
+    const k = Math.min(1, (dt || 0.016) * 5.5);
+    petP.x += (bx - petP.x) * k;
+    petP.y += (by - petP.y) * k;
+}
+function petWorldPos() { return G.pet ? petP : null; }
+
+let custs = [];
+function spawnCustomer() {
+    const d = MAP.door;
+    const dx = d.x * TS + TS / 2, dy = (d.y + 1) * TS + 6;
+    const side = (Math.random() * 3) | 0;
+    const far = TS * (5 + Math.random() * 5);
+    const sx = dx + (side === 0 ? -far : side === 1 ? far : 0);
+    const sy = dy + (side === 2 ? far : 0);
+    const looks = [{ t:'man', hair:'#3a2418', cloth:'#5b7cfa' }, { t:'woman', hair:'#8a5434', cloth:'#51cf66' },
+                   { t:'kid', hair:'#5c3620', cloth:'#ffd43b' }, { t:'old', hair:'#d8d8d8', cloth:'#c86a3f' },
+                   { t:'man', hair:'#5c3620', cloth:'#e8597a' }];
+    custs.push({ x: sx, y: sy, tx: dx, ty: dy, look: looks[(Math.random() * looks.length) | 0], state: 'in', t: 0 });
+}
+function updateCusts(dt) {
+    for (let i = custs.length - 1; i >= 0; i--) {
+        const c2 = custs[i];
+        c2.t += dt;
+        const dx = c2.tx - c2.x, dy = c2.ty - c2.y, d = Math.hypot(dx, dy);
+        if (c2.state === 'in') {
+            if (d < 6 || c2.t > 14) { c2.state = 'buy'; c2.t = 0; sellOne(c2.x, c2.y); }
+            else { c2.x += dx / d * 52 * dt; c2.y += dy / d * 52 * dt; }
+        } else {
+            c2.y += 46 * dt;
+            if (c2.t > 1.6) custs.splice(i, 1);
+        }
+    }
+}
+function drawCusts() {
+    custs.forEach(c2 => { if (c2.state === 'in') drawNpcPix({ x: c2.x, y: c2.y, look: c2.look }); });
+}
 
 // ───────── 월드 업데이트 ─────────
 let interact = null;          // 지금 상호작용 가능한 대상
@@ -1256,7 +1380,7 @@ function updateWorld(dt) {
         const d2 = Math.hypot(np.x - P.x, np.y - P.y);
         if (d2 < nearD) { nearD = d2; nearNpc = np; }
     }
-    if (nearNpc) nx = { kind:'npc', i:'💬', t:nearNpc.n, npc:nearNpc };
+    if (nearNpc) nx = { kind:'npc', i: nearNpc.merchant ? '🏺' : '💬', t:nearNpc.n, npc:nearNpc };
     else if (dl < 31 && !G.boss[city().id]) {
         const got = cityHearts(city());
         nx = { kind:'boss', i: got >= 3 ? '⚔️' : '🔒', t: got >= 3 ? '도전!' : got + '/3' };
@@ -1271,15 +1395,17 @@ function updateWorld(dt) {
         if (nx) { document.getElementById('actGoI').textContent = nx.i; document.getElementById('actGoT').textContent = nx.t; }
     }
 
-    // 가게 자동 판매
+    // 가게 자동 판매 + 손님 + 펫
     tickShop(dt);
+    updateCusts(dt);
+    updatePetTrail(dt);
     updatePops(dt);
 }
 
 function doInteract() {
     if (!interact) return;
     S.open();
-    if (interact.kind === 'npc') startTalk(interact.npc);
+    if (interact.kind === 'npc') { if (interact.npc.merchant) openMerch(); else startTalk(interact.npc); }
     else if (interact.kind === 'shop') openShop();
     else if (interact.kind === 'port') openPort();
     else if (interact.kind === 'boss') {
@@ -1733,6 +1859,9 @@ function drawWorld() {
         items.push({ y: (d.y + 1) * TS, f: () => drawDeco(d, p) });
     });
     npcs.forEach(n => items.push({ y: n.y, f: () => drawNpcPix(n) }));
+    custs.forEach(c2 => { if (c2.state === 'in') items.push({ y: c2.y, f: () => drawNpcPix({ x: c2.x, y: c2.y, look: c2.look }) }); });
+    { const pp = petWorldPos();
+      if (pp) items.push({ y: pp.y - 1, f: () => drawMobPix(G.pet, pp.x, pp.y + 4, 1, gameT, 0) }); }
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
     if (!G.boss[c.id]) {
@@ -1988,13 +2117,20 @@ function mobParts(kind, t) {
         }
     }
 }
-function drawMobPix(kind, cx, cy, s, t, hurt) {
+function drawMobPix(kind, cx, cy, s, t, hurt, legend) {
     t = t || 0;
     if (hurt > 0 && ((t * 24) | 0) % 2) return;
     const bob = (Math.sin(t * 2.2) * 1.2) | 0;
     const ox = Math.round(cx) - 10 * s, oy = Math.round(cy) - 21 * s + bob * s;
     R(ox + 2 * s, oy + 21 * s, 16 * s, 2 * s, 'rgba(0,0,0,.22)');
-    sprite(mobParts(kind, t), SK.out, s, ox, oy);
+    sprite(mobParts(kind, t), legend ? '#ffb000' : SK.out, s, ox, oy);
+    if (legend) {   // 전설 — 금빛 반짝임
+        for (let i = 0; i < 5; i++) {
+            const a = t * 2 + i * 1.25;
+            const sx2 = ox + 10 * s + Math.cos(a) * 15 * s, sy2 = oy + 10 * s + Math.sin(a) * 13 * s;
+            if (((t * 6 + i) | 0) % 3) R(sx2, sy2, 2 * s, 2 * s, '#fff2a8');
+        }
+    }
 }
 
 // ───────── 도시 랜드마크 (도트) ─────────
@@ -2063,9 +2199,13 @@ function startBattle(bossOf) {
         const m = c.mobs[Math.floor(Math.random() * c.mobs.length)];
         const r = 0.88 + Math.random() * 0.3;
         const k = mobScale(c);
-        const hp = Math.round(m.hp * r * k);
-        e = { n: m.n, draw: m.draw, hp, max: hp, atk: Math.round(m.atk * k), def: Math.round(m.def * k),
-              exp: Math.round(m.exp * (1 + (k - 1) * 0.5)), gold: Math.round(m.gold * (1 + (k - 1) * 0.5)), boss: false };
+        const legend = Math.random() < legendRate();
+        const L = legend ? 2.8 : 1;
+        const hp = Math.round(m.hp * r * k * L);
+        e = { n: (legend ? LEGEND_PRE[(Math.random() * 3) | 0] : '') + m.n, draw: m.draw, legend,
+              hp, max: hp, atk: Math.round(m.atk * k * (legend ? 1.5 : 1)), def: Math.round(m.def * k * (legend ? 1.4 : 1)),
+              exp: Math.round(m.exp * (1 + (k - 1) * 0.5) * (legend ? 8 : 1)),
+              gold: Math.round(m.gold * (1 + (k - 1) * 0.5) * (legend ? 10 : 1)), boss: false };
     }
     B = {
         e, phase: 'intro', t: 0, ringT: 0, menu: 'root', btns: [],
@@ -2075,7 +2215,11 @@ function startBattle(bossOf) {
         guard: 0, edeb: 0, estun: 0, hurtP: 0, hurtE: 0, shake: 0, busy: 0, result: null,
     };
     scene = 'battle';
-    if (!bossOf && MOB_SAY[e.draw]) B.log.push('💢 "' + MOB_SAY[e.draw] + '"');
+    if (e.legend) {
+        B.log = ['⭐ 공기가 달라졌다... ' + e.n + ' 이(가) 나타났다!'];
+        B.flash = 0.9;
+        [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.18, { delay: i * 0.08, type: 'triangle', vol: 0.16 }));
+    } else if (!bossOf && MOB_SAY[e.draw]) B.log.push('💢 "' + MOB_SAY[e.draw] + '"');
     S.encount();
     document.getElementById('hud').style.opacity = '0';
     document.getElementById('bars').style.opacity = '0';
@@ -2094,7 +2238,7 @@ function dmgCalc(a, pow, d, critBonus) {
     let v = a * pow * (0.9 + Math.random() * 0.2) - d * 0.35;
     v = Math.max(1, v);
     const cr = hasAnimal('crit');
-    const isCrit = Math.random() < 0.06 + (critBonus || 0) + (cr ? cr.val : 0);
+    const isCrit = Math.random() < 0.06 + (critBonus || 0) + (cr ? cr.val : 0) + petBonus('crit');
     if (isCrit) v *= 1.85;
     return { d: Math.max(1, Math.round(v)), crit: isCrit };
 }
@@ -2118,6 +2262,12 @@ function useSkill(sk) {
         for (let i = 0; i < hits; i++) {
             const r = dmgCalc(atkOf(), skPow(sk), B.e.def, sk.crit);
             total += r.d; anyCrit = anyCrit || r.crit;
+        }
+        const exP = petBonus('extra');
+        if (exP && Math.random() < exP) {
+            const r2 = dmgCalc(atkOf(), skPow(sk) * 0.5, B.e.def, 0);
+            total += r2.d;
+            txt += ' 🐾 펫의 추가타!';
         }
         const ex = hasAnimal('extra');
         if (ex && Math.random() < ex.val) {
@@ -2172,6 +2322,7 @@ function enemyTurn() {
     if (B.guard > 0) d *= 0.52;
     const gd = hasAnimal('guard');
     if (gd) d *= (1 - gd.val);
+    if (petBonus('def')) d *= (1 - petBonus('def'));
     d = Math.max(1, Math.round(d));
     G.hp = Math.max(0, G.hp - d);
     B.hurtP = 0.45; B.shake = 0.3;
@@ -2188,14 +2339,16 @@ function turnEnd() {
     if (rg && G.hp > 0 && G.hp < maxHp()) { G.hp = Math.min(maxHp(), G.hp + rg.val); }
     const mn = hasAnimal('mana');
     if (mn && G.mp < maxMp()) { G.mp = Math.min(maxMp(), G.mp + mn.val); }
+    if (petBonus('heal') && G.hp > 0) G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * petBonus('heal')));
+    if (petBonus('mana')) G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * petBonus('mana')));
     syncHud();
 }
 
 function winBattle() {
     const e = B.e, c = city();
-    G.gold += e.gold; G.exp += e.exp; G.kills++;
+    G.gold += Math.round(e.gold * (1 + petBonus('gold'))); G.exp += e.exp; G.kills++;
     const drops = [];
-    const n = e.boss ? 5 : 1 + (Math.random() < 0.4 ? 1 : 0);
+    const n = (e.boss ? 5 : 1 + (Math.random() < 0.4 ? 1 : 0)) + (Math.random() < petBonus('mat') ? 2 : 0);
     for (let i = 0; i < n; i++) {
         const m = c.mats[Math.floor(Math.random() * c.mats.length)];
         G.mats[m.n] = (G.mats[m.n] || 0) + 1;
@@ -2216,6 +2369,14 @@ function winBattle() {
     }
     if (e.boss) {
         G.boss[c.id] = true;
+        const UN = { paris:['stall','🧺 이동식 가판대','이제 ☰ 메뉴에서 <b>어디서든 가게를 열 수</b> 있어요!'],
+                     kyoto:['catch','🪄 몬스터 포획','전투에서 적 체력을 40% 밑으로 깎으면<br><b>반지를 던져 잡을 수</b> 있어요. 잡은 몬스터는 <b>펫</b>이 돼서 따라다녀요!'],
+                     cairo:['merchant','🏺 떠돌이 상인','도시 어딘가에 <b>수상한 상인</b>이 나타나기 시작했어요.<br>희귀한 물건을 팝니다.'],
+                     roma:['lucky','🍀 행운의 기운','<b>전설 몬스터</b> 출현 확률이 크게 올랐어요!'] }[c.id];
+        if (UN && !G.unlock[UN[0]]) {
+            G.unlock[UN[0]] = true;
+            setTimeout(() => msg('🔓', UN[1] + ' 해금!', UN[2]), 900);
+        }
         if (!G.animals.includes(c.animal.id)) {
             G.animals.push(c.animal.id);
             lvUp += '<br><br>' + c.animal.i + ' <b>' + c.animal.n + '</b>' + (jo(c.animal.n, '이', '가').slice(-1)) + ' 동료가 됐다!<br><span style="opacity:.7">' + c.animal.desc + '</span>';
@@ -2237,6 +2398,20 @@ function winBattle() {
     syncHud(); save();
 }
 
+function catchWin() {
+    const e = B.e, c = city();
+    const g = Math.round(e.gold * 0.4), x = Math.round(e.exp * 0.5);
+    G.gold += g; G.exp += x;
+    let lvUp = '';
+    while (G.exp >= expNeed()) { G.exp -= expNeed(); G.lv++; G.hp = maxHp(); G.mp = maxMp(); lvUp = '<br>🎊 레벨 ' + G.lv + '!'; S.levelup(); }
+    const pet = (G.pets || [])[G.pets.length - 1];
+    const db = PET_DB[e.draw];
+    S.win();
+    msg('🪄', '포획 성공!', '<b style="color:#c04a60">' + (pet ? pet.n : e.n) + '</b> 이(가) 동료가 됐어요!<br>' +
+        '<span style="opacity:.75">' + (db ? db.d : '') + '</span><br><br>💰 ' + g + '원 · ⭐ ' + x + lvUp +
+        '<br><br><span style="opacity:.7">☰ 메뉴 → 펫 에서 바꿀 수 있어요.<br>같은 종류를 또 잡으면 레벨이 올라요!</span>');
+    syncHud(); save();
+}
 function loseBattle() {
     const lost = Math.round(G.gold * 0.25);
     G.gold -= lost;
@@ -2267,6 +2442,7 @@ function updateBattle(dt) {
                 scene = 'world'; endBattleUi();
                 if (B.result === 'win') winBattle();
                 else if (B.result === 'lose') loseBattle();
+                else if (B.result === 'catch') catchWin();
                 B = null; return;
             }
             if (B.e.hp <= 0) { B.result = 'win'; B.phase = 'end'; B.busy = 0.6; blog(jo(B.e.n, '을', '를') + ' 쓰러뜨렸다!'); return; }
@@ -2364,7 +2540,7 @@ function drawBattle() {
     platformPix(ex, ey + 3, 44 * (es / 2), p);
     platformPix(pxx, pyy + 3, 42, p);
 
-    if (B.e.hp > 0 || B.result !== 'win') drawMobPix(B.e.draw, ex, ey, es, B.t, B.hurtE);
+    if (B.e.hp > 0 || B.result !== 'win') drawMobPix(B.e.draw, ex, ey, es, B.t, B.hurtE, B.e.legend);
     // 대기 중이던 데미지 숫자를 화면 좌표로 띄운다
     if (B.pendDmg) {
         const d = B.pendDmg; B.pendDmg = null;
@@ -2460,10 +2636,21 @@ function drawBattle() {
     };
     const gap = 9, fullW = W - 36;
     if (B.menu === 'root') {
-        const w3 = (fullW - gap * 2) / 3;
-        mk(18, by, w3, bh, '⚔️ 싸운다', null, () => { B.menu = 'skill'; }, false, 0);
-        mk(18 + w3 + gap, by, w3, bh, '🎒 아이템', null, () => { B.menu = 'item'; }, false, 1);
-        mk(18 + (w3 + gap) * 2, by, w3, bh, '🏃 도망', null, tryRun, false, 2);
+        if (G.unlock && G.unlock.catch) {
+            const w2r = (fullW - gap) / 2, rh2 = bh * 0.84;
+            const canCatch = !B.e.boss && B.e.hp / B.e.max <= 0.4;
+            mk(18, by, w2r, rh2, '⚔️ 싸운다', null, () => { B.menu = 'skill'; }, false, 0);
+            mk(18 + w2r + gap, by, w2r, rh2, '🎒 아이템', null, () => { B.menu = 'item'; }, false, 1);
+            mk(18, by + rh2 + 6, w2r, rh2,
+               '🪄 포획', canCatch ? Math.round(catchChance(B.e) * 100) + '%' : (B.e.boss ? '보스 불가' : 'HP 40% 이하'),
+               tryCatch, !canCatch, 2);
+            mk(18 + w2r + gap, by + rh2 + 6, w2r, rh2, '🏃 도망', null, tryRun, false, 1);
+        } else {
+            const w3 = (fullW - gap * 2) / 3;
+            mk(18, by, w3, bh, '⚔️ 싸운다', null, () => { B.menu = 'skill'; }, false, 0);
+            mk(18 + w3 + gap, by, w3, bh, '🎒 아이템', null, () => { B.menu = 'item'; }, false, 1);
+            mk(18 + (w3 + gap) * 2, by, w3, bh, '🏃 도망', null, tryRun, false, 2);
+        }
     } else if (B.menu === 'skill') {
         const sk = mySkills(), w2 = (fullW - gap) / 2, rh = bh * 0.78;
         sk.slice(0, 6).forEach((s2, i) => {
@@ -2521,24 +2708,29 @@ function tickShop(dt) {
     const period = shopPeriod();
     while (G.shopAt >= period) {
         G.shopAt -= period;
-        const keys = Object.keys(G.stock).filter(k => G.stock[k] > 0);
-        if (!keys.length) { G.shopAt = 0; return; }
-        const k = keys[Math.floor(Math.random() * keys.length)];
-        G.stock[k]--;
-        if (G.stock[k] <= 0) delete G.stock[k];
-        let price = 0, icon = '🍽️';   // 가게 등급에 따라 판매가가 오른다
-        for (const c of CITIES) for (const m of c.shop.menu) if (m.n === k) { price = m.price; icon = m.i; }
-        price = Math.round(price * shopMul());
-        G.gold += price;
-        S.coin();
-        toast(icon + ' ' + jo(k, '이', '가') + ' 팔렸어요! +' + price + '원');
-        syncHud();
+        if (custs.length < 4) spawnCustomer();   // 손님이 직접 걸어와서 사 간다
+        else sellOne(P.x, P.y);
     }
+}
+function sellOne(px2, py2) {
+    const keys = Object.keys(G.stock).filter(k => G.stock[k] > 0);
+    if (!keys.length) return;
+    const k = keys[Math.floor(Math.random() * keys.length)];
+    G.stock[k]--;
+    if (G.stock[k] <= 0) delete G.stock[k];
+    let price = 0, icon = '🍽️';
+    for (const c of CITIES) for (const m of c.shop.menu) if (m.n === k) { price = m.price; icon = m.i; }
+    price = Math.round(price * shopMul());
+    G.gold += price;
+    S.coin();
+    pop(px2, py2 - 8, '+' + price, '#ffd43b');
+    toast(icon + ' ' + jo(k, '이', '가') + ' 팔렸어요! +' + price.toLocaleString() + '원');
+    syncHud();
 }
 
 // ───────── 패널 (가게 / 가방 / 메뉴 / 공항) ─────────
 const PANEL = document.getElementById('panel');
-function closePanel() { PANEL.classList.remove('show'); S.open(); }
+function closePanel() { PANEL.classList.remove('show'); stallMode = false; S.open(); }
 function panelOpen(title, sub, rows, closeLabel) {
     document.getElementById('pTitle').innerHTML = title;
     document.getElementById('pSub').innerHTML = sub;
@@ -2556,7 +2748,7 @@ function rowHtml(icon, name, desc, val, fn, off) {
 let shopTab = 'cook';
 function openShop(tab) {
     const c = city();
-    if (G.hp < maxHp() || G.mp < maxMp()) {
+    if (!stallMode && (G.hp < maxHp() || G.mp < maxMp())) {
         G.hp = maxHp(); G.mp = maxMp();
         S.heal(); syncHud();
         toast('🛋️ 가게에서 한숨 돌렸어요! 체력·기력 전부 회복');
@@ -2619,7 +2811,7 @@ function openShop(tab) {
                          it.d, itemPrice(it) + '원', 'buy(' + i + ')', G.gold < itemPrice(it));
         });
     }
-    panelOpen(c.shop.i + ' ' + c.shop.n + ' <span style="font-size:.6em;opacity:.6">Lv' + (upLv('shop') + 1) + '</span>',
+    panelOpen((stallMode ? '🧺 이동식 가판대' : c.shop.i + ' ' + c.shop.n) + ' <span style="font-size:.6em;opacity:.6">Lv' + (upLv('shop') + 1) + '</span>',
         '💰 ' + G.gold.toLocaleString() + '원 · 진열대 ' + stockTotal() + '개 · ' + RIDE_I[upLv('ride')] + ' ' + RIDE_N[upLv('ride')], h);
 }
 function cook(i) {
@@ -2711,6 +2903,17 @@ function openMenu() {
     mySkills().forEach(s => h += rowHtml('✦', s.n, s.d, s.mp ? '기력 ' + s.mp : '기력 0'));
     const next = SKILLS.find(s => s.lv > G.lv);
     if (next) h += '<div class="rd" style="opacity:.55;padding:4px 2px">🔒 Lv' + next.lv + ' — ' + next.n + '</div>';
+    if (G.unlock && G.unlock.stall) {
+        h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧺 이동식 가판대</div>';
+        h += rowHtml('🧺', '여기서 가게 열기', '어디서든 요리하고 사고팔 수 있어요<br><span style="opacity:.6">(체력 회복은 진짜 가게에서만)</span>', '열기', 'openStall()');
+    }
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 펫 (' + (G.pets || []).length + '/' + Object.keys(PET_DB).length + ')</div>';
+    if (!(G.pets || []).length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">' + (G.unlock && G.unlock.catch ? '전투에서 적 체력을 40% 밑으로 깎고 🪄 포획을 눌러보세요.' : '교토의 보스를 이기면 몬스터를 잡을 수 있게 돼요.') + '</div>';
+    (G.pets || []).forEach(pt => {
+        const db = PET_DB[pt.kind], on = G.pet === pt.kind;
+        h += rowHtml(on ? '🐾' : '·', pt.n + ' <span style="opacity:.6;font-size:.8em">Lv' + pt.lv + (on ? ' · 데리고 다니는 중' : '') + '</span>',
+            db ? db.d : '', on ? '✓' : '선택', 'setPet(\'' + pt.kind + '\')', false);
+    });
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 동료</div>';
     if (!G.animals.length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">보스를 이기면 그 도시의 동물 친구가 합류해요.</div>';
     CITIES.forEach(c => { if (G.animals.includes(c.animal.id)) h += rowHtml(c.animal.i, c.animal.n, c.animal.desc, c.icon); });
@@ -2726,6 +2929,9 @@ function openMenu() {
     panelOpen('☰ 메뉴', '💗 편지 조각 ' + Object.keys(G.hearts).length + '/15 · ⏱️ ' + Math.floor(G.playT / 60) + '분 플레이', h);
 }
 function toggleSound() { soundOn = !soundOn; sSave('dhAdvSound', soundOn); S.open(); openMenu(); }
+function setPet(k) { G.pet = (G.pet === k ? null : k); petP = null; S.pick(); save(); openMenu(); }
+let stallMode = false;
+function openStall() { stallMode = true; closePanel(); openShop('cook'); }
 function wipe() {
     closePanel();
     ask('🗑️', '처음부터 다시?', '모은 돈 · 레벨 · 업그레이드 · 편지 조각이<br><b>전부 사라집니다.</b>', '정말 지울래요',
@@ -2758,6 +2964,59 @@ function fly(i) {
     enterCity(i);
     save();
     msg(CITIES[i].icon, CITIES[i].name + ' 도착!', '새로운 재료와 몬스터가 기다리고 있어요.<br>가게도 새로 열었습니다!');
+}
+
+
+// ───────── 떠돌이 상인 (비밀 상점) ─────────
+const MERCH = [
+    { id:'charm', i:'🔮', n:'포획 부적',   d:'포획 확률 +12%, 전설 몬스터 출현 +5% (영구)', c:8000 },
+    { id:'ring',  i:'💍', n:'강화 반지',   d:'공격력 +8% (영구 · 살 때마다 누적)',          c:6000 },
+    { id:'book',  i:'📗', n:'희귀 스킬북', d:'배운 기술 하나가 한 번에 +2 레벨',            c:9000 },
+    { id:'feed',  i:'🍖', n:'펫 먹이',     d:'지금 데리고 다니는 펫의 레벨 +1',             c:5000 },
+    { id:'egg',   i:'🥚', n:'수상한 알',   d:'랜덤 펫 한 마리 (이미 있으면 레벨업)',        c:20000 },
+];
+function merchCost(m) { return Math.round(m.c * (1 + G.cityIdx * 2.1)); }
+function merchKey(m) { return city().id + '_' + m.id; }
+function openMerch() {
+    let h = '<div class="rd" style="margin:2px 0 10px;opacity:.8">"…조용히 하게. 이건 아무한테나 안 파는 거야."<br>도시마다 한 번씩만 살 수 있네.</div>';
+    MERCH.forEach((m, i) => {
+        const sold = G.merch[merchKey(m)];
+        const cost = merchCost(m);
+        h += rowHtml(sold ? '✅' : m.i, m.n + (sold ? ' <span style="opacity:.6;font-size:.8em">구매함</span>' : ''),
+            m.d + (m.id === 'ring' && G.ringLv ? '<br><b>현재 +' + (G.ringLv * 8) + '%</b>' : ''),
+            sold ? '—' : cost.toLocaleString() + '원',
+            sold ? '' : 'buyMerch(' + i + ')', sold || G.gold < cost);
+    });
+    panelOpen('🏺 떠돌이 상인', '💰 ' + G.gold.toLocaleString() + '원', h);
+}
+function buyMerch(i) {
+    const m = MERCH[i], cost = merchCost(m);
+    if (G.merch[merchKey(m)]) { S.deny(); return; }
+    if (G.gold < cost) { S.deny(); toast('💰 돈이 ' + (cost - G.gold).toLocaleString() + '원 모자라요'); return; }
+    G.gold -= cost; G.merch[merchKey(m)] = true;
+    S.levelup();
+    if (m.id === 'charm') { G.charm = true; toast('🔮 포획 부적을 얻었다!'); }
+    else if (m.id === 'ring') { G.ringLv = (G.ringLv || 0) + 1; toast('💍 공격력 +' + (G.ringLv * 8) + '%'); }
+    else if (m.id === 'book') {
+        const list = mySkills(); const sk = list[(Math.random() * list.length) | 0];
+        G.sk[sk.id] = skLv(sk.id) + 2;
+        msg('📗', '희귀 스킬북!', '<b>' + sk.n + '</b> 이(가) Lv' + G.sk[sk.id] + ' 가 됐어요!');
+    } else if (m.id === 'feed') {
+        const ap = (G.pets || []).find(x => x.kind === G.pet);
+        if (!ap) { toast('데리고 다니는 펫이 없어요'); }
+        else { ap.lv++; toast('🍖 ' + ap.n + ' Lv' + ap.lv + '!'); }
+    } else {
+        const kinds = Object.keys(PET_DB);
+        const k = kinds[(Math.random() * kinds.length) | 0];
+        const have = (G.pets || []).find(x => x.kind === k);
+        if (have) { have.lv++; msg('🥚', '알이 부화했다!', '<b>' + have.n + '</b> 이(가) Lv' + have.lv + ' 가 됐어요!'); }
+        else {
+            const np = { kind:k, n: PET_DB[k].n, lv:1, legend:false };
+            G.pets.push(np); if (!G.pet) G.pet = k;
+            msg('🥚', '알이 부화했다!', '<b>' + np.n + '</b> 이(가) 동료가 됐어요!<br><span style="opacity:.75">' + PET_DB[k].d + '</span>');
+        }
+    }
+    syncHud(); save(); openMerch();
 }
 
 // ───────── 공용 UI ─────────
