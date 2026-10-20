@@ -533,6 +533,8 @@ const FORMS = [
       note:'약속한 아침밥, 진짜로 하게 됐다.' },
     { lv:78, n:'그냥, 동훈',  i:'💍', shirt:'#f8f9fa', pants:'#3a4a6a', tool:'bare',
       note:'칭호가 다 떨어져 나갔다. 이제 그냥 동훈이다.' },
+    { lv:95, n:'기억의 동훈', i:'💫', shirt:'#6b4fa0', pants:'#2a1838', tool:'echo',
+      note:'기억 속을 걸어다닐 수 있게 됐다.' },
 ];
 const SKILLS = [
     { id:'dish',   n:'설거지 연타',    lv:1,  mp:0,  pow:0.42, hits:3, d:'퐁퐁으로 3연타. 기력이 안 들어요' },
@@ -772,7 +774,8 @@ function petBonus(e) { return activePets().reduce((a, p) => a + (p.e === e ? p.v
 
 // 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
 function legendRate() {
-    return (0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0)) * wxNow().legend;
+    return (0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0))
+           * wxNow().legend * (isEcho() ? 2 : 1);
 }
 // 등급마다 색이 다르다. 숫자가 아니라 "색"으로 바로 알아보게.
 const TIERS = [null,
@@ -1047,6 +1050,23 @@ act2: { em:'🧳', lines:[
   '"이번엔 내가 데리고 갈게.\n하나씩, 진짜로 해보자."',
   '…여행은 아직 절반이 남았다.\n\n다음 도시는 — 아이슬란드.',
 ]},
+echoIn: { em:'🌙', lines:[
+  '엔딩을 보고 며칠이 지난 어느 밤.',
+  '반지가 혼자 빛났다. 처음 보는 색이었다.',
+  '동훈이가 먼저 말했다.\n"...나 아직 못 한 말이 있어."',
+  '"도시마다 하나씩. 그때는 입이 안 떨어졌던 말."',
+  '"이번엔 내가 길을 알아. 거꾸로 가자."',
+  '눈을 뜨니 서울이었다.\n길도 건물도 그대로인데 —\n\n색이 전부 달랐다.',
+]},
+echoOut: { em:'💫', lines:[
+  '파리의 다리 밑. 처음 시작한 그 도시.',
+  '마지막 그림자가 고개를 끄덕이고 사라졌다.',
+  '"열 마디 다 했네."',
+  '"이제 못 한 말 없어?"',
+  '"...하나 있어."',
+  '"지금부터 할 말은 전부, 미루지 않고 할게."',
+  '반지는 더 빛나지 않았다.\n필요가 없어서였다.\n\n🌙 진짜 THE END 🌙',
+]},
 ending: { em:'💌', lines:[
   '서른 조각이 전부 모였다.\n열다섯 줄의 약속과, 열다섯 장의 사진.',
   '"적어두기만 했던 거, 이제 다 해봤네."',
@@ -1096,7 +1116,7 @@ function cutAdvance() {
     if (after) after();
 }
 const PIECES = 30;                                   // 전체 조각 수 (편지 15 + 사진 15)
-function letterCount() { return Object.keys(G.hearts || {}).length; }
+function letterCount() { return Object.keys(G.hearts || {}).filter(k => k.slice(0, 2) !== 'e:').length; }
 function pieceText(n) {                              // n은 1부터
     return n <= 15 ? STORY.letter[n - 1] : (STORY.photo[n - 16] || '');
 }
@@ -1430,7 +1450,7 @@ function newGame() {
         arena: { best: 0, runs: 0 },
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
-        wxK: 'clear', wxT: 200, secret: {},
+        wxK: 'clear', wxT: 200, secret: {}, echo: { on:false, boss:{} },
     };
 }
 
@@ -1452,6 +1472,90 @@ const THEME = {
     sydney:    { tree:'palm',    enc:'bush',  ground:'sand',  pave:'stone' },
     seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
+
+// ───────── 외전 「돌아가는 길」 ─────────
+// 엔딩을 본 뒤, 왔던 길을 거꾸로 되짚어 간다. 지형은 똑같은데 색이 전부 뒤집혀 있다.
+// 기억 속의 도시라서 그렇다.
+function isEcho() { return !!(G.echo && G.echo.on); }
+function echoDone(id) { return !!(G.echo && G.echo.boss && G.echo.boss[id]); }
+function echoCount() { return G.echo ? Object.keys(G.echo.boss || {}).length : 0; }
+const ECHO_ORDER = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];   // 서울에서 시작해 파리로 돌아간다
+// 색을 돌린다. 물과 꽃만 더 밝게 남겨서, 어두운 바탕에서 혼자 빛나게.
+const _echoCache = {};
+const ECHO_TINT = '#6a52a8';                          // 달빛 보라
+function echoPal(c) {
+    if (_echoCache[c.id]) return _echoCache[c.id];
+    const o = c.pal0 || c.pal, out = {};
+    for (const k in o) {
+        if (k === 'out') { out[k] = '#140e24'; continue; }
+        const glow = k[0] === 'a' || k[0] === 'f';       // 물 · 꽃은 기억 속에서 혼자 빛난다
+        const rot = hueRot(o[k], 172, glow ? 1.3 : 0.62, glow ? 1.1 : 0.86);
+        out[k] = glow ? rot : mix(rot, ECHO_TINT, 0.34);
+    }
+    out.sky = mix(hueRot(o.sky, 172, 0.7, 0.55), '#2a1d44', 0.5);
+    return (_echoCache[c.id] = out);
+}
+function applyPalette(c) {
+    if (!c.pal0) c.pal0 = c.pal;
+    c.pal = isEcho() ? echoPal(c) : c.pal0;
+}
+// 외전은 늘 "지금 내 수준보다 한 뼘 위". 다만 몬스터 체력은 내 공격력을 따라가고
+// 몬스터 공격력은 내 체력을 따라간다. 둘을 하나로 뭉뚱그리면 숫자가 터진다.
+function echoMuls() {
+    const c = city(), lv0 = c.lv0 || 1;
+    // 여기까지 온 사람은 기술이 만렙(위력 2.4배)이고 장비도 다 찼다(+30%).
+    // 레벨만 보고 배율을 잡으면 한두 대에 끝나버린다.
+    return {
+        hp:  (11 + G.lv * 4.4) / (11 + lv0 * 4.4) * 4.0,    // 내 공격력 기준
+        atk: (60 + G.lv * 20)  / (60 + lv0 * 20)  * 1.15,   // 내 체력 기준
+        def: (11 + G.lv * 4.4) / (11 + lv0 * 4.4) * 1.2,
+        rew: (11 + G.lv * 4.4) / (11 + lv0 * 4.4),
+    };
+}
+function echoBoss(c) {
+    const m = echoMuls(), b = c.boss, pa = atkOf();
+    // 되짚어 갈수록 원래 보스가 약해지니, 바닥을 깔아서 끝까지 보스답게 만든다
+    const hp = Math.max(Math.round(b.hp * m.hp * 0.82), Math.round(pa * 115));
+    return { n: '그림자 ' + b.n, wife: b.wife, draw: b.draw, echo: true,
+             hp, atk: Math.max(Math.round(b.atk * m.atk * 0.9), Math.round(maxHp() * 0.1)),
+             def: Math.round(b.def * m.def),
+             exp: Math.round(b.exp * m.rew * 1.8), gold: Math.round(b.gold * m.rew * 2.4),
+             intro: '기억 속의 ' + b.wife + ' & ' + b.n + '. 이번엔 말이 없다.',
+             win: ECHO_WORD[c.id] };
+}
+// 그 도시에서 동훈이 끝내 못 한 말 아홉 마디 (+ 서울 한 마디)
+const ECHO_WORD = {
+    seoul:     '"…고맙다는 말을 제일 안 했네. 집에 있어줘서 고마워."',
+    sydney:    '"파도에 넘어졌을 때, 나 사실 네 손 잡고 싶었어."',
+    london:    '"우산 같이 쓰자고 먼저 말할걸. 괜히 안 젖은 척했어."',
+    santorini: '"석양 보면서 딴생각했어. 내일 회사 걱정. ...미안."',
+    iceland:   '"춥다고만 했지, 예쁘다고는 안 했더라. 너 말이야."',
+    ny:        '"그때 거울 속 나한테 하고 싶었던 말 — 너 혼자 큰 거 아니야."',
+    roma:      '"수첩에 적기만 하고 보여준 적이 없네. 보여줄걸."',
+    cairo:     '"하루 종일 말 안 한 그날, 먼저 말 걸고 싶었어. 입이 안 떨어졌어."',
+    kyoto:     '"불어터진 라면 두고 간 거, 고맙다고 말했어야 했는데."',
+    paris:     '"설거지 내가 한다고 한 그 밤이, 내 인생에서 제일 잘한 일이야."',
+};
+function echoStart() {
+    closePanel();
+    if (!G.echo) G.echo = { on: false, boss: {} };
+    G.echo.on = true; G.echo.boss = G.echo.boss || {};
+    G.cityIdx = 9;
+    save();
+    startCut(STORY.echoIn.em, STORY.echoIn.lines, () => { enterCity(9); save(); });
+}
+function echoQuit() {
+    G.echo.on = false; G.cityIdx = 9; applyPalette(CITIES[9]);
+    enterCity(9); save();
+    toast('🌙 원래 세계로 돌아왔어요');
+}
+function checkEchoEnd() {
+    if (!isEcho() || G.echo.ended) return;
+    if (CITIES.every(c => echoDone(c.id))) {
+        G.echo.ended = true; save();
+        setTimeout(() => startCut(STORY.echoOut.em, STORY.echoOut.lines), 700);
+    }
+}
 
 // ───────── 투기장 — 자동 진행 ─────────
 // 눌러줄 필요 없이 알아서 싸운다. 층이 오를수록 세지고, 죽으면 거기서 끝.
@@ -1556,7 +1660,7 @@ function gearDrop(e) {
     const chance = e.boss ? 1 : 0.1 + (e.tier ? 0.22 * e.tier : 0);
     if (Math.random() > chance) return null;
     const slot = SLOTS[(Math.random() * SLOTS.length) | 0].id;
-    const g = gearRoll(slot, G.cityIdx, e.boss ? 2 : (e.tier | 0));
+    const g = gearRoll(slot, G.cityIdx, (e.boss ? 2 : (e.tier | 0)) + (isEcho() ? 2 : 0));
     if (!G.gear) G.gear = {};
     const cur = G.gear[slot];
     if (gearPower(g) > gearPower(cur)) {
@@ -1632,6 +1736,10 @@ const WX = {
 const WX_KEYS = Object.keys(WX);
 function wxNow() { return WX[G.wxK] || WX.clear; }
 function pickWeather(c) {
+    if (isEcho()) {                              // 기억 속은 늘 어둑하다
+        const pool = ['night', 'night', 'fog', 'rain', 'snow'];
+        return pool[(Math.random() * pool.length) | 0];
+    }
     if (c.night) return 'night';                 // 아이슬란드는 늘 오로라 밤
     if (c.rain) return Math.random() < 0.72 ? 'rain' : 'fog';   // 런던은 거의 늘 비 아니면 안개
     let pool = WX_KEYS.filter(k => k !== 'snow' || c.id === 'iceland' || c.id === 'kyoto');
@@ -1649,7 +1757,7 @@ function setWeather(k, quiet) {
 }
 function tickWeather(dt) {
     const c = city();
-    if (c.night || c.rain) return;               // 고정 날씨 도시는 안 바뀐다
+    if (!isEcho() && (c.night || c.rain)) return;   // 고정 날씨 도시는 안 바뀐다
     G.wxT -= dt;
     if (G.wxT <= 0) {
         let k = pickWeather(c), guard = 0;
@@ -2058,7 +2166,7 @@ function buildHearts(c) {
     while (hearts.length < 3 && guard++ < 900) {
         const tx = 2 + Math.floor(rnd() * (MW - 4)), ty = 7 + Math.floor(rnd() * (MH - 14));
         if (!WALKABLE[tileAt(tx, ty)]) continue;
-        const key = c.id + hearts.length;
+        const key = (isEcho() ? 'e:' : '') + c.id + hearts.length;
         hearts.push({ x: tx * TS + TS / 2, y: ty * TS + TS / 2, key, got: !!G.hearts[key] });
     }
 }
@@ -2092,6 +2200,7 @@ function placeNpcs(c) {
 function enterCity(idx, keepPos) {
     G.cityIdx = idx;
     const c = city();
+    applyPalette(c);
     TH = THEME[c.id] || THEME.paris;
     MAP = buildMap(c);
     placeNpcs(c);
@@ -2100,7 +2209,7 @@ function enterCity(idx, keepPos) {
     buildHearts(c);
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
     P.x = G.px; P.y = G.py; P.vx = P.vy = 0;
-    document.getElementById('hCity').textContent = c.icon + ' ' + c.name;
+    document.getElementById('hCity').textContent = (isEcho() ? '🌙 ' : '') + c.icon + ' ' + c.name;
     setWeather(pickWeather(c), true);
     syncHud();
 }
@@ -2406,6 +2515,14 @@ function updateWorld(dt) {
             pop(h.x, h.y, photo ? '📷' : '💗', photo ? '#8cd0f0' : '#ff8fc7');
             const line = pieceText(total);
             const cg = cityHearts(city());
+            if (isEcho()) {
+                const cg2 = cityHearts(city());
+                msg('🌙', '기억 조각 ' + cg2 + '/3',
+                    '손에 닿자마자 바스러졌다.<br><br>' +
+                    (cg2 >= 3 ? '🌙 <b>세 조각을 다 모았어요.</b><br>랜드마크에서 그림자 커플이 기다리고 있어요.'
+                              : '<b>' + city().name + '</b> ' + cg2 + ' / 3'));
+                continue;
+            }
             msg(photo ? '📷' : '💗', pieceKind(total) + ' ' + (photo ? total - 15 : total) + '/15',
                 '<b style="color:#c04a60">' + line + '</b><br><br>' +
                 (photo ? '적어두기만 했던 줄 하나를 <b>진짜로 해본</b> 사진이다.'
@@ -2470,6 +2587,15 @@ function doInteract() {
                 '<span style="opacity:.7">💗 는 사람들이 잘 안 가는 구석에 있어요.<br>미니맵을 보면서 안 가본 곳을 찾아보세요.</span>');
             return;
         }
+        if (isEcho()) {
+            if (echoDone(c.id)) { S.deny(); toast('🌙 이 도시의 그림자는 이미 보냈어요'); return; }
+            const eb = echoBoss(c);
+            ask('🌙', '그림자 ' + c.boss.wife + ' & ' + c.boss.n,
+                '기억 조각 3/3 — 준비됐어요!<br><br>이쪽은 <b>훨씬 셉니다.</b><br>' +
+                '이기면 그 도시에서 <b>동훈이가 끝내 못 한 말</b>을 들을 수 있어요.',
+                '마주한다', () => startBattle(eb));
+            return;
+        }
         ask('⚔️', c.boss.wife + ' & ' + c.boss.n,
             '편지 조각 3/3 — 준비됐어요!<br><br><b>보스전은 도망칠 수 없어요.</b><br>체력과 기력을 꽉 채우고 가세요.',
             '도전한다!', () => startBattle(c.boss));
@@ -2501,6 +2627,33 @@ function shade(hex, amt) {
     const r = cl((n >> 16) + amt), g = cl(((n >> 8) & 255) + amt), b = cl((n & 255) + amt);
     return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
 }
+function mix(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const f = (sh) => Math.round((((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t));
+    return '#' + ((1 << 24) | (f(16) << 16) | (f(8) << 8) | f(0)).toString(16).slice(1);
+}
+// 색상환을 돌려서 "같은 곳인데 다른 세계"를 만든다 (외전 전용)
+function hueRot(hex, deg, satMul, liMul) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0, l = (mx + mn) / 2, sa = 0;
+    if (d) {
+        sa = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+        h = mx === r ? ((g - b) / d + (g < b ? 6 : 0)) : mx === g ? ((b - r) / d + 2) : ((r - g) / d + 4);
+        h /= 6;
+    }
+    h = (h + deg / 360) % 1;
+    sa = Math.max(0, Math.min(1, sa * satMul));
+    l = Math.max(0, Math.min(1, l * liMul));
+    const hk = (q, w, t) => { t = (t + 1) % 1;
+        return t < 1 / 6 ? q + (w - q) * 6 * t : t < 0.5 ? w : t < 2 / 3 ? q + (w - q) * (2 / 3 - t) * 6 : q; };
+    const q2 = l < 0.5 ? l * (1 + sa) : l + sa - l * sa, p2 = 2 * l - q2;
+    const to = v => Math.round(Math.max(0, Math.min(1, v)) * 255);
+    const R2 = to(hk(p2, q2, h + 1 / 3)), G2 = to(hk(p2, q2, h)), B2 = to(hk(p2, q2, h - 1 / 3));
+    return '#' + ((1 << 24) | (R2 << 16) | (G2 << 8) | B2).toString(16).slice(1);
+}
+
 // 도트 스프라이트: 먼저 실루엣을 외곽선 색으로 한 겹 깔고 그 위에 칠한다
 function sprite(parts, out, s, ox, oy) {
     s = s || 1; ox = ox || 0; oy = oy || 0;
@@ -3144,6 +3297,13 @@ function donghoonParts(form, t) {
                 [5, 11, 1, 2, '#c8c0b4'], [10, 11, 1, 2, '#c8c0b4'],
                 [6, 15, 4, 3, '#d9a441'],
                 [15, 11 + (1 - sw), 1, 6, '#a8834c'], [14, 9 + (1 - sw), 3, 3, '#f1f3f5']);
+    } else if (form.tool === 'echo') {              // 💫 기억 — 윤곽이 번지고 별빛이 돈다
+        P0.unshift([0, 10, 16, 14, '#3a2a58']);
+        P0.push([3, 11, 10, 4, '#8a6bc8'], [5, 15, 6, 4, '#6b4fa0'],
+                [14, 15 + (1 - sw), 2, 2, '#ffd43b'],
+                [((t * 3) | 0) % 2 ? 1 : 13, 7, 1, 1, '#ffffff'],
+                [((t * 2) | 0) % 2 ? 14 : 2, 13, 1, 1, '#c0a8ff'],
+                [7, 9, 2, 1, '#c0a8ff']);
     } else if (form.tool === 'bare') {              // 💍 아무것도 안 들었다. 반지만 남았다.
         P0.push([3, 11, 10, 3, '#e9ecef'], [7, 11, 2, 8, '#dee2e6'],
                 [14, 15 + (1 - sw), 2, 2, '#ffd43b'], [14, 14 + (1 - sw), 2, 1, '#fff3a8'],
@@ -3343,7 +3503,12 @@ function drawMobPix(kind, cx, cy, s, t, hurt, tier) {
         }
     }
     R(ox + 2 * s, oy + 21 * s, 16 * s, 2 * s, 'rgba(0,0,0,.22)');
-    sprite(mobParts(kind, t), T2 ? tierCol(tier, t) : SK.out, s, ox, oy);
+    sprite(mobParts(kind, t), T2 ? tierCol(tier, t) : (isEcho() ? '#2a1838' : SK.out), s, ox, oy);
+    if (isEcho() && !T2) {                       // 기억 속 몬스터는 보랏빛이 얇게 돈다
+        px.globalAlpha = 0.22 + Math.sin(t * 3) * 0.06;
+        R(ox, oy - s, 20 * s, 23 * s, '#9b7bd4');
+        px.globalAlpha = 1;
+    }
     if (T2) {       // 등급 반짝임 — 높을수록 많고 빠르다
         const n = 4 + T2.id * 2;
         for (let i = 0; i < n; i++) {
@@ -3483,21 +3648,29 @@ function startBattle(bossOf, forced, preset) {
               exp: Math.round(m.exp * T2.exp), gold: Math.round(m.gold * T2.gold), boss: false };
     } else if (bossOf) {
         const b = bossOf;
-        const k = 1 + 0.08 * Math.max(0, G.lv - (c.lv0 + 6));   // 과하게 레벨 올리고 와도 긴장감 유지
+        // 외전 보스는 echoMul()로 이미 지금 레벨에 맞춰져 있다. 또 보정하면 손도 못 댄다.
+        const k = b.echo ? 1 : 1 + 0.08 * Math.max(0, G.lv - (c.lv0 + 6));   // 과하게 레벨 올리고 와도 긴장감 유지
         const hp = Math.round(b.hp * k);
         e = { n: b.n, draw: b.draw, hp, max: hp, atk: Math.round(b.atk * k), def: Math.round(b.def * k),
-              exp: b.exp, gold: b.gold, boss: true, wife: b.wife };
+              exp: b.exp, gold: b.gold, boss: true, wife: b.wife, echo: !!b.echo };
     } else {
         const m = c.mobs[Math.floor(Math.random() * c.mobs.length)];
         const r = 0.88 + Math.random() * 0.3;
         const k = mobScale(c);
         const tier = Math.random() < legendRate() ? rollTier() : 0;
         const T2 = tierOf(tier);
-        const hp = Math.round(m.hp * r * k * (T2 ? T2.mul : 1));
-        e = { n: (T2 ? T2.pre : '') + m.n, draw: m.draw, legend: tier > 0, tier,
-              hp, max: hp, atk: Math.round(m.atk * k * (T2 ? T2.atk : 1)), def: Math.round(m.def * k * (T2 ? T2.def : 1)),
-              exp: Math.round(m.exp * (1 + (k - 1) * 0.5) * (T2 ? T2.exp : 1)),
-              gold: Math.round(m.gold * (1 + (k - 1) * 0.5) * (T2 ? T2.gold : 1)), boss: false };
+        const E = isEcho() ? echoMuls() : null;
+        // 외전에선 도시 안에서 레벨이 오른 만큼의 보정(k)을 쓰지 않는다. 겹치면 숫자가 터진다.
+        const kk = E ? 1 : k;
+        let hp = Math.round(m.hp * r * kk * (E ? E.hp : 1) * (T2 ? T2.mul : 1));
+        if (E) hp = Math.max(hp, Math.round(atkOf() * 20 * (T2 ? T2.mul : 1)));
+        e = { n: (E ? '기억 속의 ' : '') + (T2 ? T2.pre : '') + m.n, draw: m.draw,
+              legend: tier > 0, tier, echo: !!E,
+              hp, max: hp,
+              atk: Math.round(m.atk * kk * (E ? E.atk : 1) * (T2 ? T2.atk : 1)),
+              def: Math.round(m.def * kk * (E ? E.def : 1) * (T2 ? T2.def : 1)),
+              exp: Math.round(m.exp * (1 + (kk - 1) * 0.5) * (T2 ? T2.exp : 1) * (E ? E.rew * 1.6 : 1)),
+              gold: Math.round(m.gold * (1 + (kk - 1) * 0.5) * (T2 ? T2.gold : 1) * (E ? E.rew * 3.2 : 1)), boss: false };
     }
     B = {
         e, phase: 'intro', t: 0, ringT: 0, menu: 'root', btns: [],
@@ -3694,6 +3867,16 @@ function winBattle() {
             if (f.note) lvUp += '<br><span style="opacity:.75;font-size:.9em">' + f.note + '</span>';
         }
         S.levelup();
+    }
+    if (e.boss && e.echo) {                 // 🌙 외전 보스
+        G.echo.boss[c.id] = true;
+        save();
+        msg('🌙', '그림자 ' + c.boss.n + ' 을(를) 보냈다',
+            '<b style="color:#9b7bd4;font-size:1.05em">' + ECHO_WORD[c.id] + '</b><br><br>' +
+            '<span style="opacity:.75">그림자는 아무 말 없이 고개를 끄덕이고 사라졌다.</span><br><br>' +
+            body + lvUp + '<br><br>🌙 못 한 말 <b>' + echoCount() + ' / 10</b>');
+        syncHud(); save(); checkEchoEnd();
+        return;
     }
     if (e.boss) {
         G.boss[c.id] = true;
@@ -4345,6 +4528,14 @@ function openMenu() {
         h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧺 이동식 가판대</div>';
         h += rowHtml('🧺', '여기서 가게 열기', '어디서든 요리하고 사고팔 수 있어요<br><span style="opacity:.6">(체력 회복은 진짜 가게에서만)</span>', '열기', 'openStall()');
     }
+    if (G.echo && (G.echo.on || echoCount())) {
+        h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🌙 못 한 말 (' + echoCount() + '/10)</div>';
+        ECHO_ORDER.forEach(ci => {
+            const cc = CITIES[ci], got = echoDone(cc.id);
+            h += '<div class="rd" style="padding:3px 4px;' + (got ? 'color:#7a4fb5;font-weight:800' : 'opacity:.35') + '">' +
+                 cc.icon + ' ' + (got ? ECHO_WORD[cc.id] : '????????') + '</div>';
+        });
+    }
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧤 장비</div>';
     SLOTS.forEach(sl => {
         const g = (G.gear || {})[sl.id];
@@ -4417,6 +4608,24 @@ function openPort() {
         h += '<div class="rd" style="opacity:.8;padding:4px 2px;line-height:1.7">✈️ 이 도시의 <b>라이벌 커플</b>을 이겨야 다음 도시 티켓을 팔아요.<br>' +
              c.icon + ' <b>' + c.name + '</b>의 랜드마크에서 <b>' + c.boss.wife + ' & ' + c.boss.n + '</b> 커플이 기다리고 있어요!</div>';
     }
+    if (isEcho()) {
+        h = '<div class="rd" style="opacity:.8;padding:4px 2px;line-height:1.7">🌙 <b>돌아가는 길</b> — 왔던 길을 거꾸로 되짚어 갑니다.<br>' +
+            '그림자 커플을 이겨야 그 앞 도시로 갈 수 있어요. (' + echoCount() + '/10)</div>';
+        ECHO_ORDER.forEach((ci, k) => {
+            const cc = CITIES[ci];
+            const unlocked = k === 0 || echoDone(CITIES[ECHO_ORDER[k - 1]].id);
+            const cur = ci === G.cityIdx;
+            const can = unlocked && !cur;
+            h += rowHtml(cc.icon, '🌙 ' + cc.name + (cur ? ' <span style="opacity:.6;font-size:.8em">지금 여기</span>' : '') +
+                    (echoDone(cc.id) ? ' <span style="color:#9b7bd4;font-size:.8em">✔</span>' : ''),
+                unlocked ? (cur ? '' : '표는 필요 없어요') : '🔒 앞 도시의 그림자를 먼저 이겨요',
+                can ? '출발' : '', can ? 'fly(' + ci + ')' : '', !can);
+        });
+        h += '<div class="rd" style="margin-top:10px">' +
+             rowHtml('🚪', '원래 세계로 돌아가기', '언제든 다시 올 수 있어요', '나가기', 'echoQuit()') + '</div>';
+        panelOpen('🌙 돌아가는 길', '그림자 ' + echoCount() + '/10 · 💰 ' + G.gold.toLocaleString() + '원', h);
+        return;
+    }
     CITIES.forEach((cc, i) => {
         const unlocked = i === 0 || !!G.boss[CITIES[i - 1].id];
         const cur = i === G.cityIdx;
@@ -4426,16 +4635,22 @@ function openPort() {
             unlocked ? (cur ? '' : '비행기표 ' + cost + '원') : '🔒 앞 도시의 보스를 먼저 이겨요',
             unlocked && !cur ? '출발' : '', can ? 'fly(' + i + ')' : '', !can);
     });
+    if (G.story && G.story.ended) h += '<div class="rd" style="margin-top:10px">' +
+        rowHtml('🌙', '돌아가는 길 <span style="opacity:.6;font-size:.8em">외전</span>',
+            '왔던 길을 거꾸로 되짚어 갑니다. 지형은 그대로인데 색이 전부 뒤집혀 있어요.<br>' +
+            '훨씬 세고, 보상도 훨씬 큽니다.', '떠나기', 'echoStart()') + '</div>';
     panelOpen('✈️ 공항', '💰 ' + G.gold + '원', h);
 }
 function fly(i) {
-    const cost = i > G.cityIdx ? CITIES[G.cityIdx].ticket : 0;
+    const cost = isEcho() ? 0 : (i > G.cityIdx ? CITIES[G.cityIdx].ticket : 0);
     if (G.gold < cost) { S.deny(); return; }
     G.gold -= cost;
     S.fly(); closePanel();
     enterCity(i);
     save();
-    msg(CITIES[i].icon, CITIES[i].name + ' 도착!', '새로운 재료와 몬스터가 기다리고 있어요.<br>가게도 새로 열었습니다!');
+    msg(CITIES[i].icon, (isEcho() ? '🌙 기억 속의 ' : '') + CITIES[i].name + ' 도착!',
+        isEcho() ? '길도 건물도 그대로인데, 색이 전부 다르다.<br>여기 있던 것들이 전부 그림자로 서 있다.'
+                 : '새로운 재료와 몬스터가 기다리고 있어요.<br>가게도 새로 열었습니다!');
 }
 
 
