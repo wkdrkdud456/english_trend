@@ -123,6 +123,7 @@
 
 <div class="hud" id="hud">
     <div class="chip"><span id="hCity">🗼 파리</span><span class="s" id="hForm">백수동훈 Lv1</span></div>
+    <div class="chip" id="hWx" style="font-size:.86em">☀️ 맑음</div>
     <div class="spacer"></div>
     <div class="chip">💰 <span id="hGold">0</span><span class="s">모은 돈</span></div>
     <div class="chip tap" onclick="openBag()">🎒<span class="s">가방</span></div>
@@ -758,7 +759,9 @@ function activePet() { return activePets()[0] || null; }
 function petBonus(e) { return activePets().reduce((a, p) => a + (p.e === e ? p.v : 0), 0); }
 
 // 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
-function legendRate() { return 0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0); }
+function legendRate() {
+    return (0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0)) * wxNow().legend;
+}
 // 등급마다 색이 다르다. 숫자가 아니라 "색"으로 바로 알아보게.
 const TIERS = [null,
     { id:1, pre:'✨전설의 ',  n:'전설', out:'#ffb000', spark:'#fff2a8', aura:'#ffd84d', ui:'#c9881a',
@@ -801,6 +804,7 @@ function catchChance(e) {
     const T2 = tierOf(e.tier != null ? e.tier : e.legend);
     if (T2) c *= T2.cat;
     if (G.charm) c += 0.12;
+    c += wxNow().cat;
     return Math.max(0.05, Math.min(0.95, c));
 }
 function tryCatch() {
@@ -1127,7 +1131,7 @@ function upCost(u) { return u.cost[upLv(u.id)]; }
 function pickRadius() { return PICK_R[upLv('magnet')]; }
 function moveSpeed()  { return SPEED[upLv('ride')]; }
 function pickCount()  { return 1 + upLv('cart'); }
-function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3); }   // 알바생이 손님도 빨리 받는다
+function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3) / wxNow().cust; }   // 알바생이 손님도 빨리 받고, 날씨도 탄다
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
 
 // ───────── 스킬북 (기술 강화) ─────────
@@ -1413,6 +1417,7 @@ function newGame() {
         pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {}, skUse: {},
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
+        wxK: 'clear', wxT: 200, secret: {},
     };
 }
 
@@ -1435,6 +1440,133 @@ const THEME = {
     seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
 
+// ───────── 비밀 장소 ─────────
+// 도시마다 딱 한 군데. 지도에 표시되지 않고, 가 보면 뭔가 있다.
+const SECRET = {
+    paris:     { em:'🎻', n:'다리 밑 강변',       d:'누가 바이올린을 두고 갔다. 케이스 안에 돈이 가득.', kind:'gold', mul:14 },
+    kyoto:     { em:'🐠', n:'연못 가운데 섬',     d:'징검다리를 건너자 잉어 한 마리가 솟구쳤다.',        kind:'pet',  pet:'fairy',   tier:3 },
+    cairo:     { em:'🕳️', n:'모래 속 땅굴',       d:'모래가 꺼지더니 좁은 계단이 나왔다. 아래에 뭔가 있다.', kind:'pet', pet:'sphinx',  tier:3 },
+    roma:      { em:'🗝️', n:'콜로세움 지하 통로', d:'검투사들이 드나들던 길. 구석에 금고가 하나.',       kind:'gold', mul:20 },
+    ny:        { em:'🐿️', n:'공원 연못 섬',       d:'다람쥐 갱단의 아지트였다. 두목이 나타났다!',        kind:'pet',  pet:'squirrel', tier:3 },
+    iceland:   { em:'🧊', n:'얼어붙은 호수 한가운데', d:'얼음 아래에서 빛이 올라온다. 오로라가 모여든다.', kind:'pet', pet:'aurorafox', tier:3 },
+    santorini: { em:'🏊', n:'절벽 위 비밀 수영장', d:'아무도 없다. 물에 동전이 잔뜩 가라앉아 있다.',      kind:'gold', mul:18 },
+    london:    { em:'🚇', n:'템스강 아래 통로',    d:'폐쇄된 승강장. 어둠 속에서 눈이 반짝인다.',         kind:'pet',  pet:'tuberat',  tier:3 },
+    sydney:    { em:'🏝️', n:'라군 가운데 모래섬',  d:'물때가 맞았다. 모래 위에 뭔가 자고 있다.',          kind:'pet',  pet:'koala',    tier:3 },
+    seoul:     { em:'🌃', n:'한강 다리 아래 둔치', d:'둘이 앉았던 자리. 그때 그 자물쇠가 아직 걸려 있다.', kind:'gold', mul:26 },
+};
+function secretOf() { return MAP && MAP.secret ? SECRET[city().id] : null; }
+function secretDone() { return !!(G.secret && G.secret[city().id]); }
+function secretPos() { return MAP && MAP.secret ? { x: MAP.secret.x * TS + TS / 2, y: MAP.secret.y * TS + TS / 2 } : null; }
+function drawSecret() {
+    const sp = secretPos(); if (!sp || secretDone()) return;
+    const sx = Math.round(sp.x), sy = Math.round(sp.y);
+    const b = Math.sin(gameT * 2.4) * 2;
+    for (let i = 0; i < 7; i++) {                       // 작은 빛기둥 — 가까이 와야 보이는 정도로
+        const a = gameT * 1.4 + i * 0.9;
+        R(sx + Math.cos(a) * 7, sy - 4 + Math.sin(a) * 4 + b, 1, 1, i % 2 ? '#fff2a8' : '#ffffff');
+    }
+    R(sx - 3, sy - 1 + b, 6, 2, 'rgba(255,230,140,.55)');
+    R(sx - 1, sy - 5 + b, 2, 6, 'rgba(255,255,255,.75)');
+}
+function openSecret() {
+    const sc = secretOf(); if (!sc || secretDone()) return;
+    G.secret[city().id] = true; save();
+    if (sc.kind === 'gold') {
+        const g = Math.round(city().mobs[0].gold * sc.mul);
+        G.gold += g; S.levelup(); syncHud(); save();
+        msg(sc.em, '비밀 장소 — ' + sc.n, sc.d + '<br><br><b style="color:#c04a60">💰 ' + g.toLocaleString() + '원</b>을 찾았다!');
+    } else {
+        const T2 = tierOf(sc.tier), db = PET_DB[sc.pet];
+        msg(sc.em, '비밀 장소 — ' + sc.n,
+            sc.d + '<br><br><b style="color:' + T2.ui + '">' + T2.pre + (db ? db.n : '') + '</b> 이(가) 나타났다!' +
+            '<br><span style="opacity:.75">체력을 40% 밑으로 깎고 🪄 포획을 노려보세요.</span>');
+        const old = document.getElementById('mBtn').onclick;
+        document.getElementById('mBtn').onclick = function () {
+            document.getElementById('ovMsg').classList.remove('show');
+            document.getElementById('mBtn').onclick = old;
+            startBattle(null, { draw: sc.pet, tier: sc.tier });
+        };
+    }
+}
+
+// ───────── 날씨 & 밤낮 ─────────
+// 같은 도시라도 날씨가 바뀌면 다른 데처럼 보이고, 할 만한 것도 달라진다.
+const WX = {
+    clear:  { n:'맑음',   i:'☀️', d:'손님이 많이 와요',            cust:1.45, node:1,   legend:1,   cat:0,    gold:1,    w:34 },
+    sunset: { n:'노을',   i:'🌇', d:'빵이 비싸게 팔려요',          cust:1.2,  node:1,   legend:1.2, cat:0,    gold:1.35, w:16 },
+    night:  { n:'밤',     i:'🌙', d:'전설 몬스터가 두 배로 나와요', cust:0.5,  node:1,   legend:2.0, cat:0,    gold:1,    w:20 },
+    rain:   { n:'비',     i:'🌧️', d:'재료가 쑥쑥 자라요',          cust:0.5,  node:1.7, legend:1,   cat:0,    gold:1,    w:16 },
+    snow:   { n:'눈',     i:'❄️', d:'재료가 조금 더 나와요',        cust:0.7,  node:1.3, legend:1.3, cat:0,    gold:1,    w:8 },
+    fog:    { n:'안개',   i:'🌫️', d:'몬스터가 잘 잡혀요',          cust:0.8,  node:1,   legend:1.4, cat:0.14, gold:1,    w:6 },
+};
+const WX_KEYS = Object.keys(WX);
+function wxNow() { return WX[G.wxK] || WX.clear; }
+function pickWeather(c) {
+    if (c.night) return 'night';                 // 아이슬란드는 늘 오로라 밤
+    if (c.rain) return Math.random() < 0.72 ? 'rain' : 'fog';   // 런던은 거의 늘 비 아니면 안개
+    let pool = WX_KEYS.filter(k => k !== 'snow' || c.id === 'iceland' || c.id === 'kyoto');
+    const tot = pool.reduce((a, k) => a + WX[k].w, 0);
+    let r = Math.random() * tot;
+    for (const k of pool) { r -= WX[k].w; if (r <= 0) return k; }
+    return 'clear';
+}
+function setWeather(k, quiet) {
+    G.wxK = k; G.wxT = 150 + Math.random() * 150;          // 2분 30초 ~ 5분
+    const w = wxNow();
+    const el = document.getElementById('hWx');
+    if (el) { el.textContent = w.i + ' ' + w.n; el.title = w.d; }
+    if (!quiet) toast(w.i + ' 날씨가 바뀌었어요 — ' + w.n + ' · ' + w.d);
+}
+function tickWeather(dt) {
+    const c = city();
+    if (c.night || c.rain) return;               // 고정 날씨 도시는 안 바뀐다
+    G.wxT -= dt;
+    if (G.wxT <= 0) {
+        let k = pickWeather(c), guard = 0;
+        while (k === G.wxK && guard++ < 6) k = pickWeather(c);
+        setWeather(k);
+    }
+}
+// 날씨 덧그리기 — 틴트 + 입자. blit 직전, 가상 해상도 좌표에 그린다.
+function drawWeather() {
+    const k = G.wxK;
+    if (k === 'night') {
+        px.fillStyle = 'rgba(16,20,56,.44)'; px.fillRect(0, 0, VW, VH);
+        for (let i = 0; i < 26; i++) {              // 별
+            const sx = (i * 97 + 13) % VW, sy = (i * 53 + 7) % (VH * 0.55);
+            if (((gameT * 1.6 + i) | 0) % 4) R(sx, sy, 1, 1, i % 5 ? '#ffffff' : '#cfe9f5');
+        }
+    } else if (k === 'rain') {
+        px.fillStyle = 'rgba(48,60,86,.28)'; px.fillRect(0, 0, VW, VH);
+        for (let i = 0; i < 46; i++) {
+            const sx = ((i * 71 + gameT * 46) % (VW + 40)) - 20;
+            const sy = (i * 37 + gameT * 240) % (VH + 20);
+            R(sx | 0, sy | 0, 1, 5, 'rgba(180,210,240,.75)');
+        }
+        if (((gameT * 2) | 0) % 7 === 0) { px.fillStyle = 'rgba(255,255,255,.1)'; px.fillRect(0, 0, VW, VH); }
+    } else if (k === 'snow') {
+        px.fillStyle = 'rgba(224,238,255,.16)'; px.fillRect(0, 0, VW, VH);
+        for (let i = 0; i < 34; i++) {
+            const sx = ((i * 83 + Math.sin(gameT * 0.8 + i) * 9 + gameT * 7) % (VW + 20)) - 10;
+            const sy = (i * 41 + gameT * 26) % (VH + 10);
+            R(sx | 0, sy | 0, i % 3 ? 1 : 2, i % 3 ? 1 : 2, '#ffffff');
+        }
+    } else if (k === 'fog') {
+        px.fillStyle = 'rgba(206,214,226,.3)'; px.fillRect(0, 0, VW, VH);
+        for (let i = 0; i < 7; i++) {                // 흘러가는 안개띠
+            const sy = (i * 29 + gameT * 5) % (VH + 24) - 12;
+            px.globalAlpha = 0.14; R(0, sy | 0, VW, 9, '#ffffff'); px.globalAlpha = 1;
+        }
+        const v = 26;                                 // 가장자리를 좁힌다
+        px.fillStyle = 'rgba(200,208,222,.34)';
+        px.fillRect(0, 0, VW, v); px.fillRect(0, VH - v, VW, v);
+        px.fillRect(0, 0, v, VH); px.fillRect(VW - v, 0, v, VH);
+    } else if (k === 'sunset') {
+        px.fillStyle = 'rgba(255,142,70,.22)'; px.fillRect(0, 0, VW, VH);
+        px.fillStyle = 'rgba(255,196,120,.16)'; px.fillRect(0, 0, VW, VH * 0.45);
+    }
+}
+
 function mulberry32(a) {
     return function () {
         a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -1455,7 +1587,7 @@ function buildMap(c) {
     const rnd = mulberry32(c.seed);
     const g = new Uint8Array(MW * MH).fill(T.GROUND);
     const M = {
-        g, rnd, blocks: [], trees: [], decos: [], npcSpots: [],
+        g, rnd, blocks: [], trees: [], decos: [], npcSpots: [], secret: null,
         set(x, y, v) { if (x > 0 && y > 0 && x < MW - 1 && y < MH - 1) g[y * MW + x] = v; },
         rect(x, y, w, h, v) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) M.set(i, j, v); },
         at(x, y) { return tileOf(g, x, y); },
@@ -1482,6 +1614,12 @@ function buildMap(c) {
         },
         house(x, y, w, h) { if (!M.free(x, y, w, h)) return false; M.rect(x, y, w, h, T.WALL); M.blocks.push({ x, y, w, h }); return true; },
         deco(x, y, kind, solid) { M.decos.push({ x, y, kind }); if (solid) M.set(x, y, T.DECO); },
+        // 비밀 장소 — 그 칸과 거기까지 가는 좁은 길을 억지로 뚫어준다
+        hide(x, y, path) {
+            (path || []).forEach(q => M.set(q[0], q[1], T.GROUND));
+            M.set(x, y, T.GROUND);
+            M.secret = { x, y };
+        },
         // 수풀(몬스터 구역) 덩어리
         patch(cx, cy, r) {
             for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
@@ -1529,7 +1667,7 @@ function buildMap(c) {
     const start = { x: MW / 2 | 0, y: MH / 2 | 0 };
     for (let r = 0; r < 6; r++) { if (WALKABLE[M.at(start.x, start.y)]) break; start.y++; }
 
-    return { g, door, port, start, blocks: M.blocks, trees: M.trees, decos: M.decos, npcSpots: M.npcSpots };
+    return { g, door, port, start, blocks: M.blocks, trees: M.trees, decos: M.decos, npcSpots: M.npcSpots, secret: M.secret };
 }
 
 const MAPGEN = {
@@ -1556,6 +1694,7 @@ const MAPGEN = {
         for (let k = 0; k < 5; k++) M.patch(5 + (rnd() * (MW - 10) | 0), 14 + (rnd() * 6 | 0), 2);
         M.scatterTrees(20, 14);
         for (let k = 0; k < 9; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 15 + (rnd() * (MH - 24) | 0), rnd() < 0.5 ? 'bench' : 'pot', false);
+        M.hide(MW / 2 | 0, riverY + 4, [[MW / 2 | 0, riverY + 3]]);     // 🗼 다리 밑 강변
         M.npcSpots = [[MW / 2 - 6 | 0, 13], [14, 9], [MW - 16, 9], [11, riverY + 5], [MW / 2 + 7 | 0, MH - 10]];
     },
 
@@ -1580,6 +1719,7 @@ const MAPGEN = {
         for (let k = 0; k < 11; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
         M.scatterTrees(22, 9);
         for (let k = 0; k < 8; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 'lantern', false);
+        M.hide(12, 23, [[12, 22], [12, 21], [12, 20]]);                 // ⛩️ 연못 가운데 섬 — 징검다리
         M.npcSpots = [[MW / 2 - 5 | 0, 12], [MW / 2 + 4 | 0, 20], [18, 27], [MW - 12, 14], [9, 9]];
     },
 
@@ -1604,6 +1744,7 @@ const MAPGEN = {
         for (let k = 0; k < 13; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
         M.scatterTrees(10, 14);
         for (let k = 0; k < 7; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 14 + (rnd() * (MH - 22) | 0), 'pot', false);
+        M.hide(MW - 7, MH - 6, [[MW - 7, MH - 7], [MW - 7, MH - 8], [MW - 8, MH - 8]]);   // 🐫 모래 속 땅굴
         M.npcSpots = [[MW / 2 - 7 | 0, 17], [12, 12], [MW - 14, 12], [13, 24], [MW / 2 + 6 | 0, 30]];
     },
 
@@ -1628,6 +1769,7 @@ const MAPGEN = {
         for (let x = 5; x < MW - 5; x += 4) { M.plantTree(x, 8, 0.2); M.plantTree(x + 2, MH - 10, 0.2); }
         M.scatterTrees(16, 9);
         for (let k = 0; k < 6; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 'bench', false);
+        M.hide(8, MH - 7, [[8, MH - 8], [8, MH - 9], [9, MH - 9]]);     // 🏛️ 콜로세움 지하 통로
         M.npcSpots = [[MW / 2 - 9 | 0, 21], [MW / 2 + 9 | 0, 21], [14, 11], [MW - 13, 29], [10, 30]];
     },
 
@@ -1647,6 +1789,7 @@ const MAPGEN = {
         }
         for (let k = 0; k < 16; k++) M.patch(3 + (rnd() * (MW - 6) | 0), 10 + (rnd() * (MH - 18) | 0), 1 + (rnd() * 2 | 0));   // 뒷골목
         for (let k = 0; k < 12; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 9 + (rnd() * (MH - 18) | 0), rnd() < 0.5 ? 'hydrant' : 'bench', false);
+        M.hide(23, 21, [[23, 20], [23, 19]]);                           // 🗽 센트럴파크 연못 섬
         M.npcSpots = [[15, 16], [30, 23], [8, 12], [MW - 10, 19], [20, 33]];
     },
 
@@ -1668,6 +1811,7 @@ const MAPGEN = {
         for (let k = 0; k < 14; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 11 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
         M.scatterTrees(13, 10);
         for (let k = 0; k < 6; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 12 + (rnd() * (MH - 22) | 0), 'column', false);
+        M.hide(11, 22, [[11, 21], [11, 20], [11, 19], [11, 18], [11, 17], [11, 16]]);   // 🌌 얼어붙은 호수 한가운데
         M.npcSpots = [[MW / 2 - 6 | 0, 14], [12, 10], [MW - 14, 11], [MW - 12, 26], [16, 32]];
     },
 
@@ -1685,6 +1829,7 @@ const MAPGEN = {
         for (let k = 0; k < 10; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 22) | 0), 1 + (rnd() * 3 | 0));
         M.scatterTrees(14, 11);
         for (let k = 0; k < 7; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 13 + (rnd() * (MH - 24) | 0), 'fountain', false);
+        M.hide(MW - 10, 30, [[MW - 10, 29], [MW - 10, 28]]);            // 🏖️ 절벽 위 비밀 수영장
         M.npcSpots = [[MW / 2 - 7 | 0, 16], [10, 12], [MW - 12, 17], [MW - 9, 28], [14, 31]];
     },
 
@@ -1704,6 +1849,7 @@ const MAPGEN = {
         for (let k = 0; k < 13; k++) M.patch(3 + (rnd() * (MW - 6) | 0), 11 + (rnd() * (MH - 20) | 0), 1 + (rnd() * 3 | 0));
         M.scatterTrees(16, 10);
         for (let k = 0; k < 10; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 10 + (rnd() * (MH - 18) | 0), rnd() < 0.5 ? 'lamp' : 'bench', false);
+        M.hide(9, riverY + 1, [[9, riverY], [9, riverY - 1], [10, riverY - 1]]);   // ☔ 템스강 아래 지하철 통로
         M.npcSpots = [[MW / 2 - 6 | 0, 14], [12, 11], [MW - 13, 13], [14, riverY + 5], [MW - 11, 32]];
     },
 
@@ -1725,6 +1871,7 @@ const MAPGEN = {
         for (let k = 0; k < 12; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 13 + (rnd() * (MH - 24) | 0), 1 + (rnd() * 3 | 0));
         M.scatterTrees(17, 12);
         for (let k = 0; k < 8; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 14 + (rnd() * (MH - 26) | 0), 'bench', false);
+        M.hide(13, 19, [[13, 18], [13, 17], [13, 16]]);                 // 🏄 라군 가운데 모래섬
         M.npcSpots = [[MW / 2 - 8 | 0, 13], [11, 14], [MW - 13, 16], [MW - 10, 29], [17, 24]];
     },
 
@@ -1746,6 +1893,7 @@ const MAPGEN = {
         for (let k = 0; k < 12; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 22) | 0), 1 + (rnd() * 3 | 0));
         M.scatterTrees(20, 11);
         for (let k = 0; k < 10; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 12 + (rnd() * (MH - 22) | 0), rnd() < 0.5 ? 'lamp' : 'bench', false);
+        M.hide(MW / 2 | 0, hanY + 4, [[MW / 2 | 0, hanY + 3]]);         // 🏠 한강 다리 아래 둔치
         M.npcSpots = [[MW / 2 - 6 | 0, 16], [12, 12], [MW - 13, 14], [14, hanY + 6], [MW - 11, 33]];
     },
 };
@@ -1823,6 +1971,7 @@ function enterCity(idx, keepPos) {
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
     P.x = G.px; P.y = G.py; P.vx = P.vy = 0;
     document.getElementById('hCity').textContent = c.icon + ' ' + c.name;
+    setWeather(pickWeather(c), true);
     syncHud();
 }
 
@@ -2070,6 +2219,7 @@ let interact = null;          // 지금 상호작용 가능한 대상
 let encounterGauge = 0;
 
 function updateWorld(dt) {
+    tickWeather(dt);
     const sp = moveSpeed();
     let dx = stick.dx, dy = stick.dy;
     const mag = Math.hypot(dx, dy);
@@ -2112,7 +2262,7 @@ function updateWorld(dt) {
             pop(n.x, n.y, n.mat.i + (got > 1 ? ' ×' + got : ''), n.mat.c);
         }
     }
-    if (nodes.length < nodeCap() && Math.random() < dt * (0.9 + upLv('part') * 0.8)) spawnNodes(city(), nodeCap());
+    if (nodes.length < nodeCap() && Math.random() < dt * (0.9 + upLv('part') * 0.8) * wxNow().node) spawnNodes(city(), nodeCap());
     updateStaff(dt);   // 알바생이 직접 돌아다니며 줍고 가게에서 만든다
 
     // 숨겨진 하트
@@ -2143,6 +2293,7 @@ function updateWorld(dt) {
     const dp = Math.hypot(p.x * TS + TS/2 - P.x, (p.y + 2) * TS - P.y);
     // 랜드마크 앞에 라이벌 커플이 서 있다
     const dl = Math.hypot((MW / 2) * TS - P.x, 3 * TS + 17 - P.y);
+    const sxp = secretPos();
     let nx = null, nearNpc = null, nearD = 20;
     for (const np of npcs) {
         const d2 = Math.hypot(np.x - P.x, np.y - P.y);
@@ -2153,6 +2304,8 @@ function updateWorld(dt) {
         const got = cityHearts(city());
         nx = { kind:'boss', i: got >= 3 ? '⚔️' : '🔒', t: got >= 3 ? '도전!' : got + '/3' };
     }
+    else if (sxp && !secretDone() && Math.hypot(sxp.x - P.x, sxp.y - P.y) < 15)
+        nx = { kind:'secret', i: secretOf().em, t:'?????' };
     else if (dd < 19) nx = { kind:'shop', i:city().shop.i, t:city().shop.n };
     else if (dp < 22) nx = { kind:'port', i:'✈️', t:'공항' };
     const key = a2 => a2 ? a2.kind + (a2.npc ? a2.npc.n : '') + (a2.t || '') : '';
@@ -2176,6 +2329,7 @@ function doInteract() {
     if (interact.kind === 'npc') { if (interact.npc.merchant) openMerch(); else startTalk(interact.npc); }
     else if (interact.kind === 'shop') openShop();
     else if (interact.kind === 'port') openPort();
+    else if (interact.kind === 'secret') openSecret();
     else if (interact.kind === 'boss') {
         const c = city();
         const got = cityHearts(c);
@@ -2669,6 +2823,7 @@ function drawWorld() {
     });
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
+    { const sp2 = secretPos(); if (sp2 && !secretDone()) items.push({ y: sp2.y + 3, f: drawSecret }); }
     if (!G.boss[c.id]) {
         const bx = (MW / 2) * TS, by = 3 * TS + 17;
         items.push({ y: by, f: () => drawCouple(c, bx, by) });
@@ -2678,6 +2833,7 @@ function drawWorld() {
     items.forEach(i => i.f());
 
     px.restore();
+    drawWeather();
     blit();
 
     // ── 여기부터는 선명하게 보여야 하는 것들이라 원래 해상도로 덧그린다
@@ -3155,10 +3311,20 @@ let B = null;
 function mobScale(c) { return 1 + 0.11 * Math.max(0, G.lv - (c.lv0 || 1)); }
 function hasAnimal(eff) { const a = CITIES.map(c => c.animal).find(a => G.animals.includes(a.id) && a.eff === eff); return a || null; }
 
-function startBattle(bossOf) {
+function startBattle(bossOf, forced) {
     const c = city();
     let e;
-    if (bossOf) {
+    if (forced) {                       // 비밀 장소에서 튀어나오는 지정 몬스터
+        // 생김새만 가져오고 세기는 "지금 이 도시의 제일 단단한 놈" 기준으로 맞춘다.
+        // 안 그러면 교토에서 로마 몬스터가 튀어나와 손도 못 댄다.
+        const m = c.mobs[c.mobs.length - 1];
+        const nm = (CITIES.flatMap(x => x.mobs).find(x => x.draw === forced.draw) || m).n;
+        const T2 = tierOf(forced.tier), k = mobScale(c);
+        const hp = Math.round(m.hp * k * T2.mul);
+        e = { n: T2.pre + nm, draw: forced.draw, legend: true, tier: forced.tier,
+              hp, max: hp, atk: Math.round(m.atk * k * T2.atk), def: Math.round(m.def * k * T2.def),
+              exp: Math.round(m.exp * T2.exp), gold: Math.round(m.gold * T2.gold), boss: false };
+    } else if (bossOf) {
         const b = bossOf;
         const k = 1 + 0.08 * Math.max(0, G.lv - (c.lv0 + 6));   // 과하게 레벨 올리고 와도 긴장감 유지
         const hp = Math.round(b.hp * k);
@@ -3780,7 +3946,7 @@ function sellOne(px2, py2) {
     if (G.stock[k] <= 0) delete G.stock[k];
     let price = 0, icon = '🍽️';
     for (const c of CITIES) for (const m of c.shop.menu) if (m.n === k) { price = m.price; icon = m.i; }
-    price = Math.round(price * shopMul());
+    price = Math.round(price * shopMul() * wxNow().gold);
     G.gold += price;
     S.coin();
     pop(px2, py2 - 8, '+' + price, '#ffd43b');
