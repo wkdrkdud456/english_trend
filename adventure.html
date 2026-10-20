@@ -247,6 +247,7 @@ const S = {
     open()    { tone(440, 0.1, { slideTo:660, type:'triangle', vol:0.08 }); },
     deny()    { tone(170, 0.14, { type:'square', vol:0.06 }); },
     fly()     { tone(200, 0.6, { slideTo:1400, type:'sawtooth', vol:0.07 }); },
+    cook()    { tone(620, 0.09, { type:'triangle', vol:0.09 }); tone(880, 0.12, { delay:0.07, type:'triangle', vol:0.08 }); },
 };
 
 // ───────── 캔버스 ─────────
@@ -363,11 +364,11 @@ const CITIES = [
         { n:'황제의 코스', i:'🏛️', need:{'토마토':5,'치즈':5,'올리브':4,'바질':4}, price:7000, t:3 },
     ]},
     mobs:[
-        { n:'검투사 석상', draw:'gladiator', hp:900, atk:95, def:60, exp:410, gold:500 },
-        { n:'분수 요정', draw:'fairy', hp:800, atk:110, def:44, exp:425, gold:520 },
-        { n:'콜로세움 망령', draw:'wraith', hp:1150, atk:90, def:78, exp:470, gold:580 },
+        { n:'검투사 석상', draw:'gladiator', hp:900, atk:70, def:60, exp:410, gold:500 },
+        { n:'분수 요정', draw:'fairy', hp:800, atk:80, def:44, exp:425, gold:520 },
+        { n:'콜로세움 망령', draw:'wraith', hp:1150, atk:66, def:78, exp:470, gold:580 },
     ],
-    boss:{ n:'마르코', wife:'줄리아', draw:'marco', hp:6500, atk:70, def:80, exp:2500, gold:14000,
+    boss:{ n:'마르코', wife:'줄리아', draw:'marco', hp:5600, atk:62, def:80, exp:2500, gold:14000,
            intro:'줄리아: "마르코는 어머니 셋을 모시고 살아요." 전설이 시작된다!',
            win:'줄리아: "...당신 남편, 우리 마르코보다 단단하네요."' },
     animal:{ id:'pigeon', n:'로마 비둘기', i:'🕊️', eff:'mana', val:4, desc:'매 턴 기력을 회복시켜줘요' },
@@ -445,14 +446,21 @@ const PET_DB = {
     wzombie:   { n:'퇴근한 좀비',   e:'def',   v:0.22,  d:'받는 피해 -22%' },
 };
 function petOf(kind) { return PET_DB[kind]; }
-function activePet() {
-    if (!G.pet) return null;
-    const p = (G.pets || []).find(x => x.kind === G.pet);
-    if (!p) return null;
-    const db = PET_DB[p.kind];
-    return db ? { kind: p.kind, n: p.n, legend: p.legend, e: db.e, v: db.v * (p.legend ? 2 : 1) * (1 + (p.lv - 1) * 0.2), d: db.d, lv: p.lv } : null;
+const PARTY_MAX = 3;
+function party() {
+    if (!G.party) G.party = G.pet ? [G.pet] : [];   // 예전 저장 호환
+    return G.party;
 }
-function petBonus(e) { const a = activePet(); return a && a.e === e ? a.v : 0; }
+function activePets() {
+    return party().map(k => {
+        const p = (G.pets || []).find(x => x.kind === k);
+        const db = p && PET_DB[p.kind];
+        return db ? { kind:p.kind, n:p.n, legend:p.legend, e:db.e,
+                      v: db.v * (p.legend ? 2 : 1) * (1 + (p.lv - 1) * 0.2), d: db.d, lv: p.lv } : null;
+    }).filter(Boolean);
+}
+function activePet() { return activePets()[0] || null; }
+function petBonus(e) { return activePets().reduce((a, p) => a + (p.e === e ? p.v : 0), 0); }
 
 // 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
 function legendRate() { return 0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0); }
@@ -480,7 +488,7 @@ function tryCatch() {
         else {
             const np = { kind: B.e.draw, n: (B.e.legend ? '✨' : '') + (db ? db.n : B.e.n), lv: 1, legend: !!B.e.legend };
             G.pets.push(np);
-            if (!G.pet) G.pet = np.kind;
+            if (party().length < PARTY_MAX) party().push(np.kind);
             blog('🪄 ' + np.n + ' 을(를) 잡았다!');
         }
         B.caught = true; B.result = 'catch'; B.phase = 'end'; B.busy = 1.1;
@@ -708,14 +716,14 @@ const UPGRADES = [
       f: '손님이 더 빨리, 더 비싸게 사 가요' },
     { id:'part', n:'알바생', i:'🧑‍🍳', max:3, cost:[3500, 12000, 40000],
       d: lv => lv >= 3 ? '최대 고용! 3명' : '알바생 ' + lv + '명 → ' + (lv + 1) + '명',
-      f: '돌아다니지 않아도 알아서 재료를 주워와요' },
+      f: '직접 돌아다니며 재료를 줍고, 가게에서 요리까지 해요 (판매 속도 +30%/명)' },
 ];
 function upLv(id) { return (G.up && G.up[id]) || 0; }
 function upCost(u) { return u.cost[upLv(u.id)]; }
 function pickRadius() { return PICK_R[upLv('magnet')]; }
 function moveSpeed()  { return SPEED[upLv('ride')]; }
 function pickCount()  { return 1 + upLv('cart'); }
-function shopPeriod() { return SHOP_T[upLv('shop')]; }
+function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3); }   // 알바생이 손님도 빨리 받는다
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
 
 // ───────── 스킬북 (기술 강화) ─────────
@@ -901,7 +909,7 @@ function newGame() {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
         up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, learned: {}, story: {}, partT: 0,
-        pets: [], pet: null, unlock: {}, charm: false, merch: {},
+        pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {},
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
@@ -1140,10 +1148,20 @@ function tileOf(g, x, y) { if (x < 0 || y < 0 || x >= MW || y >= MH) return T.WA
 
 // 재료 노드 / 하트 / 상호작용 지점
 let nodes = [], hearts = [];
+function nodeCap() { return 26 + upLv('part') * 12; }
 function spawnNodes(c, n) {
     const rnd = mulberry32(c.seed + 99 + Math.floor(gameT * 7));
-    while (nodes.length < n) {
-        const tx = 1 + Math.floor(rnd() * (MW - 2)), ty = 6 + Math.floor(rnd() * (MH - 12));
+    let guard = 0;
+    while (nodes.length < n && guard++ < 900) {
+        let tx, ty;
+        // 알바생이 있으면 일부는 플레이어 주변에 깔아서 바로 일하러 가게 만든다
+        if (upLv('part') > 0 && rnd() < 0.55 && P.x) {
+            const a = rnd() * Math.PI * 2, r = 70 + rnd() * 190;
+            tx = Math.floor((P.x + Math.cos(a) * r) / TS);
+            ty = Math.floor((P.y + Math.sin(a) * r) / TS);
+        } else {
+            tx = 1 + Math.floor(rnd() * (MW - 2)); ty = 6 + Math.floor(rnd() * (MH - 12));
+        }
         const t = tileAt(tx, ty);
         if (t !== T.GROUND && t !== T.GRASS) continue;
         const mi = Math.floor(rnd() * c.mats.length);
@@ -1194,8 +1212,8 @@ function enterCity(idx, keepPos) {
     TH = THEME[c.id] || THEME.paris;
     MAP = buildMap(c);
     placeNpcs(c);
-    custs = []; petP = null;
-    nodes = []; spawnNodes(c, 26);
+    custs = []; petPs = [null, null, null]; staff = [];
+    nodes = []; spawnNodes(c, nodeCap());
     buildHearts(c);
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
     P.x = G.px; P.y = G.py; P.vx = P.vy = 0;
@@ -1246,17 +1264,20 @@ window.addEventListener('pointercancel', endStick);
 
 
 // ───────── 펫 따라다니기 / 손님 / 떠돌이 상인 ─────────
-let petP = null;
-const petTrail = { length: 0 };   // (도시 이동 시 초기화용 더미)
+let petPs = [null, null, null];
 function updatePetTrail(dt) {
-    if (!G.pet) { petP = null; return; }
-    const bx = P.x - Math.cos(P.dir) * 16, by = P.y - Math.sin(P.dir) * 13 + 2;
-    if (!petP) { petP = { x: bx, y: by }; return; }
-    const k = Math.min(1, (dt || 0.016) * 5.5);
-    petP.x += (bx - petP.x) * k;
-    petP.y += (by - petP.y) * k;
+    const pt = party();
+    for (let i = 0; i < PARTY_MAX; i++) {
+        if (!pt[i]) { petPs[i] = null; continue; }
+        const ang = P.dir + Math.PI + (i - 1) * 0.85;
+        const bx = P.x + Math.cos(ang) * (23 + i * 4), by = P.y + Math.sin(ang) * (18 + i * 3) + 2;
+        if (!petPs[i]) { petPs[i] = { x: bx, y: by }; continue; }
+        const k = Math.min(1, (dt || 0.016) * 5.5);
+        petPs[i].x += (bx - petPs[i].x) * k;
+        petPs[i].y += (by - petPs[i].y) * k;
+    }
 }
-function petWorldPos() { return G.pet ? petP : null; }
+function petWorldPos() { return petPs[0]; }
 
 let custs = [];
 function spawnCustomer() {
@@ -1287,6 +1308,98 @@ function updateCusts(dt) {
 }
 function drawCusts() {
     custs.forEach(c2 => { if (c2.state === 'in') drawNpcPix({ x: c2.x, y: c2.y, look: c2.look }); });
+}
+
+
+// ───────── 알바생 — 직접 돌아다니며 줍고, 만들고, 판다 ─────────
+let staff = [];
+const STAFF_LOOK = [{ t:'man', hair:'#3a2418', cloth:'#f1f3f5' },
+                    { t:'woman', hair:'#8a5434', cloth:'#ffe3c8' },
+                    { t:'man', hair:'#5c3620', cloth:'#c3e8ff' }];
+function canWalkAt(x, y, r) {
+    for (const [ox, oy] of [[-r,-r],[r,-r],[-r,r],[r,r]])
+        if (!WALKABLE[tileAt(Math.floor((x + ox) / TS), Math.floor((y + oy) / TS))]) return false;
+    return true;
+}
+function syncStaff() {
+    const n = upLv('part');
+    while (staff.length < n) {
+        const d = MAP.door;
+        staff.push({ x: P.x + (Math.random() - 0.5) * 40, y: P.y + 20 + Math.random() * 20,
+                     node: null, mode: 'seek', cookT: 0,
+                     carry: 0, bob: Math.random() * 6, look: STAFF_LOOK[staff.length % 3] });
+    }
+    while (staff.length > n) staff.pop();
+}
+function moveStaff(st, tx, ty, dt) {
+    const dx = tx - st.x, dy = ty - st.y, d = Math.hypot(dx, dy) || 1;
+    const sp = 108 * dt;
+    const nx = st.x + dx / d * sp, ny = st.y + dy / d * sp;
+    if (canWalkAt(nx, st.y, 4)) st.x = nx;
+    else st.y += (Math.random() - 0.5) * 20 * dt;     // 벽에 걸리면 살짝 비켜선다
+    if (canWalkAt(st.x, ny, 4)) st.y = ny;
+    else st.x += (Math.random() - 0.5) * 20 * dt;
+}
+function staffCook(st) {
+    const c = city(), lv = upLv('shop');
+    const avail = c.shop.menu.filter(m => (m.t || 0) <= lv &&
+        Object.entries(m.need).every(([k, v]) => (G.mats[k] || 0) >= v));
+    if (!avail.length) return false;
+    const m = avail[avail.length - 1];       // 만들 수 있는 것 중 제일 비싼 것
+    for (const [k, v] of Object.entries(m.need)) G.mats[k] -= v;
+    G.stock[m.n] = (G.stock[m.n] || 0) + 1;
+    S.cook();
+    pop(st ? st.x : P.x, st ? st.y - 6 : P.y, '🍳 ' + m.i, '#ffd43b');
+    toast('🧑‍🍳 알바생이 ' + m.i + ' ' + jo(m.n, '을', '를') + ' 만들었어요! (진열 ' + stockTotal() + ')');
+    syncHud();
+    return true;
+}
+function updateStaff(dt) {
+    syncStaff();
+    for (const st of staff) {
+        // 너무 멀어지면 먼저 주인 쪽으로 (플레이어가 보는 데서 일하게)
+        const far = Math.hypot(P.x - st.x, P.y - st.y);
+        if (far > 330) { moveStaff(st, P.x, P.y, dt); st.node = null; continue; }
+
+        if (st.mode === 'cook') {
+            st.cookT -= dt;
+            if (st.cookT <= 0) { staffCook(st); st.mode = 'seek'; }
+            continue;
+        }
+        if (!st.node || nodes.indexOf(st.node) < 0) {
+            let best = null, bd = 1e9;
+            for (const n of nodes) {
+                const d = Math.hypot(n.x - P.x, n.y - P.y) + Math.hypot(n.x - st.x, n.y - st.y) * 0.5;
+                if (d < bd && !staff.some(o => o !== st && o.node === n)) { bd = d; best = n; }
+            }
+            st.node = best;
+        }
+        if (!st.node) continue;
+        if (Math.hypot(st.node.x - st.x, st.node.y - st.y) < 13) {
+            const i = nodes.indexOf(st.node);
+            if (i >= 0) {
+                G.mats[st.node.mat.n] = (G.mats[st.node.mat.n] || 0) + pickCount();
+                pop(st.node.x, st.node.y, st.node.mat.i, '#8ce99a');
+                nodes.splice(i, 1);
+                S.pick();
+            }
+            st.node = null;
+            if (++st.carry >= 2) { st.carry = 0; st.mode = 'cook'; st.cookT = 1.1; }
+        } else moveStaff(st, st.node.x, st.node.y, dt);
+    }
+}
+function drawStaff(st) {
+    drawNpcPix({ x: st.x, y: st.y, look: st.look });
+    const X = Math.round(st.x) - 6, Y = Math.round(st.y) - 18;
+    R(X + 2, Y - 4, 8, 4, '#ffffff');       // 요리사 모자
+    R(X + 1, Y - 5, 10, 2, '#ffffff');
+    R(X + 1, Y - 6, 3, 2, '#ffffff'); R(X + 7, Y - 6, 3, 2, '#ffffff');
+    R(X + 1, Y - 7, 10, 1, SK.out);
+    if (st.mode === 'cook') {   // 그 자리에서 요리 중
+        R(X + 2, Y - 14, 8, 5, '#3f444b'); R(X + 1, Y - 15, 10, 2, '#5a6068');
+        const pf = ((gameT * 6) | 0) % 3;
+        R(X + 4 + pf, Y - 20, 2, 4, '#ffffff'); R(X + 7 - pf, Y - 22, 2, 3, '#e8e8f0');
+    }
 }
 
 // ───────── 월드 업데이트 ─────────
@@ -1336,18 +1449,8 @@ function updateWorld(dt) {
             pop(n.x, n.y, n.mat.i + (got > 1 ? ' ×' + got : ''), n.mat.c);
         }
     }
-    if (nodes.length < 26 && Math.random() < dt * 0.9) spawnNodes(city(), 26);
-    // 알바생 — 멀리 있는 재료를 알아서 주워온다
-    const part = upLv('part');
-    if (part > 0 && nodes.length) {
-        G.partT = (G.partT || 0) + dt * part;
-        while (G.partT >= 4) {
-            G.partT -= 4;
-            const n2 = nodes.pop();
-            if (!n2) break;
-            G.mats[n2.mat.n] = (G.mats[n2.mat.n] || 0) + pickCount();
-        }
-    }
+    if (nodes.length < nodeCap() && Math.random() < dt * (0.9 + upLv('part') * 0.8)) spawnNodes(city(), nodeCap());
+    updateStaff(dt);   // 알바생이 직접 돌아다니며 줍고 가게에서 만든다
 
     // 숨겨진 하트
     for (const h of hearts) {
@@ -1860,8 +1963,11 @@ function drawWorld() {
     });
     npcs.forEach(n => items.push({ y: n.y, f: () => drawNpcPix(n) }));
     custs.forEach(c2 => { if (c2.state === 'in') items.push({ y: c2.y, f: () => drawNpcPix({ x: c2.x, y: c2.y, look: c2.look }) }); });
-    { const pp = petWorldPos();
-      if (pp) items.push({ y: pp.y - 1, f: () => drawMobPix(G.pet, pp.x, pp.y + 4, 1, gameT, 0) }); }
+    staff.forEach(st => items.push({ y: st.y, f: () => drawStaff(st) }));
+    party().forEach((k, i) => {
+        const pp = petPs[i];
+        if (pp) items.push({ y: pp.y - 1, f: () => drawMobPix(k, pp.x, pp.y + 4, 1, gameT, 0) });
+    });
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
     if (!G.boss[c.id]) {
@@ -2346,6 +2452,9 @@ function turnEnd() {
 
 function winBattle() {
     const e = B.e, c = city();
+    // 승리 시 소폭 회복 — 전투마다 가게로 돌아가지 않아도 되게
+    G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * 0.09));
+    G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * 0.06));
     G.gold += Math.round(e.gold * (1 + petBonus('gold'))); G.exp += e.exp; G.kills++;
     const drops = [];
     const n = (e.boss ? 5 : 1 + (Math.random() < 0.4 ? 1 : 0)) + (Math.random() < petBonus('mat') ? 2 : 0);
@@ -2763,6 +2872,11 @@ function openShop(tab) {
 
     if (shopTab === 'cook') {
         const lv = upLv('shop');
+        if (stallMode) {
+            const heal = restCost();
+            h += rowHtml('🛏️', '간이 휴식', (G.hp >= maxHp() && G.mp >= maxMp()) ? '이미 쌩쌩해요' : '체력·기력 전부 회복',
+                heal.toLocaleString() + '원', 'restHere()', G.gold < heal || (G.hp >= maxHp() && G.mp >= maxMp()));
+        }
         h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">요리해서 진열대에 올려두면, 돌아다니는 동안 손님이 사 갑니다.</div>';
         c.shop.menu.forEach((m, i) => {
             if ((m.t || 0) > lv) {
@@ -2833,6 +2947,15 @@ function buy(i) {
     G.items[it.id] = (G.items[it.id] || 0) + 1;
     S.coin();
     toast(it.i + ' ' + it.n + ' 구매! (보유 ' + G.items[it.id] + '개)');
+    syncHud(); save(); openShop();
+}
+function restCost() { return Math.round(220 * (1 + G.cityIdx * 2.4)); }
+function restHere() {
+    const c2 = restCost();
+    if (G.gold < c2) { S.deny(); toast('💰 돈이 ' + (c2 - G.gold).toLocaleString() + '원 모자라요'); return; }
+    if (G.hp >= maxHp() && G.mp >= maxMp()) { S.deny(); return; }
+    G.gold -= c2; G.hp = maxHp(); G.mp = maxMp();
+    S.heal(); toast('🛏️ 푹 쉬었어요! 체력·기력 회복');
     syncHud(); save(); openShop();
 }
 function buyUp(i) {
@@ -2907,10 +3030,11 @@ function openMenu() {
         h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧺 이동식 가판대</div>';
         h += rowHtml('🧺', '여기서 가게 열기', '어디서든 요리하고 사고팔 수 있어요<br><span style="opacity:.6">(체력 회복은 진짜 가게에서만)</span>', '열기', 'openStall()');
     }
-    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 펫 (' + (G.pets || []).length + '/' + Object.keys(PET_DB).length + ')</div>';
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 펫 — 도감 ' + (G.pets || []).length + '/' + Object.keys(PET_DB).length +
+         ' · 출전 ' + party().length + '/' + PARTY_MAX + '</div>';
     if (!(G.pets || []).length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">' + (G.unlock && G.unlock.catch ? '전투에서 적 체력을 40% 밑으로 깎고 🪄 포획을 눌러보세요.' : '교토의 보스를 이기면 몬스터를 잡을 수 있게 돼요.') + '</div>';
     (G.pets || []).forEach(pt => {
-        const db = PET_DB[pt.kind], on = G.pet === pt.kind;
+        const db = PET_DB[pt.kind], on = party().indexOf(pt.kind) >= 0;
         h += rowHtml(on ? '🐾' : '·', pt.n + ' <span style="opacity:.6;font-size:.8em">Lv' + pt.lv + (on ? ' · 데리고 다니는 중' : '') + '</span>',
             db ? db.d : '', on ? '✓' : '선택', 'setPet(\'' + pt.kind + '\')', false);
     });
@@ -2929,7 +3053,14 @@ function openMenu() {
     panelOpen('☰ 메뉴', '💗 편지 조각 ' + Object.keys(G.hearts).length + '/15 · ⏱️ ' + Math.floor(G.playT / 60) + '분 플레이', h);
 }
 function toggleSound() { soundOn = !soundOn; sSave('dhAdvSound', soundOn); S.open(); openMenu(); }
-function setPet(k) { G.pet = (G.pet === k ? null : k); petP = null; S.pick(); save(); openMenu(); }
+function setPet(k) {
+    const pt = party(), i = pt.indexOf(k);
+    if (i >= 0) pt.splice(i, 1);
+    else if (pt.length >= PARTY_MAX) { S.deny(); toast('🐾 최대 ' + PARTY_MAX + '마리까지 데려갈 수 있어요'); return; }
+    else pt.push(k);
+    petPs = [null, null, null];
+    S.pick(); save(); openMenu();
+}
 let stallMode = false;
 function openStall() { stallMode = true; closePanel(); openShop('cook'); }
 function wipe() {
@@ -3002,7 +3133,7 @@ function buyMerch(i) {
         G.sk[sk.id] = skLv(sk.id) + 2;
         msg('📗', '희귀 스킬북!', '<b>' + sk.n + '</b> 이(가) Lv' + G.sk[sk.id] + ' 가 됐어요!');
     } else if (m.id === 'feed') {
-        const ap = (G.pets || []).find(x => x.kind === G.pet);
+        const ap = (G.pets || []).find(x => x.kind === party()[0]);
         if (!ap) { toast('데리고 다니는 펫이 없어요'); }
         else { ap.lv++; toast('🍖 ' + ap.n + ' Lv' + ap.lv + '!'); }
     } else {
@@ -3012,7 +3143,7 @@ function buyMerch(i) {
         if (have) { have.lv++; msg('🥚', '알이 부화했다!', '<b>' + have.n + '</b> 이(가) Lv' + have.lv + ' 가 됐어요!'); }
         else {
             const np = { kind:k, n: PET_DB[k].n, lv:1, legend:false };
-            G.pets.push(np); if (!G.pet) G.pet = k;
+            G.pets.push(np); if (party().length < PARTY_MAX) party().push(k);
             msg('🥚', '알이 부화했다!', '<b>' + np.n + '</b> 이(가) 동료가 됐어요!<br><span style="opacity:.75">' + PET_DB[k].d + '</span>');
         }
     }
