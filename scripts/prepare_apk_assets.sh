@@ -12,6 +12,7 @@ cp "$ROOT/shooter.html"                "$ASSETS/shooter.html"
 cp "$ROOT/shooter3d.html"              "$ASSETS/shooter3d.html"
 cp "$ROOT/screw.html"                  "$ASSETS/screw.html"
 cp "$ROOT/screw3d.html"                "$ASSETS/screw3d.html"
+cp "$ROOT/adventure.html"              "$ASSETS/adventure.html"  # 가라! 동훈! 세계여행 RPG
 
 echo "assets 준비 완료:"
 ls -la "$ASSETS"
