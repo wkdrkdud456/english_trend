@@ -516,11 +516,23 @@ const CITIES = [
 ];
 
 // ───────── 동훈이 진화 / 기술 ─────────
+// 1막은 "뭐 하는 사람인가"가 바뀌고, 2막은 "같이 뭘 하는 사람인가"가 바뀐다.
+// 마지막엔 칭호가 떨어져 나가고 그냥 동훈이 된다.
 const FORMS = [
     { lv:1,  n:'백수동훈',   i:'🧍', shirt:'#8f9bb3', pants:'#4a5570', tool:'sponge' },
     { lv:8,  n:'정장동훈',   i:'👔', shirt:'#2f3550', pants:'#1f2438', tool:'briefcase' },
     { lv:16, n:'요리사동훈', i:'👨‍🍳', shirt:'#f1f3f5', pants:'#495057', tool:'pan' },
     { lv:25, n:'전설의 남편', i:'🦸', shirt:'#ffd43b', pants:'#c92a2a', tool:'ring' },
+    { lv:34, n:'배낭 동훈',   i:'🎒', shirt:'#3d8361', pants:'#2f4f4f', tool:'backpack',
+      note:'이번엔 자기가 먼저 가방을 멨다.' },
+    { lv:45, n:'탐험가 동훈', i:'🧭', shirt:'#2f6690', pants:'#1d3b53', tool:'lantern',
+      note:'어두운 데서도 앞장서게 됐다.' },
+    { lv:56, n:'사진가 동훈', i:'📷', shirt:'#e9d8a6', pants:'#6b705c', tool:'camera',
+      note:'이제 자기 사진 말고 네 사진을 찍는다.' },
+    { lv:67, n:'집밥 동훈',   i:'🍚', shirt:'#e8e0d4', pants:'#4a4a52', tool:'ladle',
+      note:'약속한 아침밥, 진짜로 하게 됐다.' },
+    { lv:78, n:'그냥, 동훈',  i:'💍', shirt:'#f8f9fa', pants:'#3a4a6a', tool:'bare',
+      note:'칭호가 다 떨어져 나갔다. 이제 그냥 동훈이다.' },
 ];
 const SKILLS = [
     { id:'dish',   n:'설거지 연타',    lv:1,  mp:0,  pow:0.42, hits:3, d:'퐁퐁으로 3연타. 기력이 안 들어요' },
@@ -3111,6 +3123,32 @@ function donghoonParts(form, t) {
     } else if (form.tool === 'ring') {
         P0.unshift([-1, 10, 4, 13, '#d84a5a']);
         P0.push([6, 13, 4, 4, '#ffd43b'], [14, 14 + (1 - sw), 5, 5, '#ffd43b']);
+    } else if (form.tool === 'backpack') {          // 🎒 등에 멘 가방 — 어깨끈이 앞으로 넘어온다
+        P0.unshift([-1, 11, 3, 8, '#2f4f4f'], [14, 11, 3, 8, '#2f4f4f']);
+        P0.push([5, 11, 1, 8, '#24413d'], [10, 11, 1, 8, '#24413d'],
+                [5, 15, 6, 2, '#24413d'], [14, 15 + (1 - sw), 4, 3, '#c8a86c']);
+    } else if (form.tool === 'lantern') {           // 🧭 랜턴 — 불빛이 깜빡인다
+        const on = ((t * 3) | 0) % 2;
+        P0.push([3, 10, 10, 2, '#1d3b53'], [6, 12, 4, 3, '#e9d8a6'],
+                [15, 12 + (1 - sw), 1, 4, '#6b4530'],
+                [14, 16 + (1 - sw), 4, 5, '#3f444b'],
+                [15, 17 + (1 - sw), 2, 3, on ? '#fff3a8' : '#ffd43b']);
+    } else if (form.tool === 'camera') {            // 📷 목에 건 카메라
+        P0.push([4, 11, 1, 4, '#6b705c'], [11, 11, 1, 4, '#6b705c'],
+                [4, 14, 8, 5, '#343a40'], [5, 13, 3, 1, '#495057'],
+                [6, 15, 4, 3, '#4dabf7'], [7, 16, 2, 1, '#cfe9f5'],
+                [10, 15, 1, 1, ((t * 2) | 0) % 3 ? '#343a40' : '#ff6b6b'],
+                [14, 15 + (1 - sw), 4, 3, SK.skin]);
+    } else if (form.tool === 'ladle') {             // 🍚 앞치마와 주걱
+        P0.push([3, 12, 10, 7, '#f8f9fa'], [3, 12, 10, 1, '#c8c0b4'],
+                [5, 11, 1, 2, '#c8c0b4'], [10, 11, 1, 2, '#c8c0b4'],
+                [6, 15, 4, 3, '#d9a441'],
+                [15, 11 + (1 - sw), 1, 6, '#a8834c'], [14, 9 + (1 - sw), 3, 3, '#f1f3f5']);
+    } else if (form.tool === 'bare') {              // 💍 아무것도 안 들었다. 반지만 남았다.
+        P0.push([3, 11, 10, 3, '#e9ecef'], [7, 11, 2, 8, '#dee2e6'],
+                [14, 15 + (1 - sw), 2, 2, '#ffd43b'], [14, 14 + (1 - sw), 2, 1, '#fff3a8'],
+                [1, 15 + sw, 2, 2, SK.skin]);
+        if (((t * 2.2) | 0) % 3 === 0) P0.push([16, 13 + (1 - sw), 1, 1, '#ffffff']);
     } else {
         P0.push([14, 15 + (1 - sw), 5, 4, '#ffe066'], [14, 15 + (1 - sw), 5, 2, '#51cf66']);
     }
@@ -3651,7 +3689,10 @@ function winBattle() {
         lvUp = '<br><br>🎊 <b>레벨 ' + G.lv + ' 달성!</b>';
         const ns = SKILLS.find(s => s.lv === G.lv);
         if (ns) lvUp += '<br>새 기술 <b>' + ns.n + '</b> 습득!';
-        if (f.lv === G.lv) lvUp += '<br>✨ <b>' + f.n + '</b>(으)로 진화했다!';
+        if (f.lv === G.lv) {
+            lvUp += '<br>✨ <b>' + f.n + '</b>(으)로 진화했다!';
+            if (f.note) lvUp += '<br><span style="opacity:.75;font-size:.9em">' + f.note + '</span>';
+        }
         S.levelup();
     }
     if (e.boss) {
