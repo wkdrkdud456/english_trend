@@ -816,13 +816,13 @@ function defOf() { return 5 + G.lv * 2.4; }
 function expNeed() { return Math.round(20 * Math.pow(G.lv, 1.4)); }
 function city() { return CITIES[G.cityIdx]; }
 function formOf() { let f = FORMS[0]; for (const x of FORMS) if (G.lv >= x.lv) f = x; return f; }
-function mySkills() { return SKILLS.filter(s => G.lv >= s.lv); }
+function mySkills() { return SKILLS.filter(s => G.lv >= s.lv || (G.learned && G.learned[s.id])); }
 
 function newGame() {
     return {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
-        up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, story: {}, partT: 0,
+        up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, learned: {}, story: {}, partT: 0,
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
@@ -2563,15 +2563,21 @@ function openShop(tab) {
                 maxed ? '' : 'buyUp(' + i + ')', maxed || G.gold < upCost(u));
         });
     } else if (shopTab === 'book') {
-        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">기술 위력이 레벨당 28% 올라요. 레벨이 안 올라도 세질 수 있어요.</div>';
-        mySkills().forEach((sk, i) => {
+        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">책을 사면 그 기술의 <b>레벨이 1 올라갑니다</b> (위력 +28%).<br>아직 못 배운 기술도 책으로 미리 배울 수 있어요.</div>';
+        SKILLS.forEach(sk => {
+            const known = G.lv >= sk.lv || (G.learned && G.learned[sk.id]);
             const lv = skLv(sk.id);
-            h += rowHtml('📕', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + '</span>',
-                sk.d + (sk.pow ? '<br>위력 ' + (skPow(sk)).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) : ''),
-                skBookCost(sk).toLocaleString() + '원', 'buyBook(\'' + sk.id + '\')', G.gold < skBookCost(sk));
+            if (known) {
+                h += rowHtml('📕', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + ' → Lv' + (lv + 1) + '</span>',
+                    sk.d + (sk.pow ? '<br><b>위력 ' + skPow(sk).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) + '</b>' : ''),
+                    skBookCost(sk).toLocaleString() + '원', 'buyBook(\'' + sk.id + '\')', G.gold < skBookCost(sk));
+            } else {
+                const cost = skBookCost(sk) * 3;
+                h += rowHtml('🔒', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + sk.lv + ' 기술</span>',
+                    sk.d + '<br><span style="color:#c04a60">레벨 없이 지금 바로 배우기</span>',
+                    cost.toLocaleString() + '원', 'learnSkill(\'' + sk.id + '\')', G.gold < cost);
+            }
         });
-        const next = SKILLS.find(x => x.lv > G.lv);
-        if (next) h += '<div class="rd" style="opacity:.55;padding:4px 2px">🔒 Lv' + next.lv + ' 달성하면 <b>' + next.n + '</b> 습득</div>';
     } else {
         ITEMS.forEach((it, i) => {
             h += rowHtml(it.i, it.n + ' <span style="opacity:.6;font-size:.8em">보유 ' + (G.items[it.id] || 0) + '</span>',
@@ -2580,6 +2586,27 @@ function openShop(tab) {
     }
     panelOpen(c.shop.i + ' ' + c.shop.n + ' <span style="font-size:.6em;opacity:.6">Lv' + (upLv('shop') + 1) + '</span>',
         '💰 ' + G.gold.toLocaleString() + '원 · 진열대 ' + stockTotal() + '개 · ' + RIDE_I[upLv('ride')] + ' ' + RIDE_N[upLv('ride')], h);
+}
+function cook(i) {
+    const m = city().shop.menu[i];
+    if ((m.t || 0) > upLv('shop')) { S.deny(); toast('🔒 가게를 확장해야 만들 수 있어요'); return; }
+    const lack = Object.entries(m.need).filter(([k, v]) => (G.mats[k] || 0) < v);
+    if (lack.length) { S.deny(); toast('재료가 모자라요 — ' + lack.map(([k, v]) => k + ' ' + (G.mats[k] || 0) + '/' + v).join(', ')); return; }
+    for (const [k, v] of Object.entries(m.need)) G.mats[k] -= v;
+    G.stock[m.n] = (G.stock[m.n] || 0) + 1;
+    S.pick();
+    toast(m.i + ' ' + m.n + ' 완성! 진열대에 올렸어요 (' + stockTotal() + '개)');
+    syncHud(); save(); openShop();
+}
+function buy(i) {
+    const it = ITEMS[i];
+    const pr = itemPrice(it);
+    if (G.gold < pr) { S.deny(); toast('💰 돈이 ' + (pr - G.gold).toLocaleString() + '원 모자라요'); return; }
+    G.gold -= pr;
+    G.items[it.id] = (G.items[it.id] || 0) + 1;
+    S.coin();
+    toast(it.i + ' ' + it.n + ' 구매! (보유 ' + G.items[it.id] + '개)');
+    syncHud(); save(); openShop();
 }
 function buyUp(i) {
     const u = UPGRADES[i];
@@ -2598,11 +2625,24 @@ function buyUp(i) {
 function buyBook(id) {
     const sk = SKILLS.find(x => x.id === id);
     const cost = skBookCost(sk);
-    if (G.gold < cost) { S.deny(); return; }
+    if (G.gold < cost) { S.deny(); toast('💰 돈이 ' + (cost - G.gold).toLocaleString() + '원 모자라요'); return; }
+    const was = skLv(id);
     G.gold -= cost;
-    G.sk[id] = skLv(id) + 1;
+    G.sk[id] = was + 1;
     S.levelup();
-    toast('📕 ' + sk.n + ' Lv' + G.sk[id] + '!');
+    toast('📕 ' + sk.n + ' Lv' + was + ' → Lv' + G.sk[id] + ' (위력 +28%)');
+    syncHud(); save(); openShop();
+}
+// 아직 레벨이 안 되는 기술을 책으로 미리 배운다
+function learnSkill(id) {
+    const sk = SKILLS.find(x => x.id === id);
+    const cost = skBookCost(sk) * 3;
+    if (G.gold < cost) { S.deny(); toast('💰 돈이 ' + (cost - G.gold).toLocaleString() + '원 모자라요'); return; }
+    G.gold -= cost;
+    G.learned[id] = true;
+    G.sk[id] = Math.max(1, skLv(id));
+    S.levelup();
+    msg('📕', '새 기술 습득!', '<b>' + sk.n + '</b><br><span style="opacity:.75">' + sk.d + '</span><br><br>레벨 제한 없이 책으로 배웠어요!');
     syncHud(); save(); openShop();
 }
 function openBag() {
