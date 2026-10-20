@@ -387,14 +387,129 @@ const CITIES = [
         { n:'자유의 버거 타워', i:'🗽', need:{'소고기':8,'번':6,'체다':5,'핫소스':4}, price:9500, t:3 },
     ]},
     mobs:[
-        { n:'택시 괴물', draw:'taxi', hp:1200, atk:122, def:100, exp:690, gold:1200 },
-        { n:'다람쥐 갱단', draw:'squirrel', hp:1050, atk:140, def:82, exp:710, gold:1250 },
-        { n:'월스트리트 좀비', draw:'wzombie', hp:1550, atk:115, def:128, exp:780, gold:1400 },
+        { n:'택시 괴물', draw:'taxi', hp:1200, atk:108, def:100, exp:690, gold:1200 },
+        { n:'다람쥐 갱단', draw:'squirrel', hp:1050, atk:124, def:82, exp:710, gold:1250 },
+        { n:'월스트리트 좀비', draw:'wzombie', hp:1550, atk:102, def:128, exp:780, gold:1400 },
     ],
     boss:{ n:'과거의 동훈', wife:'???', draw:'pastdh', hp:6500, atk:90, def:130, exp:20000, gold:40000,
            intro:'거울 속에서 누군가 걸어나온다... 게임만 하던 시절의 동훈이다!',
            win:'과거의 동훈: "...너, 진짜 어른이 됐구나." 빛이 되어 사라졌다.' },
     animal:{ id:'squirrel', n:'센트럴파크 다람쥐', i:'🐿️', eff:'crit', val:0.22, desc:'치명타 확률을 올려줘요' },
+    ticket:40000,
+},
+{
+    id:'iceland', name:'아이슬란드', icon:'🌌', landmark:'aurora', seed:8080, lv0:44, night:true,
+    pal:{ sky:'#2a3a6a', g0:'#e8f0ff', g1:'#cfdcf0', g2:'#9aacc8', t0:'#a8d8e8', t1:'#5c90b8', t2:'#2e5478', p0:'#dce8f8', p1:'#b8c8e0', p2:'#7a8cac', w0:'#e8f0fc', w1:'#b4c4dc', w2:'#6c7c9c', r0:'#7c5c9c', r1:'#4e3870', r2:'#2a1c44', a0:'#8ce8e0', a1:'#3c9cc0', a2:'#1c5c80', tr0:'#6cc49c', tr1:'#3c8468', tr2:'#1e5440', f0:'#b48cff', f1:'#8cf0e0', out:'#161c2e' },
+    mats:[ {n:'빙하수',i:'💧',c:'#8ce8e0'}, {n:'양모',i:'🧶',c:'#f0e8d8'}, {n:'호밀',i:'🌾',c:'#c8a86c'}, {n:'이끼',i:'🍃',c:'#6cc49c'} ],
+    shop:{ n:'앨리 수프집', i:'🍲', menu:[
+        { n:'양고기 스튜', i:'🍲', need:{'양모':2,'호밀':2}, price:1300 },
+        { n:'호밀 흑빵', i:'🍞', need:{'호밀':3,'이끼':1}, price:1700 },
+        { n:'빙하수 소다', i:'🥤', need:{'빙하수':3,'이끼':2}, price:2600 },
+        { n:'온천 달걀 수프', i:'🥣', need:{'빙하수':3,'양모':2,'호밀':2}, price:5200, t:1 },
+        { n:'오로라 푸딩', i:'🍮', need:{'빙하수':4,'이끼':3,'양모':2}, price:9000, t:2 },
+        { n:'빙하 한 상', i:'🧊', need:{'빙하수':6,'양모':5,'호밀':5,'이끼':4}, price:20000, t:3 },
+    ]},
+    mobs:[
+        { n:'온천 요정', draw:'hotspring', hp:2460, atk:130, def:105, exp:900,  gold:2200 },
+        { n:'눈사람 트롤', draw:'snowtroll', hp:2860, atk:145, def:80,  exp:920,  gold:2400 },
+        { n:'오로라 여우', draw:'aurorafox', hp:3480, atk:120, def:166, exp:990,  gold:2600 },
+    ],
+    boss:{ n:'비요른', wife:'아스타', draw:'bjorn', hp:15600, atk:112, def:170, exp:8000, gold:60000,
+           intro:'아스타: "비요른은 겨울마다 혼자 양을 몰아요." 눈보라가 몰아친다!',
+           win:'비요른: "...당신 남편은 추운 데서도 웃는군. 그게 더 어려운 건데."' },
+    animal:{ id:'puffin', n:'퍼핀', i:'🐧', eff:'mana', val:7, desc:'매 턴 기력을 많이 회복시켜줘요' },
+    ticket:90000,
+},
+{
+    id:'santorini', name:'산토리니', icon:'🏖️', landmark:'dome', seed:3131, lv0:52,
+    pal:{ sky:'#6cc8f0', g0:'#f4ecd8', g1:'#dcd0b0', g2:'#a89878', t0:'#a8c86c', t1:'#6c9444', t2:'#40602c', p0:'#fcf8f0', p1:'#e4dcc8', p2:'#a89c84', w0:'#ffffff', w1:'#e4e8f0', w2:'#9ca8bc', r0:'#5cb4e8', r1:'#2878b8', r2:'#14487c', a0:'#6cd8f8', a1:'#2894d8', a2:'#145c94', tr0:'#9cd05c', tr1:'#5c9440', tr2:'#365c28', f0:'#ff8fb0', f1:'#fff0a0', out:'#1e2432' },
+    mats:[ {n:'무화과',i:'🍈',c:'#9c6cb8'}, {n:'요거트',i:'🥛',c:'#f8f4e8'}, {n:'꿀',i:'🍯',c:'#ffb000'}, {n:'레몬',i:'🍋',c:'#ffe066'} ],
+    shop:{ n:'앨리 에게해 식당', i:'🥗', menu:[
+        { n:'그릭 요거트', i:'🥣', need:{'요거트':2,'꿀':1}, price:2400 },
+        { n:'무화과 샐러드', i:'🥗', need:{'무화과':2,'레몬':2}, price:3100 },
+        { n:'꿀 레몬 케이크', i:'🍋', need:{'꿀':2,'레몬':3,'요거트':1}, price:4800 },
+        { n:'에게해 플래터', i:'🫒', need:{'무화과':3,'요거트':3,'레몬':2}, price:9500, t:1 },
+        { n:'선셋 바클라바', i:'🍯', need:{'꿀':5,'무화과':3,'요거트':2}, price:17000, t:2 },
+        { n:'석양의 코스', i:'🌅', need:{'무화과':6,'요거트':5,'꿀':5,'레몬':4}, price:38000, t:3 },
+    ]},
+    mobs:[
+        { n:'당나귀 유령', draw:'donkey', hp:2880, atk:152, def:123, exp:1120, gold:4000 },
+        { n:'에게해 문어', draw:'octopus', hp:3360, atk:170, def:93,  exp:1150, gold:4300 },
+        { n:'풍차 정령', draw:'windmill', hp:4080, atk:142, def:195, exp:1230, gold:4700 },
+    ],
+    boss:{ n:'니코스', wife:'엘레니', draw:'nikos', hp:18200, atk:132, def:200, exp:10000, gold:130000,
+           intro:'엘레니: "니코스는 30년을 이 언덕에서 살았어요." 석양이 붉게 탄다!',
+           win:'니코스: "석양은 매일 와. 사람은 안 그렇지. ...잘 데리고 다녀."' },
+    animal:{ id:'pelican', n:'항구 펠리컨', i:'🦩', eff:'extra', val:0.35, desc:'자주 추가타를 날려줘요' },
+    ticket:170000,
+},
+{
+    id:'london', name:'런던', icon:'☔', landmark:'bigben', seed:1887, lv0:60, rain:true,
+    pal:{ sky:'#8c9cb0', g0:'#8cb48c', g1:'#5c8460', g2:'#38543c', t0:'#78a478', t1:'#4c7450', t2:'#2c4830', p0:'#c4c0bc', p1:'#9c9894', p2:'#68645c', w0:'#c08878', w1:'#94584c', w2:'#5c3028', r0:'#6c7484', r1:'#444c5c', r2:'#242a38', a0:'#88a8c4', a1:'#4c7498', a2:'#2c4864', tr0:'#74a474', tr1:'#487048', tr2:'#2a4430', f0:'#e8a0c0', f1:'#fff0c0', out:'#1a1c22' },
+    mats:[ {n:'홍차잎',i:'🍂',c:'#8a4b2a'}, {n:'감자',i:'🥔',c:'#c8a060'}, {n:'버섯',i:'🍄',c:'#d9534f'}, {n:'생크림',i:'🍶',c:'#fff8f0'} ],
+    shop:{ n:'앨리 티룸', i:'☕', menu:[
+        { n:'스콘 & 크림', i:'🧁', need:{'생크림':2,'감자':1}, price:4300 },
+        { n:'피시 앤 칩스', i:'🍟', need:{'감자':3,'버섯':1}, price:5600 },
+        { n:'버섯 파이', i:'🥧', need:{'버섯':3,'생크림':2}, price:8700 },
+        { n:'애프터눈 티 세트', i:'☕', need:{'홍차잎':3,'생크림':3,'감자':2}, price:17000, t:1 },
+        { n:'얼그레이 케이크', i:'🍰', need:{'홍차잎':5,'생크림':3,'버섯':2}, price:30000, t:2 },
+        { n:'여왕의 티타임', i:'👑', need:{'홍차잎':6,'생크림':5,'감자':5,'버섯':4}, price:68000, t:3 },
+    ]},
+    mobs:[
+        { n:'빨간 전화박스', draw:'phonebox', hp:3300, atk:175, def:142, exp:1350, gold:7000 },
+        { n:'안개 속 신사', draw:'gentleman', hp:3860, atk:195, def:107, exp:1390, gold:7600 },
+        { n:'지하철 쥐떼', draw:'tuberat', hp:4680, atk:162, def:224, exp:1490, gold:8200 },
+    ],
+    boss:{ n:'올리버', wife:'에밀리', draw:'oliver', hp:20900, atk:151, def:230, exp:12000, gold:240000,
+           intro:'에밀리: "올리버는 비 오는 날에도 우산을 안 써요." 빅벤이 울린다!',
+           win:'올리버: "비는 멈춰요. 기다려주는 사람이 있으면 더 빨리."' },
+    animal:{ id:'corgi', n:'여왕의 코기', i:'🐕', eff:'guard', val:0.24, desc:'받는 피해를 많이 줄여줘요' },
+    ticket:300000,
+},
+{
+    id:'sydney', name:'시드니', icon:'🏄', landmark:'opera', seed:2000, lv0:68,
+    pal:{ sky:'#5cc4f4', g0:'#f0dca8', g1:'#d4bc80', g2:'#a08c54', t0:'#9cd060', t1:'#5c9838', t2:'#366022', p0:'#f8f0e0', p1:'#dcd0b8', p2:'#a09880', w0:'#fff8ec', w1:'#e0d4c0', w2:'#988c74', r0:'#ff9c5c', r1:'#d4642c', r2:'#8c3818', a0:'#5ce0f8', a1:'#189cd8', a2:'#0c6498', tr0:'#8cc850', tr1:'#549434', tr2:'#305c20', f0:'#ff7ea8', f1:'#ffe878', out:'#1c2228' },
+    mats:[ {n:'새우',i:'🦐',c:'#ff8a6a'}, {n:'아보카도',i:'🥑',c:'#7cb342'}, {n:'망고',i:'🥭',c:'#ffb000'}, {n:'바비큐소스',i:'🧴',c:'#8a3a20'} ],
+    shop:{ n:'앨리 비치 바비큐', i:'🍤', menu:[
+        { n:'새우 바비큐', i:'🍤', need:{'새우':2,'바비큐소스':1}, price:7700 },
+        { n:'아보카도 토스트', i:'🥑', need:{'아보카도':2,'망고':1}, price:10000 },
+        { n:'망고 스무디볼', i:'🥭', need:{'망고':3,'아보카도':2}, price:15500 },
+        { n:'해변 플래터', i:'🏖️', need:{'새우':3,'아보카도':3,'바비큐소스':2}, price:31000, t:1 },
+        { n:'선셋 바비큐 세트', i:'🔥', need:{'바비큐소스':5,'새우':4,'망고':3}, price:54000, t:2 },
+        { n:'오페라의 만찬', i:'🎭', need:{'새우':7,'아보카도':5,'망고':5,'바비큐소스':5}, price:120000, t:3 },
+    ]},
+    mobs:[
+        { n:'복싱 캥거루', draw:'kangaroo', hp:3720, atk:197, def:160, exp:1600, gold:12000 },
+        { n:'서핑 상어', draw:'shark', hp:4340, atk:220, def:121, exp:1650, gold:13000 },
+        { n:'코알라 도둑', draw:'koala', hp:5280, atk:184, def:252, exp:1760, gold:14000 },
+    ],
+    boss:{ n:'잭', wife:'클로이', draw:'jack', hp:23600, atk:171, def:260, exp:14000, gold:420000,
+           intro:'클로이: "잭은 파도가 높을수록 웃어요." 바다가 들끓는다!',
+           win:'잭: "파도는 어차피 와. 같이 타면 덜 무섭지, 안 그래?"' },
+    animal:{ id:'quokka', n:'쿼카', i:'🐨', eff:'crit', val:0.26, desc:'치명타 확률을 크게 올려줘요' },
+    ticket:500000,
+},
+{
+    id:'seoul', name:'서울', icon:'🏠', landmark:'namsan', seed:1991, lv0:76,
+    pal:{ sky:'#9cd0ec', g0:'#a0cc78', g1:'#74a455', g2:'#4a7038', t0:'#8cc060', t1:'#548c3c', t2:'#305424', p0:'#e4e0d8', p1:'#c0bcb4', p2:'#8c8880', w0:'#f4ece0', w1:'#d4c4ac', w2:'#948470', r0:'#e88a7c', r1:'#b8544c', r2:'#7c2c28', a0:'#84c8ec', a1:'#3c8cc4', a2:'#1c5888', tr0:'#84bc58', tr1:'#4e8838', tr2:'#2c5024', f0:'#ffb0cc', f1:'#ffeca0', out:'#201c1a' },
+    mats:[ {n:'김치',i:'🥬',c:'#e03131'}, {n:'참기름',i:'🫗',c:'#d9a441'}, {n:'떡',i:'🍡',c:'#fdf2f8'}, {n:'계란',i:'🥚',c:'#ffe8b0'} ],
+    shop:{ n:'앨리 분식집', i:'🍢', menu:[
+        { n:'김밥', i:'🍙', need:{'떡':1,'계란':2}, price:13500 },
+        { n:'떡볶이', i:'🍢', need:{'떡':3,'김치':1}, price:17500 },
+        { n:'김치볶음밥', i:'🍚', need:{'김치':3,'참기름':2}, price:27000 },
+        { n:'잔치국수', i:'🍜', need:{'계란':3,'참기름':3,'떡':2}, price:54000, t:1 },
+        { n:'집밥 한 상', i:'🍱', need:{'김치':4,'계란':4,'참기름':3,'떡':3}, price:95000, t:2 },
+        { n:'둘이 먹는 저녁', i:'🍽️', need:{'김치':6,'계란':6,'참기름':5,'떡':5}, price:210000, t:3 },
+    ]},
+    mobs:[
+        { n:'배달 오토바이', draw:'delivery', hp:4140, atk:219, def:178, exp:1900, gold:20000 },
+        { n:'야근 과장님', draw:'buchang', hp:4840, atk:244, def:135, exp:1960, gold:21500 },
+        { n:'길고양이 대장', draw:'streetcat', hp:5880, atk:204, def:281, exp:2100, gold:23000 },
+    ],
+    boss:{ n:'내일의 동훈', wife:'???', draw:'futuredh', hp:30000, atk:182, def:240, exp:30000, gold:800000,
+           intro:'현관 앞에 동훈이가 한 명 더 서 있다. "나는 내일 아침의 너야. 또 바빠질 거야."',
+           win:'내일의 동훈: "...알았어. 이번엔 네가 이겼다." 그리고 사라졌다.' },
+    animal:{ id:'homecat', n:'우리집 고양이', i:'🐈', eff:'regen', val:14, desc:'매 턴 HP를 많이 회복시켜줘요' },
     ticket:0,
 },
 ];
@@ -449,10 +564,10 @@ function pxStar(cx, cy, r, col) {
 }
 function drawEF() {
     for (const e of EF) {
-        const k = e.t / e.dur, lv = Math.min(10, e.lv);
-        const n = 1 + lv * 0.35;                       // 레벨이 오르면 양이 늘고
-        const big = 1 + (lv - 1) * 0.12;               // 크기도 커진다
-        const gold = lv >= 5, rainbow = lv >= 9;
+        const k = e.t / e.dur, lv = Math.min(SK_MAX, e.lv);
+        const n = 1 + lv * 0.7;                        // 레벨이 오르면 양이 늘고
+        const big = 1 + (lv - 1) * 0.25;               // 크기도 커진다
+        const gold = lv >= 3, rainbow = lv >= SK_MAX;  // 만렙이면 무지개로 터진다
         switch (e.id) {
             case 'dish': {                             // 설거지 연타 — 거품 3연타 + 스펀지 궤적
                 for (let h = 0; h < 3; h++) {
@@ -608,6 +723,21 @@ const PET_DB = {
     taxi:      { n:'장난감 택시',   e:'gold',  v:0.6,   d:'전투 보상 돈 +60%' },
     squirrel:  { n:'다람쥐 갱',     e:'crit',  v:0.18,  d:'치명타 확률 +18%' },
     wzombie:   { n:'퇴근한 좀비',   e:'def',   v:0.22,  d:'받는 피해 -22%' },
+    hotspring: { n:'온천 요정',     e:'heal',  v:0.08,  d:'매 턴 HP 8% 회복' },
+    snowtroll: { n:'아기 눈사람',   e:'def',   v:0.24,  d:'받는 피해 -24%' },
+    aurorafox: { n:'오로라 여우',   e:'crit',  v:0.22,  d:'치명타 확률 +22%' },
+    donkey:    { n:'꼬마 당나귀',   e:'mat',   v:0.7,   d:'전투 후 재료를 훨씬 더 줍는다' },
+    octopus:   { n:'아기 문어',     e:'extra', v:0.34,  d:'34% 확률로 추가타' },
+    windmill:  { n:'풍차 정령',     e:'mana',  v:0.08,  d:'매 턴 기력 8% 회복' },
+    phonebox:  { n:'빨간 전화박스', e:'gold',  v:0.8,   d:'전투 보상 돈 +80%' },
+    gentleman: { n:'안개 신사',     e:'atk',   v:0.24,  d:'공격력 +24%' },
+    tuberat:   { n:'지하철 생쥐',   e:'extra', v:0.3,   d:'30% 확률로 추가타' },
+    kangaroo:  { n:'복싱 캥거루',   e:'atk',   v:0.28,  d:'공격력 +28%' },
+    shark:     { n:'아기 상어',     e:'crit',  v:0.26,  d:'치명타 확률 +26%' },
+    koala:     { n:'잠꾸러기 코알라', e:'def', v:0.26,  d:'받는 피해 -26%' },
+    delivery:  { n:'미니 오토바이', e:'gold',  v:1.0,   d:'전투 보상 돈 +100%' },
+    buchang:   { n:'과장님 인형',   e:'atk',   v:0.3,   d:'공격력 +30%' },
+    streetcat: { n:'길고양이',      e:'heal',  v:0.09,  d:'매 턴 HP 9% 회복' },
 };
 function petOf(kind) { return PET_DB[kind]; }
 const PARTY_MAX = 3;
@@ -776,6 +906,11 @@ const MOB_SAY = {
     fox:'캬캬캬!', bamboo:'사각... 사각...', mummy:'...끄으으', scorpion:'찌릭!',
     sphinx:'수수께끼를 풀어라', gladiator:'결투다!', fairy:'물장난하자~', wraith:'돌아가라...',
     taxi:'빵빵!! 비켜!', squirrel:'도토리 내놔!', wzombie:'야근... 야근...',
+    hotspring:'같이 몸 좀 녹이고 가~', snowtroll:'...추워? 나도 추워.', aurorafox:'하늘 좀 봐!',
+    donkey:'이 언덕을 30년 올랐어', octopus:'다리가 여덟인 게 죄야?', windmill:'빙글... 빙글...',
+    phonebox:'전화 한 통 하고 가지?', gentleman:'우산은 됐습니다.', tuberat:'끼익! 끼익!',
+    kangaroo:'한 판 붙자!', shark:'파도 좋다!', koala:'...조금만 더 잘게',
+    delivery:'배달 왔습니다!!', buchang:'김 대리, 잠깐만.', streetcat:'야옹... (밥 줘)',
 };
 
 // ───────── 스토리 / 컷신 ─────────
@@ -815,6 +950,36 @@ memory: {
     '"열다섯 줄이었는데"',
     '"…하나도 못 해줬지."',
     '소현이는 주머니 속 편지 조각을 만졌다.\n열다섯 조각. 열다섯 줄.' ]},
+  iceland: { em:'❄️', lines:[
+    '오로라 아래에서 동훈이가 멈춰 섰다.',
+    '"우리 \'별 보이는 데까지 차 타고 가기\' 적었잖아."',
+    '"그거... 지금 하는 거 맞지?"',
+    '소현이는 대답 대신 손을 잡았다.',
+    '열 번째 줄이, 처음으로 지워졌다.' ]},
+  santorini: { em:'🌅', lines:[
+    '석양이 바다로 떨어지는 걸 둘이 앉아서 봤다.',
+    '"예전엔 이런 거 보면 사진만 찍었는데."',
+    '"오늘은 그냥 볼래."',
+    '"...네 얼굴 보려고."',
+    '동훈이가 처음으로 먼저 웃었다.' ]},
+  london: { em:'☔', lines:[
+    '비가 왔다. 우산은 하나뿐이었다.',
+    '"내가 들게. 너 어깨 젖어."',
+    '"...너도 젖었잖아."',
+    '"나는 괜찮아."',
+    '소현이는 그 말을 아주 오래 기억하기로 했다.' ]},
+  sydney: { em:'🌊', lines:[
+    '파도에 둘 다 넘어져서 한참 웃었다.',
+    '"나 진짜 못하네."',
+    '"어. 진짜 못해."',
+    '"...근데 또 하자."',
+    '싸울 일이 없는 하루였다.' ]},
+  seoul: { em:'🏠', lines:[
+    '돌아왔다. 현관 비밀번호는 그대로였다.',
+    '"...집이 제일 좋다, 그치."',
+    '동훈이가 신발을 벗고, 불을 켰다.',
+    '"내일 아침은 내가 할게. 설거지도."',
+    '목록의 첫 줄이었다.' ]},
   ny:   { em:'🪞', lines:[
     '마지막 도시. 거울 앞에 누군가 서 있다.',
     '동훈이와 똑같이 생긴 사람.',
@@ -840,13 +1005,39 @@ letter: [
   '14. 늙어서도 손잡고 다니기',
   '15. 매일 자기 전에 "사랑해" 말하기',
 ],
-ending: { em:'💌', lines:[
-  '편지가 완성되는 순간, 반지가 빛났다.',
-  '동훈이가 — 처음으로 입을 열었다.',
+// 2막 수집물 — 편지의 각 줄을 "진짜로 해본" 사진 15장
+photo: [
+  '📷 아침 식탁. 계란프라이 두 개. 설거지하는 뒷모습.',
+  '📷 퇴근길 버스 창문. 평소보다 두 정거장 일찍 내린 날.',
+  '📷 아무것도 안 한 토요일. 이불 속에서 찍은 천장.',
+  '📷 영화관 좌석. 둘 다 끝까지 안 졸았다는 증거.',
+  '📷 벚꽃 길. 손 두 개가 프레임 안에 같이 들어왔다.',
+  '📷 엉망이 된 주방과, 그래도 웃고 있는 두 사람.',
+  '📷 밤 11시 편의점 앞 벤치. 아이스크림 두 개.',
+  '📷 소현이 사진이 백 장. 동훈이 사진은 두 장.',
+  '📷 자정 12시 2분. "미안" 이라고 적힌 메모.',
+  '📷 오로라 아래 차 한 대. 담요 두 장.',
+  '📷 촛불 하나 꽂힌 케이크. 서프라이즈는 실패했지만.',
+  '📷 같이 깬 게임의 엔딩 크레딧 화면.',
+  '📷 "괜찮아?" 라고 먼저 보낸 메시지 캡처.',
+  '📷 할머니 할아버지가 손잡고 가는 뒷모습. 몰래 찍었다.',
+  '📷 불 끈 방. 작게 "사랑해" 라고 적힌 쪽지.',
+],
+act2: { em:'🧳', lines:[
+  '과거의 동훈이 사라지고, 기억이 전부 돌아왔다.',
   '"열다섯 줄, 네가 다 찾아왔네."',
-  '"미안해. 바쁘다는 말로 너무 많이 미뤘어."',
-  '"이제 하나씩 진짜로 해보자."',
-  '…그리고 반지는 조용히 손가락으로 돌아갔다.\n\n🎉 THE END 🎉',
+  '"근데 찾은 거랑 한 거랑은 다르잖아."',
+  '동훈이가 처음으로 가방을 멨다.',
+  '"이번엔 내가 데리고 갈게.\n하나씩, 진짜로 해보자."',
+  '…여행은 아직 절반이 남았다.\n\n다음 도시는 — 아이슬란드.',
+]},
+ending: { em:'💌', lines:[
+  '서른 조각이 전부 모였다.\n열다섯 줄의 약속과, 열다섯 장의 사진.',
+  '"적어두기만 했던 거, 이제 다 해봤네."',
+  '"...하나 더 적어도 돼?"',
+  '동훈이가 수첩 맨 뒷장에 한 줄을 더 적었다.',
+  '"16. 내일도 오늘처럼."',
+  '반지는 조용히 손가락으로 돌아갔다.\n이번엔 빠지지 않았다.\n\n🎉 THE END 🎉',
 ]},
 };
 
@@ -888,12 +1079,17 @@ function cutAdvance() {
     ['hud','bars','acts'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
     if (after) after();
 }
+const PIECES = 30;                                   // 전체 조각 수 (편지 15 + 사진 15)
 function letterCount() { return Object.keys(G.hearts || {}).length; }
+function pieceText(n) {                              // n은 1부터
+    return n <= 15 ? STORY.letter[n - 1] : (STORY.photo[n - 16] || '');
+}
+function pieceKind(n) { return n <= 15 ? '편지 조각' : '사진'; }
 function cityHearts(c) { return hearts.filter(h => h.got).length; }
 function checkEnding() {
     if (G.story.ended) return;
     const allBoss = CITIES.every(c => G.boss[c.id]);
-    if (allBoss && letterCount() >= 15) {
+    if (allBoss && letterCount() >= PIECES) {
         G.story.ended = true; save();
         setTimeout(() => startCut(STORY.ending.em, STORY.ending.lines), 600);
     }
@@ -935,10 +1131,14 @@ function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3); 
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
 
 // ───────── 스킬북 (기술 강화) ─────────
-const SK_MASTER = 100;   // 이만큼 쓰면 숙련도로 레벨업
-function skLv(id) { return (G.sk && G.sk[id]) || 1; }
-function skUse(id) { return (G.skUse && G.skUse[id]) || 0; }
-function skPow(sk) { return sk.pow * (1 + (skLv(sk.id) - 1) * 0.28); }
+const SK_MAX = 5;                           // 기술 만렙은 5
+const SK_NEED = [0, 40, 70, 120, 200];      // 지금 레벨 → 다음 레벨까지 필요한 사용 횟수
+function skNeed(lv) { return SK_NEED[lv] || 0; }                 // 0이면 더 올릴 곳이 없다
+function skLv(id) { return Math.min(SK_MAX, (G.sk && G.sk[id]) || 1); }
+function skMaxed(id) { return skLv(id) >= SK_MAX; }
+function skReset(id) { if (!G.skUse) G.skUse = {}; G.skUse[id] = 0; }
+function skUse(id) { return Math.min(skNeed(skLv(id)) || 0, (G.skUse && G.skUse[id]) || 0); }
+function skPow(sk) { return sk.pow * (1 + (skLv(sk.id) - 1) * 0.35); }   // 만렙이면 위력 2.4배
 function skBookCost(sk) { return Math.round(500 * Math.pow(skLv(sk.id), 2.1) * (1 + sk.lv * 0.25)); }
 
 // ───────── NPC & 대화 ─────────
@@ -1037,9 +1237,100 @@ ny: [
           '저도 예전엔 사람이었어요.',
           '남편분, 야근 너무 시키지 마세요.'] },
  { n:'거울 앞 노인', look:{ t:'old', hair:'#f0f0f0', cloth:'#9b5de5' },
-   lines:['마지막 상대가 누군지 아나?',
-          '라이벌도, 괴물도 아니야.',
-          '...게임만 하던 시절의 자기 자신이지.'] },
+   lines:['여기가 끝인 줄 알지?',
+          '찾는 거랑 하는 거는 달라.',
+          '...진짜 여행은 그 다음부터야.'] },
+],
+iceland: [
+ { n:'온천 주인', look:{ t:'old', hair:'#e8e8f0', cloth:'#5c90b8' },
+   lines:['어서 와. 여기까지 오느라 얼었겠구먼.',
+          '오로라는 날씨가 궂은 날에 더 잘 보여. 인생이랑 비슷하지.',
+          '호수 한가운데에 섬이 하나 있어. 얼어붙은 날에만 건너갈 수 있지.'],
+   gift:{ gold:12000, msg:'"몸 좀 녹이고 가" — 12,000원을 받았다!' } },
+ { n:'양치기', look:{ t:'man', hair:'#8a5434', cloth:'#3c8468' },
+   lines:['비요른이랑 나랑 같이 양을 몰았어.',
+          '그 사람, 겨울 내내 혼자 산에 있어. 말을 잃어버릴 만도 하지.'] },
+ { n:'사진가', look:{ t:'woman', hair:'#2b2f45', cloth:'#b48cff' },
+   lines:['오로라 사진을 20년 찍었는데요.',
+          '제일 잘 나온 건 하늘이 아니라, 하늘 보는 사람 얼굴이더라고요.'] },
+ { n:'온천욕 중인 아저씨', look:{ t:'man', hair:'#5c3620', cloth:'#8ce8e0' },
+   lines:['...아 좋다.',
+          '온천 요정은 안 무서워요. 같이 몸 녹이자고 할 뿐이지.'] },
+ { n:'길 잃은 여행자', look:{ t:'kid', hair:'#3a2418', cloth:'#ffd43b' },
+   lines:['여기부터는 진짜 아무것도 없어요.',
+          '근데 그래서 옆 사람이 더 잘 보이던데요.'] },
+],
+santorini: [
+ { n:'항구 할머니', look:{ t:'old', hair:'#f0f0f0', cloth:'#2878b8' },
+   lines:['어서 와요. 여긴 석양 보러 오는 데예요.',
+          '계단이 많아요. 천천히 가요, 급할 거 없어요.'],
+   gift:{ gold:25000, msg:'"둘이 맛있는 거 사 먹어" — 25,000원!' } },
+ { n:'당나귀 주인', look:{ t:'man', hair:'#5c3620', cloth:'#c0b8ac' },
+   lines:['우리 당나귀가 30년을 이 언덕을 올랐어요.',
+          '죽고 나서도 계단을 오르더라고요. 습관이 무서워.'] },
+ { n:'어부', look:{ t:'man', hair:'#2b2f45', cloth:'#189cd8' },
+   lines:['문어는 똑똑해요. 다리가 여덟이라 외롭진 않겠죠.',
+          '...사람은 둘이면 충분한데 말이에요.'] },
+ { n:'신혼부부', look:{ t:'woman', hair:'#8a5434', cloth:'#ff8fb0' },
+   lines:['저희 신혼여행 왔어요!',
+          '...두 분은요? 아 — 두 번째 신혼여행 같은 거구나.'] },
+ { n:'풍차지기', look:{ t:'old', hair:'#d8d0c0', cloth:'#e4dcc8' },
+   lines:['풍차는 바람이 불어야 도는 거예요.',
+          '안 불면 그냥 서 있으면 돼. 억지로 돌리면 부서져요.'] },
+],
+london: [
+ { n:'우산 장수', look:{ t:'man', hair:'#3a2418', cloth:'#444c5c' },
+   lines:['런던에 온 걸 환영합니다. 우산 하나 드릴까요?',
+          '...아, 하나면 된다고요. 그렇겠네요.'],
+   gift:{ gold:48000, msg:'"우산값은 됐어요" — 48,000원을 받았다!' } },
+ { n:'티룸 사장', look:{ t:'woman', hair:'#8a5434', cloth:'#c08878' },
+   lines:['홍차는 기다려야 우러나요.',
+          '급하게 꺼내면 맹물이죠. 사람도 그래요.'] },
+ { n:'지하철 역무원', look:{ t:'man', hair:'#2b2f45', cloth:'#2b2f45' },
+   lines:['터널에 쥐가 떼로 다녀요. 조심하세요.',
+          '빅벤이 울리면 그놈들이 조용해지더라고요.'] },
+ { n:'비 맞는 신사', look:{ t:'old', hair:'#e0e0e0', cloth:'#3a4058' },
+   lines:['우산이요? 됐습니다.',
+          '같이 쓸 사람이 없으면 우산은 의미가 없어요.'] },
+ { n:'꽃 파는 소녀', look:{ t:'kid', hair:'#5c3620', cloth:'#e8a0c0' },
+   lines:['비 오는 날엔 꽃이 안 팔려요.',
+          '그래도 아저씨가 매일 한 송이씩 사 가요. 부인 주려고요.'] },
+],
+sydney: [
+ { n:'서프 강사', look:{ t:'man', hair:'#c8a860', cloth:'#189cd8' },
+   lines:['어이! 파도 타러 왔어?',
+          '처음엔 다 넘어져. 넘어지는 게 기본기야.'],
+   gift:{ gold:90000, msg:'"웰컴 보드값" — 90,000원을 받았다!' } },
+ { n:'바비큐 아저씨', look:{ t:'man', hair:'#3a2418', cloth:'#d4642c' },
+   lines:['여긴 뭐든 구워 먹어요. 새우도, 걱정도.',
+          '불 앞에 둘이 앉아 있으면 말이 저절로 나오거든요.'] },
+ { n:'라이프가드', look:{ t:'woman', hair:'#8a5434', cloth:'#ffe878' },
+   lines:['라군 가운데 모래섬 보이죠?',
+          '물때 맞으면 걸어서 들어갈 수 있어요. 뭔가 산다던데.'] },
+ { n:'캥거루 조련사', look:{ t:'man', hair:'#5c3620', cloth:'#9cd060' },
+   lines:['캥거루랑 권투는 하지 마세요. 집니다.',
+          '...남편분은 해볼 만하겠네요.'] },
+ { n:'오페라 관객', look:{ t:'old', hair:'#f0f0f0', cloth:'#5c90b8' },
+   lines:['오페라는 끝까지 봐야 해요.',
+          '마지막 10분에 다 뒤집히거든요. 인생처럼.'] },
+],
+seoul: [
+ { n:'분식집 이모', look:{ t:'woman', hair:'#2b2f45', cloth:'#e03131' },
+   lines:['어머 왔어? 얼굴 좋아졌다, 둘 다.',
+          '오래 돌았네. 앉아, 떡볶이 해줄게.'],
+   gift:{ gold:160000, msg:'"이건 이모가 쏜다" — 160,000원!' } },
+ { n:'경비 아저씨', look:{ t:'old', hair:'#d0d0d0', cloth:'#495057' },
+   lines:['1404호죠? 택배 많이 쌓였어요.',
+          '한참 비웠더라고. ...좋은 데 다녀왔나 봐요, 표정이.'] },
+ { n:'편의점 알바', look:{ t:'kid', hair:'#3a2418', cloth:'#51cf66' },
+   lines:['새벽 2시에 라면 사러 오시는 분 있었는데.',
+          '요즘은 두 분이 같이 오시더라고요.'] },
+ { n:'한강 러너', look:{ t:'man', hair:'#5c3620', cloth:'#4dabf7' },
+   lines:['저 다리 세 개 다 건너봤어요.',
+          '어디로 건너든 결국 집으로 오게 되더라고요.'] },
+ { n:'남산 자물쇠 파는 사람', look:{ t:'woman', hair:'#8a5434', cloth:'#ffb0cc' },
+   lines:['자물쇠 하나 거실래요?',
+          '...이미 안 풀리는 것 같긴 한데.'] },
 ],
 };
 
@@ -1137,6 +1428,11 @@ const THEME = {
     cairo: { tree:'palm',    enc:'dune',   ground:'sand',  pave:'sand' },
     roma:  { tree:'cypress', enc:'ruin',   ground:'grass', pave:'stone' },
     ny:    { tree:'pine',    enc:'bush',   ground:'grass', pave:'asphalt' },
+    iceland:   { tree:'pine',    enc:'snow',  ground:'snow',  pave:'ice' },
+    santorini: { tree:'palm',    enc:'ruin',  ground:'sand',  pave:'stone' },
+    london:    { tree:'broad',   enc:'bush',  ground:'grass', pave:'stone' },
+    sydney:    { tree:'palm',    enc:'bush',  ground:'sand',  pave:'stone' },
+    seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
 
 function mulberry32(a) {
@@ -1352,6 +1648,105 @@ const MAPGEN = {
         for (let k = 0; k < 16; k++) M.patch(3 + (rnd() * (MW - 6) | 0), 10 + (rnd() * (MH - 18) | 0), 1 + (rnd() * 2 | 0));   // 뒷골목
         for (let k = 0; k < 12; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 9 + (rnd() * (MH - 18) | 0), rnd() < 0.5 ? 'hydrant' : 'bench', false);
         M.npcSpots = [[15, 16], [30, 23], [8, 12], [MW - 10, 19], [20, 33]];
+    },
+
+    // 🌌 아이슬란드 — 빙하 호수와 온천, 가운데 섬에 비밀이 있다
+    iceland(M, c, rnd) {
+        M.rect(1, 5, MW - 2, 2, T.ROAD);                 // 링로드
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);
+        M.rect(1, MH - 9, MW - 2, 2, T.ROAD);
+        M.rect(MW / 2 - 6 | 0, 8, 13, 5, T.PLAZA);       // 오로라 전망대
+        M.pond(11, 22, 8, 5);                            // 빙하 호수
+        M.rect(10, 21, 4, 2, T.GROUND);                  // 호수 가운데 섬 (비밀 장소)
+        M.pond(MW - 13, 29, 5, 3);                       // 온천
+        for (let k = 0; k < 5; k++) M.deco(MW - 17 + k * 2, 27, 'lantern', false);
+        M.rowHouses(3, MW / 2 - 5 | 0, 9, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 9, 3, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 15, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 15, 3, rnd);
+        M.rowHouses(24, MW - 3, 33, 3, rnd);
+        for (let k = 0; k < 14; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 11 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
+        M.scatterTrees(13, 10);
+        for (let k = 0; k < 6; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 12 + (rnd() * (MH - 22) | 0), 'column', false);
+        M.npcSpots = [[MW / 2 - 6 | 0, 14], [12, 10], [MW - 14, 11], [MW - 12, 26], [16, 32]];
+    },
+
+    // 🏖️ 산토리니 — 절벽 계단길, 하얀 집, 파란 돔
+    santorini(M, c, rnd) {
+        M.rect(1, MH - 6, MW - 2, 4, T.WATER);           // 에게해
+        M.rect(1, 6, MW - 2, 2, T.ROAD);
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 8, T.ROAD);    // 절벽 계단길
+        M.rect(MW / 2 - 7 | 0, 9, 15, 6, T.PLAZA);       // 돔 광장
+        for (let y = 16; y < MH - 8; y += 5) M.rect(4, y, MW - 8, 2, T.ROAD);  // 계단 테라스
+        for (let k = 0; k < 7; k++) M.rowHouses(4 + (k % 2) * 6, MW - 4, 18 + k * 2, 2, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 10, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 10, 3, rnd);
+        M.pond(MW - 10, 30, 3, 2);                       // 절벽 위 수영장
+        for (let k = 0; k < 10; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 22) | 0), 1 + (rnd() * 3 | 0));
+        M.scatterTrees(14, 11);
+        for (let k = 0; k < 7; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 13 + (rnd() * (MH - 24) | 0), 'fountain', false);
+        M.npcSpots = [[MW / 2 - 7 | 0, 16], [10, 12], [MW - 12, 17], [MW - 9, 28], [14, 31]];
+    },
+
+    // ☔ 런던 — 템스강과 벽돌 블록, 지하철 입구
+    london(M, c, rnd) {
+        const riverY = 25;
+        for (let y = 5; y < MH - 4; y += 8) M.rect(1, y, MW - 2, 2, T.ROAD);
+        for (let x = 7; x < MW - 5; x += 10) M.rect(x, 1, 3, MH - 2, T.ROAD);
+        M.rect(3, riverY, MW - 6, 3, T.WATER);           // 템스강
+        [10, MW / 2 | 0, MW - 12].forEach(bx => M.rect(bx - 1, riverY, 3, 3, T.ROAD));
+        M.rect(MW / 2 - 5 | 0, 8, 11, 5, T.PLAZA);       // 빅벤 광장
+        for (let y = 9; y < MH - 7; y += 8) for (let x = 11; x < MW - 6; x += 10) {
+            if (y > riverY - 4 && y < riverY + 4) continue;
+            M.rowHouses(x, x + 7, y, 4, rnd);
+        }
+        M.rowHouses(3, 7, 10, 4, rnd);
+        for (let k = 0; k < 13; k++) M.patch(3 + (rnd() * (MW - 6) | 0), 11 + (rnd() * (MH - 20) | 0), 1 + (rnd() * 3 | 0));
+        M.scatterTrees(16, 10);
+        for (let k = 0; k < 10; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 10 + (rnd() * (MH - 18) | 0), rnd() < 0.5 ? 'lamp' : 'bench', false);
+        M.npcSpots = [[MW / 2 - 6 | 0, 14], [12, 11], [MW - 13, 13], [14, riverY + 5], [MW - 11, 32]];
+    },
+
+    // 🏄 시드니 — 하버와 해변, 오페라하우스
+    sydney(M, c, rnd) {
+        M.rect(1, MH - 7, MW - 2, 5, T.WATER);           // 본다이 비치
+        M.rect(1, 1, MW - 2, 3, T.WATER);                // 하버
+        M.rect(MW / 2 - 3 | 0, 1, 6, MH - 8, T.ROAD);    // 해안도로
+        M.rect(1, 7, MW - 2, 2, T.ROAD);
+        M.rect(1, MH - 12, MW - 2, 2, T.ROAD);
+        M.rect(MW / 2 - 7 | 0, 4, 15, 4, T.PLAZA);       // 오페라하우스 앞
+        M.pond(13, 20, 5, 3);                            // 라군
+        M.rect(12, 19, 4, 2, T.GROUND);                  // 라군 가운데 모래섬 (비밀)
+        M.rowHouses(3, MW / 2 - 6 | 0, 11, 3, rnd);
+        M.rowHouses(MW / 2 + 6 | 0, MW - 3, 11, 3, rnd);
+        M.rowHouses(3, MW / 2 - 6 | 0, 16, 3, rnd);
+        M.rowHouses(MW / 2 + 6 | 0, MW - 3, 25, 3, rnd);
+        M.rowHouses(3, MW / 2 - 6 | 0, 30, 3, rnd);
+        for (let k = 0; k < 12; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 13 + (rnd() * (MH - 24) | 0), 1 + (rnd() * 3 | 0));
+        M.scatterTrees(17, 12);
+        for (let k = 0; k < 8; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 14 + (rnd() * (MH - 26) | 0), 'bench', false);
+        M.npcSpots = [[MW / 2 - 8 | 0, 13], [11, 14], [MW - 13, 16], [MW - 10, 29], [17, 24]];
+    },
+
+    // 🏠 서울 — 한강이 가로지르고, 골목과 아파트 단지, 남산
+    seoul(M, c, rnd) {
+        const hanY = 23;
+        M.rect(1, 6, MW - 2, 3, T.ROAD);
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);
+        M.rect(1, MH - 8, MW - 2, 3, T.ROAD);
+        M.rect(2, hanY, MW - 4, 4, T.WATER);             // 한강
+        [11, MW / 2 | 0, MW - 13].forEach(bx => M.rect(bx - 1, hanY, 4, 4, T.ROAD));  // 다리 셋
+        M.rect(MW / 2 - 6 | 0, 10, 13, 5, T.PLAZA);      // 남산 앞 광장
+        M.rowHouses(3, MW / 2 - 5 | 0, 11, 4, rnd);      // 아파트 단지
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 11, 4, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 17, 4, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 17, 4, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 29, 3, rnd);      // 강남 골목
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 29, 3, rnd);
+        for (let k = 0; k < 12; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 22) | 0), 1 + (rnd() * 3 | 0));
+        M.scatterTrees(20, 11);
+        for (let k = 0; k < 10; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 12 + (rnd() * (MH - 22) | 0), rnd() < 0.5 ? 'lamp' : 'bench', false);
+        M.npcSpots = [[MW / 2 - 6 | 0, 16], [12, 12], [MW - 13, 14], [14, hanY + 6], [MW - 11, 33]];
     },
 };
 function tileOf(g, x, y) { if (x < 0 || y < 0 || x >= MW || y >= MH) return T.WALL; return g[y * MW + x]; }
@@ -1727,12 +2122,14 @@ function updateWorld(dt) {
             h.got = true; G.hearts[h.key] = true;
             S.levelup();
             const total = letterCount();
-            pop(h.x, h.y, '💗', '#ff8fc7');
-            const line = STORY.letter[total - 1] || '';
+            const photo = total > 15;
+            pop(h.x, h.y, photo ? '📷' : '💗', photo ? '#8cd0f0' : '#ff8fc7');
+            const line = pieceText(total);
             const cg = cityHearts(city());
-            msg('💗', '편지 조각 ' + total + '/15',
+            msg(photo ? '📷' : '💗', pieceKind(total) + ' ' + (photo ? total - 15 : total) + '/15',
                 '<b style="color:#c04a60">' + line + '</b><br><br>' +
-                '동훈이가 수첩 뒷장에 적어둔 <b>하고 싶은 것</b> 목록이다.<br><br>' +
+                (photo ? '적어두기만 했던 줄 하나를 <b>진짜로 해본</b> 사진이다.'
+                       : '동훈이가 수첩 뒷장에 적어둔 <b>하고 싶은 것</b> 목록이다.') + '<br><br>' +
                 (cg >= 3
                   ? '🎉 <b>' + city().name + '의 조각을 전부 찾았어요!</b><br>이제 랜드마크에서 보스에게 도전할 수 있어요.'
                   : '<b>' + city().name + '</b> 조각 ' + cg + ' / 3 — 세 개를 다 찾으면 보스에게 도전할 수 있어요.'));
@@ -1880,6 +2277,12 @@ function drawGroundTile(tx, ty, p) {
                     R(Math.max(X, cx), cy, Math.min(4, X + 16 - cx), 3, th(tx * 7 + i, ty * 7 + j, 12) > 0.5 ? p.p0 : shade(p.p0, -16));
                 }
             }
+        } else if (TH.pave === 'ice') {     // 얼어붙은 길 — 쩍 갈라진 결
+            R(X, Y, 16, 16, p.p1);
+            for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++)
+                if (th(tx * 4 + i, ty * 4 + j, 17) > 0.55) R(X + i * 4, Y + j * 4, 4, 2, p.p0);
+            if (th(tx, ty, 18) > 0.6) R(X + 2, Y + 5, 11, 1, '#ffffff');
+            if (th(tx, ty, 19) > 0.72) R(X + 6, Y + 9, 7, 1, shade(p.p0, 30));
         } else if (TH.pave === 'gravel') {
             R(X, Y, 16, 16, p.p1);
             for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++)
@@ -1918,6 +2321,15 @@ function drawGroundTile(tx, ty, p) {
             R(X + 2, Y + 8, 5, 1, lt); R(X + 9, Y + 9, 5, 1, lt);
             R(X, Y + 13, 16, 1, dk);
             for (let k = 0; k < 3; k++) R(X + 1 + k * 6, Y + 11, 3, 1, shade(dk, -18));
+        } else if (TH.enc === 'snow') {     // 눈더미 — 소복하게 쌓인 자리
+            const dk = shade(p.g2, -14), md = '#e4eefc', lt = '#ffffff';
+            R(X, Y + 9, 16, 7, dk);
+            R(X + 1, Y + 6, 14, 4, md);
+            R(X + 4, Y + 3, 9, 4, md);
+            R(X + 6, Y + 2, 5, 2, lt);
+            R(X + 2, Y + 7, 6, 1, lt); R(X + 9, Y + 8, 5, 1, lt);
+            for (let k = 0; k < 3; k++) R(X + 2 + k * 5, Y + 12, 2, 1, shade(dk, -16));
+            if (((gameT * 3 + tx) | 0) % 4 === 0) R(X + 11, Y + 1, 1, 1, lt);
         } else if (TH.enc === 'ruin') {     // 무너진 돌더미
             R(X + 1, Y + 7, 7, 6, p.w1); R(X + 8, Y + 4, 6, 9, p.w0);
             R(X + 1, Y + 7, 7, 1, p.w0); R(X + 8, Y + 4, 6, 1, '#ffffff');
@@ -1937,6 +2349,22 @@ function drawGroundTile(tx, ty, p) {
     }
 
     // 평지
+    if (TH.ground === 'snow') {             // 설원 — 결정이 반짝인다
+        R(X, Y, 16, 16, p.g1);
+        for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+            const r = th(tx * 4 + i, ty * 4 + j, 3);
+            if (r > 0.72) R(X + i * 4, Y + j * 4 + 1, 4, 2, p.g0);
+            else if (r < 0.14) R(X + i * 4 + 1, Y + j * 4 + 2, 2, 1, p.g2);
+        }
+        const sk2 = th(tx, ty, 7);
+        if (sk2 > 0.88) {
+            const sx = X + 3 + ((th(tx, ty, 8) * 9) | 0), sy = Y + 4 + ((th(tx, ty, 9) * 8) | 0);
+            const on = (((gameT * 2.2 + tx * 0.7 + ty * 1.3) | 0) % 3) === 0;
+            R(sx, sy, 1, 3, on ? '#ffffff' : p.g0);
+            R(sx - 1, sy + 1, 3, 1, on ? '#ffffff' : p.g0);
+        }
+        return;
+    }
     if (TH.ground === 'sand') {
         R(X, Y, 16, 16, p.g1);
         for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
@@ -2475,8 +2903,77 @@ function mobParts(kind, t) {
         case 'wzombie': return [[5,0,10,8,'#8fbf7f'],[6,3,2,2,'#f03e3e'],[12,3,2,2,'#f03e3e'],[8,6,4,1,'#3a5a30'],
             [4,8,12,10,'#495057'],[8,8,4,8,'#f1f3f5'],[9,8,2,7,'#c92a2a'],
             [0,8,4,3,'#8fbf7f'],[16,8,4,3,'#8fbf7f'],[5,18,4,3,'#2b2f45'],[11,18,4,3,'#2b2f45']];
+        // ── 아이슬란드
+        case 'hotspring': return [[3,8,14,9,'#8ce8e0'],[5,4,10,6,'#b8f4ee'],[6,6,2,2,E],[12,6,2,2,E],
+            [9,9,2,1,'#2a7a74'],[1,10,3,5,'#8ce8e0'],[16,10,3,5,'#8ce8e0'],
+            [2,17,16,3,'#5cc4bc'],[4,1,3,3,'#ffffff'],[13,0,4,3,'#ffffff'],[8,2,3,2,'#e8fffc'],
+            [5,13,3,2,'#ffffff'],[12,14,3,2,'#ffffff']];
+        case 'snowtroll': return [[4,5,13,13,'#f4f8ff'],[5,0,10,7,'#ffffff'],
+            [6,2,2,2+bl*-1,E],[12,2,2,2+bl*-1,E],[9,5,2,2,'#e8974d'],
+            [0,7,4,6,'#f4f8ff'],[17,7,4,6,'#f4f8ff'],[5,18,4,3,'#d8e4f4'],[11,18,4,3,'#d8e4f4'],
+            [3,8,15,2,'#c8d8ee'],[3,13,15,2,'#c8d8ee'],[6,0,3,2,'#6b4a2c'],[13,-1,3,3,'#6b4a2c']];
+        case 'aurorafox': return [[3,5,14,11,'#b48cff'],[4,0,5,6,'#b48cff'],[11,0,5,6,'#b48cff'],
+            [5,1,3,4,'#8cf0e0'],[12,1,3,4,'#8cf0e0'],[5,7,10,6,'#e8e0ff'],
+            [6,7,2,2,'#1c3a6a'],[12,7,2,2,'#1c3a6a'],[9,10,2,1,'#6a3a8a'],
+            [16,9,5,8,'#8cf0e0'],[18,6,3,5,'#b48cff'],[5,16,4,3,'#7a5cc8'],[11,16,4,3,'#7a5cc8']];
+        // ── 산토리니
+        case 'donkey': return [[2,7,16,9,'#c0b8ac'],[13,1,7,8,'#c0b8ac'],[12,0,3,4,'#a09888'],
+            [17,0,3,4,'#a09888'],[15,3,2,2,E],[18,5,3,2,'#6a6258'],[0,9,3,6,'#8a8278'],
+            [3,16,3,4,'#8a8278'],[8,16,3,4,'#8a8278'],[13,16,3,4,'#8a8278'],[2,5,9,3,'#5cb4e8']];
+        case 'octopus': return [[4,2,12,11,'#d05c9c'],[6,5,3,3+bl*-1,E],[12,5,3,3+bl*-1,E],
+            [7,6,1,1,'#fff'],[13,6,1,1,'#fff'],
+            [0,12,5,5,'#b84a88'],[5,13,4,6,'#d05c9c'],[11,13,4,6,'#d05c9c'],[15,12,5,5,'#b84a88'],
+            [1,16,3,3,'#d05c9c'],[16,16,3,3,'#d05c9c'],[6,1,8,2,'#e880b8']];
+        case 'windmill': return [[6,8,8,12,'#fcf8f0'],[5,5,10,4,'#2878b8'],[7,11,3,3,'#2878b8'],
+            [8,12,1,1,'#fff'],[9,0,2,8,'#8a7a62'],[0,2,9,2,'#e4dcc8'],[11,2,9,2,'#e4dcc8'],
+            [9,0,2,3,'#e4dcc8'],[9,5,2,3,'#e4dcc8'],[5,19,10,2,'#a89c84'],[8,3,4,4,'#5cb4e8']];
+        // ── 런던
+        case 'phonebox': return [[3,0,14,19,'#c92a2a'],[5,3,10,12,'#cfe9f5'],
+            [6,5,3,3+bl*-1,E],[12,5,3,3+bl*-1,E],[9,10,2,1,'#8a1f1f'],
+            [3,0,14,3,'#a01f1f'],[6,1,8,1,'#ffd43b'],[2,19,16,2,'#6a1414'],
+            [5,8,10,1,'#9ac4d8'],[5,12,10,1,'#9ac4d8'],[15,8,3,4,'#e05050']];
+        case 'gentleman': return [[5,0,10,5,'#2b2f45'],[3,4,14,2,'#2b2f45'],
+            [5,6,10,6,'#cfd6e4'],[6,7,2,2,E],[12,7,2,2,E],[8,10,4,1,'#8a6a60'],
+            [4,12,12,7,'#3a4058'],[8,12,4,5,'#f1f3f5'],[9,12,2,4,'#c03040'],
+            [0,13,4,3,'#3a4058'],[16,13,4,4,'#6b4a2c'],[18,8,2,10,'#6b4a2c'],
+            [5,19,4,2,'#1a1a24'],[11,19,4,2,'#1a1a24']];
+        case 'tuberat': return [[3,8,14,8,'#6a6a72'],[13,4,7,7,'#6a6a72'],[12,1,4,4,'#8a8a94'],
+            [17,1,4,4,'#8a8a94'],[15,6,2,2,'#f03e3e'],[18,8,3,2,'#e8a0b0'],
+            [0,10,4,3,'#8a8a94'],[0,6,3,5,'#8a8a94'],
+            [4,16,3,3,'#4a4a52'],[9,16,3,3,'#4a4a52'],[14,15,3,3,'#4a4a52'],
+            [5,4,5,5,'#5a5a62'],[6,6,2,2,'#f03e3e']];
+        // ── 시드니
+        case 'kangaroo': return [[5,5,10,11,'#c08050'],[6,0,7,7,'#c08050'],[5,-2,2,4,'#c08050'],
+            [11,-2,2,4,'#c08050'],[7,2,2,2,E],[11,2,2,2,E],[9,5,2,1,'#6a3a20'],
+            [6,9,7,5,'#e0a878'],[0,8,5,4,'#c92a2a'],[15,8,5,4,'#c92a2a'],
+            [16,14,5,5,'#a0683c'],[5,16,4,4,'#a0683c'],[10,16,4,4,'#a0683c']];
+        case 'shark': return [[1,7,18,9,'#6a8aa8'],[8,0,5,8,'#5a7a98'],[17,5,4,5,'#5a7a98'],
+            [1,11,18,4,'#dce8f0'],[4,9,3,2,E],[2,12,12,2,'#f8f9fa'],
+            [3,13,2,2,'#ffffff'],[6,13,2,2,'#ffffff'],[9,13,2,2,'#ffffff'],[12,13,2,2,'#ffffff'],
+            [0,16,8,3,'#5a7a98'],[13,17,7,3,'#ffd43b']];
+        case 'koala': return [[4,4,12,13,'#9aa4ac'],[0,2,6,6,'#b8c0c8'],[14,2,6,6,'#b8c0c8'],
+            [1,3,4,4,'#d8e0e8'],[15,3,4,4,'#d8e0e8'],[5,5,10,8,'#b8c0c8'],
+            [6,7,2,2+bl*-1,E],[12,7,2,2+bl*-1,E],[8,9,4,4,'#3a3a42'],
+            [5,17,4,4,'#7a848c'],[11,17,4,4,'#7a848c'],[16,10,4,4,'#ffb000']];
+        // ── 서울
+        case 'delivery': return [[1,10,18,6,'#2b2f45'],[3,6,8,6,'#e03131'],[13,4,6,7,'#ffd43b'],
+            [5,7,5,4,'#f1f3f5'],[14,6,3,3,E],[0,14,6,6,'#1a1a24'],[13,14,6,6,'#1a1a24'],
+            [1,15,4,4,'#4a4a52'],[14,15,4,4,'#4a4a52'],[8,2,5,5,'#495057'],
+            [9,3,3,2,'#cfe9f5'],[17,9,3,2,'#f03e3e']];
+        case 'buchang': return [[4,0,12,8,'#3a2418'],[5,3,10,6,SK.skin],[4,0,12,3,'#20140c'],
+            [6,5,3,2,'#8a0000'],[11,5,3,2,'#8a0000'],[8,8,4,1,'#8a4a40'],
+            [3,9,14,9,'#495057'],[7,9,6,2,'#f1f3f5'],[9,10,2,5,'#1a1a24'],
+            [0,10,3,6,SK.skin],[17,10,3,6,SK.skin],[18,13,4,5,'#6b4a2c'],
+            [5,18,4,3,'#2b2f45'],[11,18,4,3,'#2b2f45'],[2,-3,16,3,'#4dabf7']];
+        case 'streetcat': return [[4,6,13,10,'#5a5248'],[5,1,10,7,'#5a5248'],
+            [4,-1,4,4,'#5a5248'],[12,-1,4,4,'#5a5248'],[5,0,2,2,'#e8a0b0'],[13,0,2,2,'#e8a0b0'],
+            [6,3,3,3+bl*-1,'#8ce99a'],[12,3,3,3+bl*-1,'#8ce99a'],[7,4,1,1,E],[13,4,1,1,E],
+            [9,6,2,1,'#e8a0b0'],[5,10,11,4,'#e8e0d0'],
+            [16,8,5,8,'#5a5248'],[18,4,3,6,'#5a5248'],
+            [5,16,4,3,'#3a342c'],[11,16,4,3,'#3a342c'],[3,2,2,1,'#f03e3e']];
         default: {   // 라이벌 남편들
-            const col = { pierre:'#4c6ef5', kenji:'#2b2f45', ahmed:'#e8974d', marco:'#2f9e44', pastdh:'#9b5de5' }[kind] || '#868e96';
+            const col = { pierre:'#4c6ef5', kenji:'#2b2f45', ahmed:'#e8974d', marco:'#2f9e44', pastdh:'#9b5de5',
+                          bjorn:'#5c90b8', nikos:'#2878b8', oliver:'#444c5c', jack:'#189cd8', futuredh:'#ffd43b' }[kind] || '#868e96';
             const dkc = shade(col, -40);
             const out = [[4,0,12,8,'#3a2418'],[5,3,10,6,SK.skin],[4,0,12,4,'#3a2418'],
                 [6,5,2,2,E],[12,5,2,2,E],[8,8,4,1,'#8a4a40'],
@@ -2490,6 +2987,11 @@ function mobParts(kind, t) {
             if (kind === 'pastdh') out.push([17,13,5,3,'#343a40'],[2,-3,16,2,'#9b5de5']);
             if (kind === 'kenji') out.push([3,9,14,2,'#f1f3f5']);
             if (kind === 'ahmed') out.push([3,-2,14,3,'#f8f0e0']);
+            if (kind === 'bjorn') out.push([3,-1,14,3,'#e8eef8'],[2,8,16,3,'#e8eef8'],[7,2,6,7,'#c8a86c'],[18,11,4,8,'#8a7352']);
+            if (kind === 'nikos') out.push([3,-2,14,3,'#ffffff'],[3,9,14,2,'#5cb4e8'],[17,12,5,2,'#8a7a62']);
+            if (kind === 'oliver') out.push([4,-4,12,4,'#1a1a24'],[2,-1,16,2,'#1a1a24'],[18,9,3,12,'#2b2f45'],[17,7,5,3,'#2b2f45']);
+            if (kind === 'jack') out.push([2,-2,16,3,'#ff9c5c'],[0,12,4,8,'#189cd8'],[3,9,14,2,'#5ce0f8']);
+            if (kind === 'futuredh') out.push([2,-4,16,3,'#ffd43b'],[17,12,5,3,'#495057'],[3,9,14,2,'#fff4a8'],[8,-7,4,4,'#ffd43b']);
             return out;
         }
     }
@@ -2586,6 +3088,58 @@ function drawLandmark(c, p) {
             R(X - 38 + i * 9, Y - 35 + r2 * 13, 6, 9, '#8a7a56');
             R(X - 37 + i * 9, Y - 34 + r2 * 13, 4, 7, '#b89f6e');
         }
+    } else if (c.landmark === 'aurora') {        // 🌌 오로라 커튼 + 빙하
+        for (let b2 = 0; b2 < 5; b2++) {
+            const cols = ['#6cc49c', '#8cf0e0', '#b48cff', '#5ca8d8', '#a8ffd8'];
+            for (let i = 0; i < 26; i++) {
+                const xx = X - 60 + i * 5 + b2 * 2;
+                const h2 = 16 + Math.sin(i * 0.5 + gameT * 0.8 + b2) * 10 + b2 * 4;
+                const yy = Y - 74 + b2 * 5 + Math.sin(i * 0.3 + gameT * 0.5) * 4;
+                px.globalAlpha = 0.5 - b2 * 0.07;
+                R(xx, yy, 4, h2, cols[b2]);
+                px.globalAlpha = 1;
+            }
+        }
+        sprite([[X - 34, Y - 16, 22, 18, '#cfe4f4'], [X - 10, Y - 26, 20, 28, '#e8f4ff'],
+                [X + 8, Y - 13, 24, 15, '#cfe4f4'], [X - 40, Y + 1, 80, 5, '#b4cce4']], O);
+        R(X - 6, Y - 22, 6, 20, '#ffffff'); R(X + 14, Y - 9, 5, 9, '#ffffff');
+    } else if (c.landmark === 'dome') {         // 🏖️ 파란 돔 성당
+        sprite([[X - 26, Y - 22, 52, 24, '#fcf8f0'], [X - 18, Y - 34, 36, 13, '#fcf8f0'],
+                [X - 13, Y - 44, 26, 11, '#2878b8'], [X - 8, Y - 50, 16, 7, '#2878b8'],
+                [X - 2, Y - 56, 4, 7, '#e4dcc8'], [X - 5, Y - 54, 10, 3, '#e4dcc8']], O);
+        for (let i = -2; i <= 2; i++) { R(X + i * 10 - 3, Y - 18, 6, 14, '#2878b8'); R(X + i * 10 - 2, Y - 17, 4, 12, '#5cb4e8'); }
+        R(X - 11, Y - 42, 4, 9, '#5cb4e8'); R(X + 6, Y - 40, 4, 7, '#5cb4e8');
+    } else if (c.landmark === 'bigben') {       // ☔ 빅벤
+        sprite([[X - 13, Y - 60, 26, 62, '#b09070'], [X - 16, Y - 70, 32, 11, '#c0a080'],
+                [X - 8, Y - 84, 16, 15, '#9c7c5c'], [X - 2, Y - 92, 4, 9, '#c0a080']], O);
+        R(X - 10, Y - 68, 20, 20, '#f4ecd0');                      // 시계판
+        R(X - 9, Y - 67, 18, 18, '#fff8e0');
+        const ang = gameT * 0.5;
+        for (let i = 0; i < 12; i++) { const a2 = i / 12 * Math.PI * 2; R(X + Math.cos(a2) * 7, Y - 58 + Math.sin(a2) * 7, 2, 2, '#6a5a40'); }
+        R(X, Y - 58, 1, 1, '#2a1c18');
+        for (let r3 = 0; r3 < 6; r3++) R(X + Math.cos(ang) * r3, Y - 58 + Math.sin(ang) * r3, 2, 2, '#2a1c18');
+        for (let r3 = 0; r3 < 4; r3++) R(X + Math.cos(ang * 12) * r3, Y - 58 + Math.sin(ang * 12) * r3, 2, 2, '#8a2c2c');
+        for (let i = 0; i < 5; i++) R(X - 11 + i * 5, Y - 2 - i % 2, 3, 4, '#8a7050');
+    } else if (c.landmark === 'opera') {        // 🏄 오페라하우스
+        for (let k = 0; k < 4; k++) {
+            const w2 = 34 - k * 6, hh = 30 - k * 5, ox2 = X - 36 + k * 17;
+            for (let i = 0; i < hh; i++) {
+                const t2 = i / hh, ww = Math.round(w2 * Math.sqrt(Math.max(0, 1 - t2 * t2)));
+                R(ox2 - ww / 2 + w2 / 2, Y - hh + i, ww, 1, i % 4 === 0 ? '#e0e8f0' : '#fcfcff');
+            }
+            R(ox2, Y - hh, w2, 1, O);
+        }
+        R(X - 44, Y, 88, 5, '#c8c0b0'); R(X - 44, Y, 88, 1, O);
+        R(X - 44, Y + 5, 88, 3, '#189cd8');
+    } else if (c.landmark === 'namsan') {       // 🏠 남산타워
+        sprite([[X - 20, Y - 10, 40, 12, '#6c8458'], [X - 5, Y - 54, 10, 46, '#c8c4bc'],
+                [X - 13, Y - 68, 26, 15, '#dcd8d0'], [X - 10, Y - 76, 20, 9, '#c8c4bc'],
+                [X - 2, Y - 92, 4, 17, '#a8a49c']], O);
+        R(X - 11, Y - 66, 22, 5, '#5cb4e8'); R(X - 8, Y - 60, 16, 4, '#8cd0f0');
+        const on2 = ((gameT * 2) | 0) % 2;
+        R(X - 2, Y - 95, 4, 4, on2 ? '#ff6b6b' : '#8a2c2c');
+        for (let i = 0; i < 7; i++) R(X - 18 + i * 6, Y - 14 - (i % 3) * 3, 4, 6, '#4e7040');
+        for (let i = 0; i < 9; i++) R(X - 24 + i * 6, Y - 4, 3, 3, '#e88a7c');   // 사랑의 자물쇠
     } else {
         sprite([[X - 7, Y - 34, 14, 36, '#5c8a78'], [X - 8, Y - 48, 16, 14, '#6b9a86'],
                 [X - 18, Y - 58, 7, 24, '#5c8a78'], [X - 20, Y - 64, 10, 7, '#ffd43b'],
@@ -2673,15 +3227,20 @@ function useSkill(sk) {
 
     // 스킬 전용 이펙트 (레벨이 오르면 연출도 세진다)
     if (B.posP && B.posE) castEffect(sk.id, B.posP.x, B.posP.y, B.posE.x, B.posE.y, skLv(sk.id));
-    // 숙련도 — 100번 쓰면 레벨이 오른다
+    // 숙련도 — 레벨이 오를수록 더 많이 써야 한다. Lv5가 만렙.
     if (!G.skUse) G.skUse = {};
-    G.skUse[sk.id] = (G.skUse[sk.id] || 0) + 1;
-    if (G.skUse[sk.id] % SK_MASTER === 0) {
-        G.sk[sk.id] = skLv(sk.id) + 1;
-        B.masterT = 1.8; B.masterS = sk.n + ' 숙련! Lv' + G.sk[sk.id];
-        S.levelup();
-        blog('🔥 ' + SK_MASTER + '번 사용! ' + sk.n + ' 이(가) Lv' + G.sk[sk.id] + ' 가 됐다!');
-        save();
+    const curLv = skLv(sk.id);
+    if (curLv < SK_MAX) {
+        G.skUse[sk.id] = (G.skUse[sk.id] || 0) + 1;
+        if (G.skUse[sk.id] >= skNeed(curLv)) {
+            G.sk[sk.id] = curLv + 1; G.skUse[sk.id] = 0;
+            const top = G.sk[sk.id] >= SK_MAX;
+            B.masterT = top ? 2.4 : 1.8;
+            B.masterS = sk.n + (top ? ' 만렙! ★★★★★' : ' 숙련! Lv' + G.sk[sk.id]);
+            S.levelup();
+            blog('🔥 ' + skNeed(curLv) + '번 사용! ' + sk.n + (top ? ' 이(가) 만렙이 됐다!!' : ' 이(가) Lv' + G.sk[sk.id] + ' 가 됐다!'));
+            save();
+        }
     }
     let txt = '동훈이의 ' + sk.n + '!';
     const say = SAY[sk.id];
@@ -2824,7 +3383,13 @@ function winBattle() {
             document.getElementById('mBtn').onclick = function () {
                 document.getElementById('ovMsg').classList.remove('show');
                 document.getElementById('mBtn').onclick = old;
-                startCut(mem.em, mem.lines, checkEnding);
+                startCut(mem.em, mem.lines, () => {
+                    // 뉴욕을 깨면 2막이 열린다 — 이번엔 약속을 하나씩 진짜로 해보는 여행
+                    if (c.id === 'ny' && !G.story.act2) {
+                        G.story.act2 = true; save();
+                        startCut(STORY.act2.em, STORY.act2.lines, checkEnding);
+                    } else checkEnding();
+                });
             };
         }
     } else {
@@ -3148,9 +3713,9 @@ function drawBattle() {
         sk.forEach((s2, i) => {
             const x = 18 + (i % 2) * (w2 + gap), y = by + Math.floor(i / 2) * (rh + 6);
             const off = G.mp < s2.mp || (s2.costGold && G.gold < s2.costGold);
-            const u2 = skUse(s2.id) % SK_MASTER;
-            mk(x, y, w2, rh, s2.n + ' ' + '★'.repeat(Math.min(3, skLv(s2.id))) + (skLv(s2.id) > 3 ? '+' : ''),
-               (s2.mp ? '기력 ' + s2.mp : '기력 0') + ' · 숙련 ' + u2 + '/' + SK_MASTER,
+            const lv2 = skLv(s2.id), top2 = skMaxed(s2.id), need2 = skNeed(lv2);
+            mk(x, y, w2, rh, s2.n + ' ' + '★'.repeat(lv2),
+               (s2.mp ? '기력 ' + s2.mp : '기력 0') + ' · ' + (top2 ? 'MAX' : '숙련 ' + skUse(s2.id) + '/' + need2),
                () => useSkill(s2), off, i % 3);
         });
         const yb = by + rowsN * (rh + 6);
@@ -3290,18 +3855,22 @@ function openShop(tab) {
                 maxed ? '' : 'buyUp(' + i + ')', maxed || G.gold < upCost(u));
         });
     } else if (shopTab === 'book') {
-        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">책을 사면 그 기술의 <b>레벨이 1 올라갑니다</b> (위력 +28%).<br>아직 못 배운 기술도 책으로 미리 배울 수 있어요.</div>';
+        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">책을 사면 그 기술의 <b>레벨이 1 올라갑니다</b> (위력 +35%).<br>기술 만렙은 <b>Lv' + SK_MAX + '</b> — 많이 쓰면 공짜로도 올라가요.</div>';
         SKILLS.forEach(sk => {
             const known = G.lv >= sk.lv || (G.learned && G.learned[sk.id]);
             const lv = skLv(sk.id);
             if (known) {
-                const u = skUse(sk.id) % SK_MASTER, pct = Math.round(u / SK_MASTER * 100);
+                const top = skMaxed(sk.id);
+                const need = skNeed(lv), u = skUse(sk.id), pct = need ? Math.round(u / need * 100) : 100;
                 const bar2 = '<div style="height:6px;border-radius:3px;background:rgba(200,140,120,.25);margin-top:4px;overflow:hidden">' +
-                    '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ffb340,#e8597a)"></div></div>' +
-                    '<div style="font-size:.66em;opacity:.7;margin-top:2px">숙련도 ' + u + ' / ' + SK_MASTER + ' — ' + SK_MASTER + '번 쓰면 공짜로 레벨업</div>';
-                h += rowHtml('📕', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + ' → Lv' + (lv + 1) + '</span>',
-                    sk.d + (sk.pow ? '<br><b>위력 ' + skPow(sk).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) + '</b>' : '') + bar2,
-                    skBookCost(sk).toLocaleString() + '원', 'buyBook(\'' + sk.id + '\')', G.gold < skBookCost(sk));
+                    '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,' + (top ? '#ffd43b,#ff8a3d' : '#ffb340,#e8597a') + ')"></div></div>' +
+                    '<div style="font-size:.66em;opacity:.7;margin-top:2px">' +
+                    (top ? '★ 만렙 — 더 올릴 수 없어요' : '숙련도 ' + u + ' / ' + need + ' — ' + need + '번 쓰면 공짜로 레벨업') + '</div>';
+                h += rowHtml(top ? '★' : '📕',
+                    sk.n + ' <span style="opacity:.6;font-size:.8em">' + (top ? 'Lv' + lv + ' MAX' : 'Lv' + lv + ' → Lv' + (lv + 1)) + '</span>',
+                    sk.d + (sk.pow ? '<br><b>위력 ' + skPow(sk).toFixed(2) + (top ? ' (최대)' : ' → ' + (sk.pow * (1 + lv * 0.35)).toFixed(2)) + '</b>' : '') + bar2,
+                    top ? 'MAX' : skBookCost(sk).toLocaleString() + '원',
+                    top ? '' : 'buyBook(\'' + sk.id + '\')', top || G.gold < skBookCost(sk));
             } else {
                 const cost = skBookCost(sk) * 3;
                 h += rowHtml('🔒', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + sk.lv + ' 기술</span>',
@@ -3364,13 +3933,14 @@ function buyUp(i) {
 }
 function buyBook(id) {
     const sk = SKILLS.find(x => x.id === id);
+    if (skMaxed(id)) { S.deny(); toast('★ ' + sk.n + ' 은(는) 이미 만렙이에요'); return; }
     const cost = skBookCost(sk);
     if (G.gold < cost) { S.deny(); toast('💰 돈이 ' + (cost - G.gold).toLocaleString() + '원 모자라요'); return; }
     const was = skLv(id);
     G.gold -= cost;
-    G.sk[id] = was + 1;
+    G.sk[id] = Math.min(SK_MAX, was + 1); skReset(id);
     S.levelup();
-    toast('📕 ' + sk.n + ' Lv' + was + ' → Lv' + G.sk[id] + ' (위력 +28%)');
+    toast('📕 ' + sk.n + ' Lv' + was + ' → Lv' + G.sk[id] + (skMaxed(id) ? ' — 만렙!' : ' (위력 +35%)'));
     syncHud(); save(); openShop();
 }
 // 아직 레벨이 안 되는 기술을 책으로 미리 배운다
@@ -3434,16 +4004,26 @@ function openMenu() {
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 동료</div>';
     if (!G.animals.length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">보스를 이기면 그 도시의 동물 친구가 합류해요.</div>';
     CITIES.forEach(c => { if (G.animals.includes(c.animal.id)) h += rowHtml(c.animal.i, c.animal.n, c.animal.desc, c.icon); });
-    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">📜 편지 (' + letterCount() + '/15)</div>';
-    if (!letterCount()) h += '<div class="rd" style="opacity:.6;padding:6px 2px">아직 한 조각도 못 찾았어요. 도시마다 세 개씩 숨어 있어요.</div>';
+    const got = letterCount();
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">📜 편지 (' + Math.min(15, got) + '/15)</div>';
+    if (!got) h += '<div class="rd" style="opacity:.6;padding:6px 2px">아직 한 조각도 못 찾았어요. 도시마다 세 개씩 숨어 있어요.</div>';
     for (let i = 0; i < 15; i++) {
-        h += '<div class="rd" style="padding:3px 4px;' + (i < letterCount() ? 'color:#c04a60;font-weight:800' : 'opacity:.35') + '">' +
-             (i < letterCount() ? STORY.letter[i] : (i + 1) + '. ????????') + '</div>';
+        h += '<div class="rd" style="padding:3px 4px;' + (i < got ? 'color:#c04a60;font-weight:800' : 'opacity:.35') + '">' +
+             (i < got ? STORY.letter[i] : (i + 1) + '. ????????') + '</div>';
+    }
+    if (G.story && G.story.act2) {
+        const ph = Math.max(0, got - 15);
+        h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">📷 사진첩 (' + ph + '/15)</div>';
+        h += '<div class="rd" style="opacity:.6;padding:4px 2px;font-size:.86em">적어두기만 했던 줄을 하나씩 진짜로 해본 기록.</div>';
+        for (let i = 0; i < 15; i++) {
+            h += '<div class="rd" style="padding:3px 4px;' + (i < ph ? 'color:#2878b8;font-weight:800' : 'opacity:.35') + '">' +
+                 (i < ph ? STORY.photo[i] : '📷 ????????') + '</div>';
+        }
     }
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">⚙️ 설정</div>';
     h += rowHtml(soundOn ? '🔊' : '🔇', '소리 ' + (soundOn ? '켜짐' : '꺼짐'), '탭해서 바꿔요', '', 'toggleSound()');
     h += rowHtml('🗑️', '처음부터 다시', '모든 진행이 사라져요', '', 'wipe()');
-    panelOpen('☰ 메뉴', '💗 편지 조각 ' + Object.keys(G.hearts).length + '/15 · ⏱️ ' + Math.floor(G.playT / 60) + '분 플레이', h);
+    panelOpen('☰ 메뉴', '💗 조각 ' + Object.keys(G.hearts).length + '/' + PIECES + ' · ⏱️ ' + Math.floor(G.playT / 60) + '분 플레이', h);
 }
 function toggleSound() { soundOn = !soundOn; sSave('dhAdvSound', soundOn); S.open(); openMenu(); }
 function setPet(k) {
@@ -3522,9 +4102,12 @@ function buyMerch(i) {
     if (m.id === 'charm') { G.charm = true; toast('🔮 포획 부적을 얻었다!'); }
     else if (m.id === 'ring') { G.ringLv = (G.ringLv || 0) + 1; toast('💍 공격력 +' + (G.ringLv * 8) + '%'); }
     else if (m.id === 'book') {
-        const list = mySkills(); const sk = list[(Math.random() * list.length) | 0];
-        G.sk[sk.id] = skLv(sk.id) + 2;
-        msg('📗', '희귀 스킬북!', '<b>' + sk.n + '</b> 이(가) Lv' + G.sk[sk.id] + ' 가 됐어요!');
+        const list = mySkills().filter(x => !skMaxed(x.id));
+        if (!list.length) { G.gold += cost; G.merch[merchKey(m)] = false; S.deny(); toast('★ 기술이 전부 만렙이에요'); return; }
+        const sk = list[(Math.random() * list.length) | 0];
+        G.sk[sk.id] = Math.min(SK_MAX, skLv(sk.id) + 2); skReset(sk.id);
+        msg('📗', '희귀 스킬북!', '<b>' + sk.n + '</b> 이(가) Lv' + G.sk[sk.id] +
+            (skMaxed(sk.id) ? ' — 만렙이 됐어요!' : ' 가 됐어요!'));
     } else if (m.id === 'feed') {
         const ap = (G.pets || []).find(x => x.kind === party()[0]);
         if (!ap) { toast('데리고 다니는 펫이 없어요'); }
