@@ -1134,7 +1134,7 @@ function checkEnding() {
 // ───────── 영구 업그레이드 ─────────
 // 설계 의도: 초반엔 일부러 답답하게 하나씩 줍게 하고,
 // 업그레이드를 살 때마다 "수집 그 자체"가 눈에 띄게 빨라지도록 만든다.
-const PICK_R   = [11, 26, 42, 64, 95, 140];                 // 자석 반경
+const PICK_R   = [11, 20, 31, 48, 76, 122];                 // 자석 반경 (뒤로 갈수록 크게 뛴다)
 const SPEED    = [66, 82, 102, 128, 160];                   // 이동 속도
 const SHOP_T   = [5.5, 4.2, 3.2, 2.4, 1.6];                 // 판매 주기(초)
 const SHOP_MUL = [1, 1.15, 1.35, 1.6, 2.0];                 // 판매가 배수
@@ -1142,28 +1142,28 @@ const RIDE_N   = ['맨발', '운동화', '자전거', '스쿠터', '자동차'];
 const RIDE_I   = ['👣', '👟', '🚲', '🛵', '🚗'];
 
 const UPGRADES = [
-    { id:'magnet', n:'자석', i:'🧲', max:5, cost:[400, 1400, 4500, 14000, 42000],
+    { id:'magnet', n:'자석', i:'🧲', max:5, cost:[800, 2600, 8500, 25000, 70000],
       d: lv => lv >= 5 ? '최대 강화! 반경 ' + PICK_R[5] + '' : '재료 수집 반경 ' + PICK_R[lv] + ' → ' + PICK_R[lv + 1],
       f: '멀리 있는 재료가 알아서 빨려와요' },
     { id:'ride', n:'탈것', i:'🚗', max:4, cost:[700, 2600, 9000, 30000],
       d: lv => lv >= 4 ? '최대 강화! ' + RIDE_N[4] : RIDE_N[lv] + ' → ' + RIDE_N[lv + 1] + ' (속도 ' + SPEED[lv] + '→' + SPEED[lv + 1] + ')',
       f: '도시를 훨씬 빨리 누벼요' },
-    { id:'cart', n:'수레', i:'🧺', max:3, cost:[1200, 4800, 16000],
+    { id:'cart', n:'수레', i:'🧺', max:3, cost:[2500, 10000, 38000],
       d: lv => lv >= 3 ? '최대 강화! 한 번에 4개' : '한 번 주울 때 ' + (lv + 1) + '개 → ' + (lv + 2) + '개',
       f: '재료를 한 번에 여러 개 집어요' },
     { id:'shop', n:'가게 확장', i:'🏪', max:4, cost:[1800, 6000, 20000, 60000],
       d: lv => lv >= 4 ? '최대 확장! 전설의 가게' : '판매 ' + SHOP_T[lv] + '초→' + SHOP_T[lv + 1] + '초, 가격 ×' + SHOP_MUL[lv + 1] + ' · 새 메뉴 해금',
       f: '손님이 더 빨리, 더 비싸게 사 가요' },
-    { id:'part', n:'알바생', i:'🧑‍🍳', max:3, cost:[3500, 12000, 40000],
-      d: lv => lv >= 3 ? '최대 고용! 3명' : '알바생 ' + lv + '명 → ' + (lv + 1) + '명',
-      f: '직접 돌아다니며 재료를 줍고, 가게에서 요리까지 해요 (판매 속도 +30%/명)' },
+    { id:'part', n:'알바생', i:'🧑‍🍳', max:4, cost:[3500, 12000, 40000, 130000],
+      d: lv => lv >= 4 ? '최대 고용! 4명' : '알바생 ' + lv + '명 → ' + (lv + 1) + '명',
+      f: '직접 돌아다니며 재료를 줍고, 가게에서 요리까지 해요 (판매 속도 +26%/명)' },
 ];
 function upLv(id) { return (G.up && G.up[id]) || 0; }
 function upCost(u) { return u.cost[upLv(u.id)]; }
 function pickRadius() { return PICK_R[upLv('magnet')] * (1 + gearVal('shoes') * 0.8); }
 function moveSpeed()  { return SPEED[upLv('ride')] * (1 + gearVal('shoes') * 0.6); }
 function pickCount()  { return 1 + upLv('cart'); }
-function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3) / wxNow().cust; }   // 알바생이 손님도 빨리 받고, 날씨도 탄다
+function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.26) / wxNow().cust; }   // 알바생이 손님도 빨리 받고, 날씨도 탄다
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
 
 // ───────── 스킬북 (기술 강화) ─────────
@@ -2308,7 +2308,8 @@ function drawCusts() {
 let staff = [];
 const STAFF_LOOK = [{ t:'man', hair:'#3a2418', cloth:'#f1f3f5' },
                     { t:'woman', hair:'#8a5434', cloth:'#ffe3c8' },
-                    { t:'man', hair:'#5c3620', cloth:'#c3e8ff' }];
+                    { t:'man', hair:'#5c3620', cloth:'#c3e8ff' },
+                    { t:'woman', hair:'#2b2f45', cloth:'#d8f0d0' }];
 function canWalkAt(x, y, r) {
     for (const [ox, oy] of [[-r,-r],[r,-r],[-r,r],[r,r]])
         if (!WALKABLE[tileAt(Math.floor((x + ox) / TS), Math.floor((y + oy) / TS))]) return false;
@@ -2321,7 +2322,7 @@ function syncStaff() {
         staff.push({ x: P.x + (Math.random() - 0.5) * 40, y: P.y + 20 + Math.random() * 20,
                      node: null, mode: 'seek', cookT: 0, path: null, pi: 0, repathT: 0, stuck: 0, resets: 0,
                      goalX: 0, goalY: 0,
-                     carry: 0, bob: Math.random() * 6, look: STAFF_LOOK[staff.length % 3] });
+                     carry: 0, bob: Math.random() * 6, look: STAFF_LOOK[staff.length % STAFF_LOOK.length] });
     }
     while (staff.length > n) staff.pop();
 }
