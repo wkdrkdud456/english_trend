@@ -1128,8 +1128,8 @@ const UPGRADES = [
 ];
 function upLv(id) { return (G.up && G.up[id]) || 0; }
 function upCost(u) { return u.cost[upLv(u.id)]; }
-function pickRadius() { return PICK_R[upLv('magnet')]; }
-function moveSpeed()  { return SPEED[upLv('ride')]; }
+function pickRadius() { return PICK_R[upLv('magnet')] * (1 + gearVal('shoes') * 0.8); }
+function moveSpeed()  { return SPEED[upLv('ride')] * (1 + gearVal('shoes') * 0.6); }
 function pickCount()  { return 1 + upLv('cart'); }
 function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3) / wxNow().cust; }   // 알바생이 손님도 빨리 받고, 날씨도 탄다
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
@@ -1402,8 +1402,8 @@ let G = null, scene = 'title', running = false, lastT = 0, gameT = 0;
 
 function maxHp() { return 60 + G.lv * 20; }
 function maxMp() { return 22 + G.lv * 7; }
-function atkOf() { return (11 + G.lv * 4.4) * (1 + petBonus('atk')) * (1 + (G.ringLv || 0) * 0.08); }
-function defOf() { return 5 + G.lv * 2.4; }
+function atkOf() { return (11 + G.lv * 4.4) * (1 + petBonus('atk')) * (1 + (G.ringLv || 0) * 0.08) * (1 + gearVal('ring')); }
+function defOf() { return (5 + G.lv * 2.4) * (1 + gearVal('apron')); }
 function expNeed() { return Math.round(20 * Math.pow(G.lv, 1.4)); }
 function city() { return CITIES[G.cityIdx]; }
 function formOf() { let f = FORMS[0]; for (const x of FORMS) if (G.lv >= x.lv) f = x; return f; }
@@ -1414,7 +1414,8 @@ function newGame() {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
         up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, learned: {}, story: {}, partT: 0,
-        pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {}, skUse: {},
+        pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {}, skUse: {}, gear: {},
+        arena: { best: 0, runs: 0 },
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
         wxK: 'clear', wxT: 200, secret: {},
@@ -1439,6 +1440,123 @@ const THEME = {
     sydney:    { tree:'palm',    enc:'bush',  ground:'sand',  pave:'stone' },
     seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
+
+// ───────── 투기장 — 자동 진행 ─────────
+// 눌러줄 필요 없이 알아서 싸운다. 층이 오를수록 세지고, 죽으면 거기서 끝.
+let ARENA = null;
+function arenaOpen() { return CITIES.filter(c => G.boss[c.id]).length >= 3; }
+function arenaFloorMul(w) { return 1 + (w - 1) * 0.16; }
+function arenaEnemy(w) {
+    const done = CITIES.filter(c => G.boss[c.id]);
+    const src = done.length ? done : [CITIES[0]];
+    const mul = arenaFloorMul(w);
+    if (w % 5 === 0) {                         // 5층마다 깼던 보스가 다시 나온다
+        const b = src[(w / 5 - 1) % src.length].boss;
+        const hp = Math.round(b.hp * mul * 0.5);
+        return { n: '🏟️ ' + b.n, draw: b.draw, hp, max: hp,
+                 atk: Math.round(b.atk * mul * 0.75), def: Math.round(b.def * mul * 0.8),
+                 exp: Math.round(b.exp * 0.22), gold: Math.round(b.gold * 0.2), boss: true, arenaBoss: true };
+    }
+    const c = src[(Math.random() * src.length) | 0];
+    const m = c.mobs[(Math.random() * c.mobs.length) | 0];
+    const tier = Math.random() < 0.06 + w * 0.004 ? rollTier() : 0;
+    const T2 = tierOf(tier);
+    const hp = Math.round(m.hp * mul * (T2 ? T2.mul : 1));
+    return { n: (T2 ? T2.pre : '') + m.n, draw: m.draw, legend: tier > 0, tier, hp, max: hp,
+             atk: Math.round(m.atk * mul * (T2 ? T2.atk : 1)), def: Math.round(m.def * mul * (T2 ? T2.def : 1)),
+             exp: Math.round(m.exp * 0.5 * (T2 ? T2.exp : 1)), gold: Math.round(m.gold * 0.8 * (T2 ? T2.gold : 1)), boss: false };
+}
+function arenaStart() {
+    if (!arenaOpen()) { S.deny(); toast('🏟️ 보스를 세 명 이기면 열려요'); return; }
+    closePanel();
+    ARENA = { wave: 1, gold: 0, exp: 0, speed: 1, actT: 0, over: false };
+    G.hp = maxHp(); G.mp = maxMp();
+    G.arena.runs = (G.arena.runs || 0) + 1;
+    startBattle(null, null, arenaEnemy(1));
+    B.log = ['🏟️ 투기장 1층 — 알아서 싸웁니다. 지켜보세요!'];
+}
+// 자동 조작 — 체력이 급하면 회복, 아니면 그 순간 제일 센 걸 쓴다
+function arenaAct() {
+    const sk = mySkills();
+    const kiss = sk.find(x => x.id === 'kiss');
+    let use = null;
+    if (G.hp < maxHp() * 0.38 && kiss && G.mp >= kiss.mp) use = kiss;
+    else if (G.hp < maxHp() * 0.3 && (G.items.candy || 0) > 0) { useItem(ITEMS.find(x => x.id === 'candy')); return; }
+    if (!use) {
+        const cands = sk.filter(x => x.pow > 0 && G.mp >= x.mp && !(x.costGold && G.gold < x.costGold));
+        use = cands.sort((a, b) => (b.pow * (b.hits || 1)) - (a.pow * (a.hits || 1)))[0] || sk[0];
+    }
+    useSkill(use);
+}
+function arenaNext() {
+    const w = ARENA.wave;
+    ARENA.gold += B.e.gold; ARENA.exp += B.e.exp;
+    G.gold += B.e.gold; G.exp += B.e.exp;
+    while (G.exp >= expNeed()) { G.exp -= expNeed(); G.lv++; G.hp = maxHp(); G.mp = maxMp(); S.levelup(); }
+    if (w > (G.arena.best || 0)) G.arena.best = w;
+    G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * 0.12));   // 층마다 조금만 회복
+    G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * 0.18));
+    ARENA.wave++;
+    save();
+    startBattle(null, null, arenaEnemy(ARENA.wave));
+    B.log = ['🏟️ ' + ARENA.wave + '층 — ' + jo(B.e.n, '이', '가') + ' 나왔다!'];
+}
+function arenaStop(dead) {
+    const w = ARENA.wave, g = ARENA.gold;
+    ARENA = null; B = null; scene = 'world'; endBattleUi();
+    if (w > (G.arena.best || 0)) G.arena.best = w;
+    G.hp = Math.max(1, G.hp); save(); syncHud();
+    msg('🏟️', dead ? ('투기장 — ' + w + '층에서 쓰러졌다') : ('투기장 — ' + w + '층에서 내려왔다'),
+        '도달 ' + w + '층 · 최고 기록 <b>' + (G.arena.best || w) + '층</b><br>' +
+        '💰 ' + g.toLocaleString() + '원 · ⭐ 경험치 ' + ARENA_LAST_EXP.toLocaleString() +
+        '<br><br><span style="opacity:.75">5층마다 깼던 보스가 다시 나와요.</span>');
+}
+let ARENA_LAST_EXP = 0;
+
+// ───────── 장비 (앞치마 · 신발 · 반지) ─────────
+// 전투에서 가끔 떨어진다. 더 좋은 게 나오면 알아서 갈아입고, 밀린 건 팔아서 돈으로 바꾼다.
+const SLOTS = [
+    { id:'apron', n:'앞치마', i:'🧑‍🍳', d:'방어력' },
+    { id:'shoes', n:'신발',   i:'👟', d:'이동 속도 · 줍는 범위' },
+    { id:'ring',  n:'반지',   i:'💍', d:'공격력' },
+];
+const GEAR_NAME = {
+    apron: ['무명 앞치마', '밀가루 앞치마', '가죽 앞치마', '명장의 앞치마', '전설의 앞치마'],
+    shoes: ['낡은 운동화', '편한 운동화', '달리기용 신발', '바람의 신발', '전설의 신발'],
+    ring:  ['양철 반지', '은반지', '보석 반지', '맹세의 반지', '전설의 반지'],
+};
+function gearPower(g) {                              // 한 장비의 종합 수치 (비교용)
+    return g ? g.v : 0;
+}
+function gearRoll(slot, cityIdx, tier) {
+    const t = Math.max(0, Math.min(4, (tier | 0) + ((Math.random() * 2) | 0)));
+    const base = { apron: 6, shoes: 5, ring: 5 }[slot];
+    const v = +(base + cityIdx * 1.3 + t * 5.5 + Math.random() * 3).toFixed(1);
+    return { slot, t, v, n: GEAR_NAME[slot][t], city: cityIdx };
+}
+function gearVal(slot) {
+    const g = G.gear && G.gear[slot];
+    return g ? g.v / 100 : 0;
+}
+function gearSell(g) { return Math.round(g.v * 60 * (1 + g.city * 1.6)); }
+// 전투가 끝날 때마다 굴린다. 전설일수록 좋은 게, 보스는 확정으로 하나.
+function gearDrop(e) {
+    const chance = e.boss ? 1 : 0.1 + (e.tier ? 0.22 * e.tier : 0);
+    if (Math.random() > chance) return null;
+    const slot = SLOTS[(Math.random() * SLOTS.length) | 0].id;
+    const g = gearRoll(slot, G.cityIdx, e.boss ? 2 : (e.tier | 0));
+    if (!G.gear) G.gear = {};
+    const cur = G.gear[slot];
+    if (gearPower(g) > gearPower(cur)) {
+        G.gear[slot] = g;
+        const back = cur ? gearSell(cur) : 0;
+        if (back) G.gold += back;
+        return { g, worn: true, back, old: cur };
+    }
+    const money = gearSell(g);
+    G.gold += money;
+    return { g, worn: false, money };
+}
 
 // ───────── 비밀 장소 ─────────
 // 도시마다 딱 한 군데. 지도에 표시되지 않고, 가 보면 뭔가 있다.
@@ -3311,10 +3429,11 @@ let B = null;
 function mobScale(c) { return 1 + 0.11 * Math.max(0, G.lv - (c.lv0 || 1)); }
 function hasAnimal(eff) { const a = CITIES.map(c => c.animal).find(a => G.animals.includes(a.id) && a.eff === eff); return a || null; }
 
-function startBattle(bossOf, forced) {
+function startBattle(bossOf, forced, preset) {
     const c = city();
     let e;
-    if (forced) {                       // 비밀 장소에서 튀어나오는 지정 몬스터
+    if (preset) { e = preset; }
+    else if (forced) {                       // 비밀 장소에서 튀어나오는 지정 몬스터
         // 생김새만 가져오고 세기는 "지금 이 도시의 제일 단단한 놈" 기준으로 맞춘다.
         // 안 그러면 교토에서 로마 몬스터가 튀어나와 손도 못 댄다.
         const m = c.mobs[c.mobs.length - 1];
@@ -3515,7 +3634,15 @@ function winBattle() {
         drops.push(m.i + m.n);
     }
     S.win();
+    const gd = gearDrop(e);
     let body = '💰 ' + e.gold + '원 &nbsp; ⭐ 경험치 ' + e.exp + '<br>🎁 ' + drops.join(' · ');
+    if (gd) {
+        const sl = SLOTS.find(x => x.id === gd.g.slot);
+        body += gd.worn
+            ? '<br><br>' + sl.i + ' <b style="color:#c04a60">' + gd.g.n + '</b> 획득! 바로 착용했어요 (' + sl.d + ' +' + gd.g.v + '%)' +
+              (gd.back ? '<br><span style="opacity:.7">쓰던 ' + gd.old.n + '은(는) 팔아서 ' + gd.back.toLocaleString() + '원</span>' : '')
+            : '<br><br>' + sl.i + ' ' + gd.g.n + ' — 쓰던 게 더 좋아서 팔았어요 (+' + gd.money.toLocaleString() + '원)';
+    }
     let lvUp = '';
     while (G.exp >= expNeed()) {
         G.exp -= expNeed(); G.lv++;
@@ -3608,6 +3735,10 @@ function updateBattle(dt) {
         B.busy -= dt;
         if (B.busy <= 0) {
             if (B.phase === 'end') {
+                if (ARENA) {                       // 투기장은 결과창 없이 바로 다음 층
+                    if (B.result === 'win') { arenaNext(); return; }
+                    ARENA_LAST_EXP = ARENA.exp; arenaStop(true); return;
+                }
                 scene = 'world'; endBattleUi();
                 if (B.result === 'win') winBattle();
                 else if (B.result === 'lose') loseBattle();
@@ -3624,6 +3755,10 @@ function updateBattle(dt) {
     if (B.phase === 'intro') {
         B.ringT += dt;
         if (B.ringT > 1.25) { B.phase = 'menu'; blog('💍 "가라! 동훈!"'); }
+    }
+    if (ARENA && B && B.phase === 'menu' && B.busy <= 0) {
+        ARENA.actT -= dt * ARENA.speed;
+        if (ARENA.actT <= 0) { ARENA.actT = 0.75; arenaAct(); }
     }
 }
 
@@ -3807,6 +3942,13 @@ function drawBattle() {
     drawDmg();
     const bw = Math.min(214, W * 0.54);
     card(W - bw - 14, 14, bw, 50, 14, p.r2);
+    if (ARENA) {
+        ctx.textAlign = 'center'; ctx.font = 'bold 15px sans-serif';
+        ctx.lineWidth = 6; ctx.strokeStyle = '#fff8ef';
+        ctx.strokeText('🏟️ ' + ARENA.wave + '층 · 최고 ' + (G.arena.best || 0) + '층', W / 2, 88);
+        ctx.fillStyle = '#8a5a12'; ctx.fillText('🏟️ ' + ARENA.wave + '층 · 최고 ' + (G.arena.best || 0) + '층', W / 2, 88);
+        ctx.textAlign = 'left';
+    }
     const ET = tierOf(B.e.tier != null ? B.e.tier : B.e.legend);
     ctx.font = 'bold 13.5px sans-serif'; ctx.textAlign = 'left';
     if (ET) {
@@ -3838,7 +3980,7 @@ function drawBattle() {
     });
 
     B.btns = [];
-    if (B.phase !== 'menu') return;
+    if (B.phase !== 'menu' && !ARENA) return;
     const by = panelY + 66, bh = Math.min(48, (H - by - 20) / 2.3);
     const COLS = [['#ffe3ea', '#e8597a', '#9c2f4c'], ['#e4f0ff', '#4dabf7', '#1b5e9c'], ['#fff2d9', '#ffb340', '#8a5a12']];
     const mk = (x, y, w, h, label2, sub, fn, off, ci) => {
@@ -3855,7 +3997,13 @@ function drawBattle() {
         if (!off) B.btns.push({ x, y, w, h, fn });
     };
     const gap = 9, fullW = W - 36;
-    if (B.menu === 'root') {
+    if (ARENA) {
+        const w3a = (fullW - gap) / 2;
+        mk(18, by, w3a, bh, '⏩ 배속 ×' + ARENA.speed, '자동으로 싸우는 중',
+           () => { ARENA.speed = ARENA.speed >= 4 ? 1 : ARENA.speed * 2; }, false, 1);
+        mk(18 + w3a + gap, by, w3a, bh, '🚪 내려가기', ARENA.wave + '층까지 왔어요',
+           () => { ARENA_LAST_EXP = ARENA.exp; arenaStop(false); }, false, 2);
+    } else if (B.menu === 'root') {
         if (G.unlock && G.unlock.catch) {
             const w2r = (fullW - gap) / 2, rh2 = bh * 0.84;
             const canCatch = !B.e.boss && B.e.hp / B.e.max <= 0.4;
@@ -4156,6 +4304,19 @@ function openMenu() {
         h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧺 이동식 가판대</div>';
         h += rowHtml('🧺', '여기서 가게 열기', '어디서든 요리하고 사고팔 수 있어요<br><span style="opacity:.6">(체력 회복은 진짜 가게에서만)</span>', '열기', 'openStall()');
     }
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧤 장비</div>';
+    SLOTS.forEach(sl => {
+        const g = (G.gear || {})[sl.id];
+        h += rowHtml(sl.i, sl.n + (g ? ' <span style="opacity:.6;font-size:.8em">' + g.n + '</span>' : ''),
+            g ? sl.d + ' <b style="color:#c04a60">+' + g.v + '%</b>' : '<span style="opacity:.6">아직 없어요 — 전투에서 가끔 떨어져요</span>',
+            g ? '+' + g.v + '%' : '—');
+    });
+    h += '<div class="rd" style="opacity:.6;padding:4px 2px;font-size:.84em">더 좋은 게 나오면 알아서 갈아입고, 밀린 건 팔아서 돈으로 바꿔요.</div>';
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🏟️ 투기장</div>';
+    h += arenaOpen()
+        ? rowHtml('🏟️', '투기장 도전 <span style="opacity:.6;font-size:.8em">최고 ' + (G.arena.best || 0) + '층</span>',
+            '알아서 싸웁니다. 층이 오를수록 세지고, 쓰러지면 거기서 끝.<br>5층마다 깼던 보스가 다시 나와요.', '입장', 'arenaStart()')
+        : '<div class="rd" style="opacity:.6;padding:6px 2px">보스를 세 명 이기면 열려요 (' + CITIES.filter(c2 => G.boss[c2.id]).length + '/3)</div>';
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 펫 — 도감 ' + (G.pets || []).length + '/' + Object.keys(PET_DB).length +
          ' · 출전 ' + party().length + '/' + PARTY_MAX + '</div>';
     if (!(G.pets || []).length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">' + (G.unlock && G.unlock.catch ? '전투에서 적 체력을 40% 밑으로 깎고 🪄 포획을 눌러보세요.' : '교토의 보스를 이기면 몬스터를 잡을 수 있게 돼요.') + '</div>';
