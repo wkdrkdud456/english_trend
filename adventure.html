@@ -173,6 +173,16 @@
     </div>
 </div>
 
+<div class="ov" id="ovAsk">
+    <div class="card">
+        <div class="em" id="aEm">⚔️</div>
+        <h3 id="aTitle">제목</h3>
+        <p id="aBody">내용</p>
+        <button class="pbtn" id="aYes">네!</button>
+        <button class="pbtn g" onclick="closeAsk()">아니요</button>
+    </div>
+</div>
+
 <div class="ov" id="ovMsg">
     <div class="card">
         <div class="em" id="mEm">🎉</div>
@@ -495,6 +505,7 @@ prologue: { em:'💍', lines:[
   '"미안.\n나를 찾고 싶으면\n우리가 가기로 했던 곳들을 가봐."\n\n— 동훈',
   '반지를 쥐자 따뜻했다.\n\n던지면... 동훈이가 나온다.',
   '그런데 말을 하지 않는다.\n눈을 마주치면 피한다.\n\n기억이 없는 것 같다.',
+  '쪽지 뒤에는 작은 글씨가 있었다.\n\n"도시마다 세 조각씩 숨겨놨어."',
   '소현이는 가방을 멨다.\n\n첫 번째 도시는 — 파리.',
 ]},
 memory: {
@@ -517,10 +528,10 @@ memory: {
     '"미안하다고 말하고 싶었는데\n입이 안 떨어졌어."',
     '"…그 말을 하려고 여기까지 온 것 같아."' ]},
   roma: { em:'📝', lines:[
-    '"냉장고에 붙여둔 메모 기억나?"',
-    '"\'언젠가 같이 갈 곳\' 리스트."',
+    '"내 수첩 맨 뒷장, 본 적 있어?"',
+    '"\'소현이랑 나중에 하고 싶은 것\' 이라고 적어뒀어."',
     '"열다섯 줄이었는데"',
-    '"…한 줄도 못 지웠지."',
+    '"…하나도 못 해줬지."',
     '소현이는 주머니 속 편지 조각을 만졌다.\n열다섯 조각. 열다섯 줄.' ]},
   ny:   { em:'🪞', lines:[
     '마지막 도시. 거울 앞에 누군가 서 있다.',
@@ -529,30 +540,30 @@ memory: {
     '"약속만 하고, 미루기만 하던 나."',
     '동훈이가 처음으로 앞으로 나섰다.\n\n"…이번엔 안 도망쳐."' ]},
 },
-// 편지 조각 15개 = 냉장고에 붙여뒀던 "언젠가 같이 갈 곳" 15줄
+// 편지 조각 15개 = 동훈이가 적어둔 "소현이랑 나중에 하고 싶은 것" 15줄
 letter: [
-  '1. 에펠탑 아래에서 사진 찍기',
-  '2. 센강 다리에서 해 지는 거 보기',
-  '3. 빵집 열기 전에 줄 서보기',
-  '4. 교토 대나무숲 같이 걷기',
-  '5. 벚꽃 질 때 한 번 더 오기',
-  '6. 절 계단에서 쉬어가기',
-  '7. 사막에서 별 보기',
-  '8. 낙타 타고 웃긴 사진 찍기',
-  '9. 피라미드 앞에서 소원 빌기',
-  '10. 분수에 동전 던지기',
-  '11. 젤라또 두 개 사서 바꿔 먹기',
-  '12. 콜로세움에서 네 손 잡기',
-  '13. 뉴욕 야경 보면서 아무 말 안 하기',
-  '14. 센트럴파크 벤치에서 같이 졸기',
-  '15. 돌아가서 같이 설거지하기',
+  '1. 아침에 같이 일어나서 밥 해 먹기. 설거지는 내가.',
+  '2. 퇴근하고 바로 집에 오기. 진짜로.',
+  '3. 주말에 아무 데도 안 가고 하루 종일 뒹굴기',
+  '4. 네가 보자고 한 영화, 졸지 않고 끝까지 보기',
+  '5. 벚꽃 필 때 손잡고 걷기',
+  '6. 둘이서 요리 하나 제대로 배우기',
+  '7. 밤에 산책 나가서 편의점 아이스크림 사 먹기',
+  '8. 사진 많이 찍기. 내 사진 말고 네 사진.',
+  '9. 싸워도 그날 안에 풀기',
+  '10. 별 보이는 데까지 차 타고 가기',
+  '11. 네 생일에 서프라이즈 제대로 한 번',
+  '12. 같이 게임 하나 끝까지 깨기',
+  '13. 네가 힘들 때 "괜찮아?" 먼저 물어보기',
+  '14. 늙어서도 손잡고 다니기',
+  '15. 매일 자기 전에 "사랑해" 말하기',
 ],
 ending: { em:'💌', lines:[
   '편지가 완성되는 순간, 반지가 빛났다.',
   '동훈이가 — 처음으로 입을 열었다.',
-  '"열다섯 줄, 다 지웠네."',
+  '"열다섯 줄, 네가 다 찾아왔네."',
   '"미안해. 바쁘다는 말로 너무 많이 미뤘어."',
-  '"이제 진짜 같이 가자."',
+  '"이제 하나씩 진짜로 해보자."',
   '…그리고 반지는 조용히 손가락으로 돌아갔다.\n\n🎉 THE END 🎉',
 ]},
 };
@@ -596,6 +607,7 @@ function cutAdvance() {
     if (after) after();
 }
 function letterCount() { return Object.keys(G.hearts || {}).length; }
+function cityHearts(c) { return hearts.filter(h => h.got).length; }
 function checkEnding() {
     if (G.story.ended) return;
     const allBoss = CITIES.every(c => G.boss[c.id]);
@@ -662,11 +674,11 @@ paris: [
  { n:'배낭 여행자', look:{ t:'man', hair:'#7a5230', cloth:'#51cf66' },
    lines:['도시마다 편지 조각이 세 개씩 숨어 있대.',
           '나도 하나 봤는데... 사람들이 잘 안 가는 구석이었어.',
-          '열다섯 개를 다 모으면 편지 한 통이 완성된다더군.'] },
+          '세 개를 다 찾기 전엔 저 커플이 상대도 안 해준다던데?'] },
  { n:'광장의 노인', look:{ t:'old', hair:'#d8d8d8', cloth:'#8a7254' },
    lines:['소피와 피에르 말인가? 저기 에펠탑 앞에 늘 서 있지.',
-          '피에르는 야근이란 걸 모르는 녀석이야. 그래서 버티기가 약해.',
-          '자네 남편은... 음, 눈빛이 다르군.'] },
+          '근데 아무나 상대 안 해줘. 이 도시 편지 조각 세 개는 찾아와야 해.',
+          '피에르는 야근이란 걸 모르는 녀석이야. 그래서 버티기가 약하지.'] },
 ],
 kyoto: [
  { n:'찻집 주인', look:{ t:'woman', hair:'#2b1a12', cloth:'#8ac926' },
@@ -999,7 +1011,11 @@ const MAPGEN = {
         for (let k = 0; k < 7; k++) M.plantTree(6 + (rnd() * 10 | 0), 23 + (rnd() * 8 | 0), 0.9);
         M.pond(MW - 12, 20, 3, 2);
         // 천막 시장 — 길 양옆으로
-        for (let x = 6; x < MW - 6; x += 4) { M.deco(x, 10, 'tent', true); M.deco(x + 2, 4, 'tent', true); }
+        const onMainRoad = x => Math.abs(x - (MW / 2 | 0)) < 4;   // 세로 큰길은 비워둔다
+        for (let x = 6; x < MW - 6; x += 4) {
+            if (!onMainRoad(x)) M.deco(x, 10, 'tent', true);
+            if (!onMainRoad(x + 2)) M.deco(x + 2, 4, 'tent', true);
+        }
         M.rowHouses(3, MW / 2 - 4 | 0, 17, 3, rnd);
         M.rowHouses(MW / 2 + 4 | 0, MW - 3, 17, 3, rnd);
         M.rowHouses(20, MW - 3, 22, 3, rnd);
@@ -1218,7 +1234,13 @@ function updateWorld(dt) {
             const total = letterCount();
             pop(h.x, h.y, '💗', '#ff8fc7');
             const line = STORY.letter[total - 1] || '';
-            msg('💗', '편지 조각 ' + total + '/15', '<b style="color:#c04a60">' + line + '</b><br><br>냉장고에 붙어 있던 그 리스트다.<br>열다섯 줄을 다 모으면 편지가 완성돼요.');
+            const cg = cityHearts(city());
+            msg('💗', '편지 조각 ' + total + '/15',
+                '<b style="color:#c04a60">' + line + '</b><br><br>' +
+                '동훈이가 수첩 뒷장에 적어둔 <b>하고 싶은 것</b> 목록이다.<br><br>' +
+                (cg >= 3
+                  ? '🎉 <b>' + city().name + '의 조각을 전부 찾았어요!</b><br>이제 랜드마크에서 보스에게 도전할 수 있어요.'
+                  : '<b>' + city().name + '</b> 조각 ' + cg + ' / 3 — 세 개를 다 찾으면 보스에게 도전할 수 있어요.'));
             checkEnding();
         }
     }
@@ -1235,10 +1257,13 @@ function updateWorld(dt) {
         if (d2 < nearD) { nearD = d2; nearNpc = np; }
     }
     if (nearNpc) nx = { kind:'npc', i:'💬', t:nearNpc.n, npc:nearNpc };
-    else if (dl < 31 && !G.boss[city().id]) nx = { kind:'boss', i:'⚔️', t:'도전!' };
+    else if (dl < 31 && !G.boss[city().id]) {
+        const got = cityHearts(city());
+        nx = { kind:'boss', i: got >= 3 ? '⚔️' : '🔒', t: got >= 3 ? '도전!' : got + '/3' };
+    }
     else if (dd < 19) nx = { kind:'shop', i:city().shop.i, t:city().shop.n };
     else if (dp < 22) nx = { kind:'port', i:'✈️', t:'공항' };
-    const key = a2 => a2 ? a2.kind + (a2.npc ? a2.npc.n : '') : '';
+    const key = a2 => a2 ? a2.kind + (a2.npc ? a2.npc.n : '') + (a2.t || '') : '';
     if (key(nx) !== key(interact)) {
         interact = nx;
         const el = document.getElementById('actGo');
@@ -1259,7 +1284,17 @@ function doInteract() {
     else if (interact.kind === 'port') openPort();
     else if (interact.kind === 'boss') {
         const c = city();
-        if (confirm(c.boss.wife + ' & ' + c.boss.n + ' 커플에게 도전할까요?\n\n(보스전은 도망칠 수 없어요!)')) startBattle(c.boss);
+        const got = cityHearts(c);
+        if (got < 3) {
+            S.deny();
+            msg('💗', '편지 조각을 먼저 찾아요', '이 도시에 숨겨진 편지 조각 <b>' + got + ' / 3</b><br><br>' +
+                '동훈이가 숨겨둔 조각을 전부 찾아야<br><b>' + c.boss.wife + ' & ' + c.boss.n + '</b> 커플이 상대해 줍니다.<br><br>' +
+                '<span style="opacity:.7">💗 는 사람들이 잘 안 가는 구석에 있어요.<br>미니맵을 보면서 안 가본 곳을 찾아보세요.</span>');
+            return;
+        }
+        ask('⚔️', c.boss.wife + ' & ' + c.boss.n,
+            '편지 조각 3/3 — 준비됐어요!<br><br><b>보스전은 도망칠 수 없어요.</b><br>체력과 기력을 꽉 채우고 가세요.',
+            '도전한다!', () => startBattle(c.boss));
     }
 }
 
@@ -2692,9 +2727,9 @@ function openMenu() {
 }
 function toggleSound() { soundOn = !soundOn; sSave('dhAdvSound', soundOn); S.open(); openMenu(); }
 function wipe() {
-    if (!confirm('정말 처음부터 다시 시작할까요?')) return;
-    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
-    location.reload();
+    closePanel();
+    ask('🗑️', '처음부터 다시?', '모은 돈 · 레벨 · 업그레이드 · 편지 조각이<br><b>전부 사라집니다.</b>', '정말 지울래요',
+        () => { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} location.reload(); });
 }
 
 function openPort() {
@@ -2740,6 +2775,18 @@ function msg(em, title, body) {
     document.getElementById('ovMsg').classList.add('show');
 }
 function closeMsg() { document.getElementById('ovMsg').classList.remove('show'); S.open(); }
+// confirm()은 아티팩트 같은 샌드박스 환경에서 막히므로 직접 만든다
+function ask(em, title, body, yesLabel, onYes) {
+    document.getElementById('aEm').textContent = em;
+    document.getElementById('aTitle').textContent = title;
+    document.getElementById('aBody').innerHTML = body;
+    const btn = document.getElementById('aYes');
+    btn.textContent = yesLabel;
+    btn.onclick = function () { closeAsk(); onYes(); };
+    document.getElementById('ovAsk').classList.add('show');
+    S.open();
+}
+function closeAsk() { document.getElementById('ovAsk').classList.remove('show'); }
 
 function syncHud() {
     if (!G) return;
