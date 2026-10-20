@@ -387,6 +387,168 @@ const ITEMS = [
     { id:'drink', n:'에너지드링크', i:'🥤', price:90,  d:'기력 50% 회복' },
 ];
 
+
+// ───────── NPC & 대화 ─────────
+const NPCS = {
+paris: [
+ { n:'빵집 아주머니', look:{ t:'woman', hair:'#8a5434', cloth:'#e8597a' },
+   lines:['어머, 처음 보는 얼굴이네! 파리에 온 걸 환영해요.',
+          '반짝이는 건 그냥 주워도 돼요. 밀가루랑 버터가 많이 떨어져 있죠.',
+          '가게에서 요리해두면 돌아다니는 동안 손님이 알아서 사 간답니다.'],
+   gift:{ gold:150, msg:'환영 선물로 150원 받았다!' } },
+ { n:'화가 아저씨', look:{ t:'man', hair:'#3a2418', cloth:'#5b7cfa' },
+   lines:['에펠탑은 몇 번을 그려도 안 질려.',
+          '센강 위에 다리가 셋 놓여 있어. 건너편엔 아직 아무도 안 가본 데가 있지.'] },
+ { n:'꼬마', look:{ t:'kid', hair:'#5c3620', cloth:'#ffd43b' },
+   lines:['누나 가방에서 반지가 튀어나왔어요!',
+          '우리 아빠는 설거지 한 번도 안 해요. 누나 남편은 잘해요?'] },
+ { n:'배낭 여행자', look:{ t:'man', hair:'#7a5230', cloth:'#51cf66' },
+   lines:['도시마다 편지 조각이 세 개씩 숨어 있대.',
+          '나도 하나 봤는데... 사람들이 잘 안 가는 구석이었어.',
+          '열다섯 개를 다 모으면 편지 한 통이 완성된다더군.'] },
+ { n:'광장의 노인', look:{ t:'old', hair:'#d8d8d8', cloth:'#8a7254' },
+   lines:['소피와 피에르 말인가? 저기 에펠탑 앞에 늘 서 있지.',
+          '피에르는 야근이란 걸 모르는 녀석이야. 그래서 버티기가 약해.',
+          '자네 남편은... 음, 눈빛이 다르군.'] },
+],
+kyoto: [
+ { n:'찻집 주인', look:{ t:'woman', hair:'#2b1a12', cloth:'#8ac926' },
+   lines:['교토에 오셨군요. 말차 한 잔 하고 가세요.',
+          '대나무숲에는 요괴가 많으니 조심하시고요.'],
+   gift:{ item:'candy', n:2, msg:'뽀뽀사탕 2개를 받았다!' } },
+ { n:'스님', look:{ t:'old', hair:'#c8c8c8', cloth:'#a8453f' },
+   lines:['저 붉은 문을 토리이라 하네. 참배로를 따라 쭉 늘어서 있지.',
+          '급할수록 돌아가라 했네. 기력이 없을 땐 가게에서 쉬어가게.'] },
+ { n:'관광객', look:{ t:'man', hair:'#3a2418', cloth:'#4dabf7' },
+   lines:['방금 초밥을 등에 업은 닌자를 봤어요. 진짜예요!',
+          '사진 찍으려니까 도망가더라고요.'] },
+ { n:'기모노 아가씨', look:{ t:'woman', hair:'#2b1a12', cloth:'#ffb7d5' },
+   lines:['연못 한가운데 작은 섬이 있어요.',
+          '거기 뭔가 반짝이는 게 있던데... 가보셨어요?'] },
+ { n:'켄지의 동료', look:{ t:'man', hair:'#2b2f45', cloth:'#2b2f45' },
+   lines:['켄지 말입니까. 야근 15년차입니다.',
+          '유키 씨가 늘 도시락을 싸다 주시죠. 그래서 안 쓰러집니다.',
+          '...이길 생각이면 장기전은 피하십시오.'] },
+],
+cairo: [
+ { n:'시장 상인', look:{ t:'man', hair:'#3a2418', cloth:'#e8974d' },
+   lines:['어서 오시오! 여긴 뭐든 다 있소.',
+          '사막을 걸으려면 체력부터 챙기시오.'],
+   gift:{ item:'drink', n:2, msg:'에너지드링크 2개를 받았다!' } },
+ { n:'낙타 몰이꾼', look:{ t:'man', hair:'#5c3620', cloth:'#b08848' },
+   lines:['저쪽에 오아시스가 있소. 야자수가 보이면 물이 있다는 뜻이지.',
+          '모래언덕에는 전갈이 숨어 있으니 발밑을 보시오.'] },
+ { n:'고고학자', look:{ t:'old', hair:'#e8e8e8', cloth:'#f1f3f5' },
+   lines:['미라는 붕대 안이 비어 있다네. 때려도 아픈 줄을 몰라.',
+          '스핑크스 조각상은 방어가 단단하니 한 방이 센 기술로 가게.'] },
+ { n:'모래장난 아이', look:{ t:'kid', hair:'#2b1a12', cloth:'#ffd43b' },
+   lines:['황금모래는 반짝반짝해요!',
+          '엄마가 그거 주우면 부자 된댔어요.'] },
+ { n:'라일라의 친구', look:{ t:'woman', hair:'#2b1a12', cloth:'#b197fc' },
+   lines:['아흐메드는 사막에서 10년을 버틴 남자예요.',
+          '라일라가 늘 자랑하죠. "우리 남편은 더위에 안 지친다"고.',
+          '...근데 집안일은 하나도 안 한대요.'] },
+],
+roma: [
+ { n:'젤라또 장수', look:{ t:'woman', hair:'#5c3620', cloth:'#51cf66' },
+   lines:['로마에 왔으면 젤라또지!',
+          '포룸 광장은 저기 가운데야. 분수가 있는 곳.'],
+   gift:{ gold:1200, msg:'1,200원을 받았다! "여행자 할인이야"' } },
+ { n:'검투사 흉내쟁이', look:{ t:'man', hair:'#3a2418', cloth:'#adb5bd' },
+   lines:['관광객 상대로 사진 찍어주는 게 내 일이야.',
+          '근데 요즘 진짜 석상이 움직이더라고... 그건 내가 아니야.'] },
+ { n:'광장의 할머니', look:{ t:'old', hair:'#dcdcdc', cloth:'#c86a3f' },
+   lines:['마르코 말이지? 그 집은 어머니가 셋이야.',
+          '시어머니 셋을 모시고 사는 남자는 쉽게 안 무너져.',
+          '...자네 남편도 만만치 않아 보이는군.'] },
+ { n:'소원 비는 사람', look:{ t:'woman', hair:'#2b1a12', cloth:'#ff8fc7' },
+   lines:['분수에 동전을 던지면 다시 로마에 온대요.',
+          '근데 저는 동전 말고 다른 걸 주웠어요. 하트 모양이었는데...'] },
+ { n:'고양이 집사', look:{ t:'man', hair:'#7a5230', cloth:'#ffa94d' },
+   lines:['로마엔 고양이가 많지. 비둘기도.',
+          '보스를 이기면 그 동네 동물이 따라온다는 얘기, 들어봤나?'] },
+],
+ny: [
+ { n:'핫도그 장수', look:{ t:'man', hair:'#3a2418', cloth:'#f03e3e' },
+   lines:['뉴욕이다! 여기까지 온 거 축하해.',
+          '여긴 모든 게 비싸. 돈 많이 모아뒀길 바라.'],
+   gift:{ gold:4000, msg:'4,000원을 받았다! "마지막 도시 보너스야"' } },
+ { n:'택시 기사', look:{ t:'man', hair:'#5c3620', cloth:'#ffd43b' },
+   lines:['노란 택시 조심해. 요즘 몇 대가 스스로 돌아다녀.',
+          '경적 울리면서 사람한테 달려든다니까?'] },
+ { n:'조깅하는 사람', look:{ t:'woman', hair:'#8a5434', cloth:'#4dabf7' },
+   lines:['센트럴파크는 이 도시 유일한 녹지예요.',
+          '나무가 많은 쪽에 다람쥐 갱단이 있으니 조심하고요.'] },
+ { n:'월가 직장인', look:{ t:'man', hair:'#2b2f45', cloth:'#495057' },
+   lines:['...',
+          '저도 예전엔 사람이었어요.',
+          '남편분, 야근 너무 시키지 마세요.'] },
+ { n:'거울 앞 노인', look:{ t:'old', hair:'#f0f0f0', cloth:'#9b5de5' },
+   lines:['마지막 상대가 누군지 아나?',
+          '라이벌도, 괴물도 아니야.',
+          '...게임만 하던 시절의 자기 자신이지.'] },
+],
+};
+
+let TK = null;   // 대화 중 상태
+function startTalk(npc) {
+    TK = { npc, i: 0, ch: 0, t: 0, done: false };
+    document.getElementById('acts').style.display = 'none';
+    S.open();
+    endStick();
+}
+function talkAdvance() {
+    if (!TK) return;
+    document.getElementById('acts').style.display = '';
+    const full = TK.npc.lines[TK.i];
+    if (TK.ch < full.length) { TK.ch = full.length; return; }   // 아직 타이핑 중이면 한 번에 완성
+    if (TK.i < TK.npc.lines.length - 1) { TK.i++; TK.ch = 0; S.step(); return; }
+    // 마지막 줄 — 선물 처리
+    const npc = TK.npc;
+    TK = null;
+    if (npc.gift && !G.talked[npc.n]) {
+        G.talked[npc.n] = true;
+        if (npc.gift.gold) G.gold += npc.gift.gold;
+        if (npc.gift.item) G.items[npc.gift.item] = (G.items[npc.gift.item] || 0) + npc.gift.n;
+        S.coin(); toast('🎁 ' + npc.gift.msg);
+        syncHud(); save();
+    }
+}
+function drawTalkBox() {
+    const npc = TK.npc;
+    const bh = Math.min(150, H * 0.22), by = H - bh - 16;
+    ctx.fillStyle = 'rgba(80,50,60,.28)';
+    rr(14, by + 5, W - 28, bh, 18); ctx.fill();
+    ctx.fillStyle = '#fff8ef';
+    rr(10, by, W - 20, bh, 18); ctx.fill();
+    ctx.strokeStyle = '#5d4038'; ctx.lineWidth = 3.5;
+    rr(10, by, W - 20, bh, 18); ctx.stroke();
+    ctx.strokeStyle = '#e8597a'; ctx.lineWidth = 1.6;
+    rr(16, by + 6, W - 32, bh - 12, 13); ctx.stroke();
+    // 이름표
+    ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'left';
+    const nw = ctx.measureText(npc.n).width + 22;
+    ctx.fillStyle = '#e8597a';
+    rr(26, by - 13, nw, 26, 11); ctx.fill();
+    ctx.fillStyle = '#fff8ef'; ctx.fillText(npc.n, 37, by + 4);
+    // 본문 (타자기 효과)
+    ctx.fillStyle = '#5d4038'; ctx.font = 'bold 14.5px sans-serif';
+    const shown = npc.lines[TK.i].slice(0, TK.ch | 0);
+    let line = '', yy = by + 36;
+    for (const chr of shown) {
+        if (ctx.measureText(line + chr).width > W - 70) { ctx.fillText(line, 32, yy); line = chr; yy += 22; }
+        else line += chr;
+    }
+    ctx.fillText(line, 32, yy);
+    // ▼
+    if (TK.ch >= npc.lines[TK.i].length && ((gameT * 3) | 0) % 2) {
+        ctx.fillStyle = '#e8597a'; ctx.textAlign = 'center';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('▼', W - 38, by + bh - 16);
+    }
+    ctx.textAlign = 'left';
+}
+
 // ───────── 게임 상태 ─────────
 let G = null, scene = 'title', running = false, lastT = 0, gameT = 0;
 
@@ -402,16 +564,25 @@ function mySkills() { return SKILLS.filter(s => G.lv >= s.lv); }
 function newGame() {
     return {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
-        mats: {}, stock: {}, items: { candy: 2, drink: 1 },
+        mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
 }
 
 // ───────── 맵 생성 (시드 고정 → 저장/복원해도 같은 지도) ─────────
-const T = { GROUND:0, ROAD:1, WALL:2, WATER:3, GRASS:4, DOOR:5, PORT:6, TREE:7 };
+const T = { GROUND:0, ROAD:1, WALL:2, WATER:3, GRASS:4, DOOR:5, PORT:6, TREE:7, PLAZA:8, DECO:9 };
 const MW = 48, MH = 38, TS = 16;
-const WALKABLE = { 0:1, 1:1, 4:1, 5:1, 6:1 };
+const WALKABLE = { 0:1, 1:1, 4:1, 5:1, 6:1, 8:1 };
+
+// 도시마다 지형 테마가 다르다 (나무 종류 · 수풀 종류 · 바닥 · 장식물)
+const THEME = {
+    paris: { tree:'broad',   enc:'grass',  ground:'grass', pave:'stone' },
+    kyoto: { tree:'sakura',  enc:'bamboo', ground:'grass', pave:'gravel' },
+    cairo: { tree:'palm',    enc:'dune',   ground:'sand',  pave:'sand' },
+    roma:  { tree:'cypress', enc:'ruin',   ground:'grass', pave:'stone' },
+    ny:    { tree:'pine',    enc:'bush',   ground:'grass', pave:'asphalt' },
+};
 
 function mulberry32(a) {
     return function () {
@@ -427,89 +598,203 @@ function tileAt(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) return T.WALL;
     return MAP.g[ty * MW + tx];
 }
+
+// ───────── 도시별 지형 생성 ─────────
 function buildMap(c) {
     const rnd = mulberry32(c.seed);
     const g = new Uint8Array(MW * MH).fill(T.GROUND);
-    const set = (x, y, v) => { if (x > 0 && y > 0 && x < MW - 1 && y < MH - 1) g[y * MW + x] = v; };
-    const rect = (x, y, w, h, v) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) set(i, j, v); };
-
-    // 바깥 테두리
+    const M = {
+        g, rnd, blocks: [], trees: [], decos: [], npcSpots: [],
+        set(x, y, v) { if (x > 0 && y > 0 && x < MW - 1 && y < MH - 1) g[y * MW + x] = v; },
+        rect(x, y, w, h, v) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) M.set(i, j, v); },
+        at(x, y) { return tileOf(g, x, y); },
+        // 집터 자체는 빈 땅이어야 하지만, 바로 옆이 길/광장인 건 오히려 자연스럽다
+        free(x, y, w, h) {
+            if (x < 1 || y < 1 || x + w > MW - 1 || y + h > MH - 1) return false;
+            for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++)
+                if (tileOf(g, i, j) !== T.GROUND) return false;
+            for (let j = y - 1; j < y + h + 1; j++) for (let i = x - 1; i < x + w + 1; i++) {
+                const t2 = tileOf(g, i, j);
+                if (t2 === T.WALL || t2 === T.DOOR || t2 === T.PORT) return false;
+            }
+            return true;
+        },
+        // 길을 따라 집을 줄지어 세운다 (도시처럼 보이게)
+        rowHouses(x0, x1, y, h, rnd2) {
+            let x = x0;
+            while (x < x1 - 3) {
+                const w = 3 + (rnd2() * 3 | 0);
+                if (x + w > x1) break;
+                if (M.house(x, y, w, h)) x += w + 1;
+                else x += 2;
+            }
+        },
+        house(x, y, w, h) { if (!M.free(x, y, w, h)) return false; M.rect(x, y, w, h, T.WALL); M.blocks.push({ x, y, w, h }); return true; },
+        deco(x, y, kind, solid) { M.decos.push({ x, y, kind }); if (solid) M.set(x, y, T.DECO); },
+        // 수풀(몬스터 구역) 덩어리
+        patch(cx, cy, r) {
+            for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+                if (i * i + j * j > r * r + 1) continue;
+                if (M.at(cx + i, cy + j) === T.GROUND) M.set(cx + i, cy + j, T.GRASS);
+            }
+        },
+        pond(cx, cy, rx, ry) {
+            for (let j = -ry; j <= ry; j++) for (let i = -rx; i <= rx; i++) {
+                if ((i * i) / (rx * rx) + (j * j) / (ry * ry) > 1) continue;
+                const t = M.at(cx + i, cy + j);
+                if (t === T.GROUND || t === T.GRASS) M.set(cx + i, cy + j, T.WATER);
+            }
+        },
+        // 8방이 전부 빈 땅인 곳에만 나무 — 길이 막힐 수가 없다
+        plantTree(tx, ty, kind) {
+            for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++)
+                if (tileOf(g, tx + i, ty + j) !== T.GROUND) return false;
+            if (M.trees.some(t => Math.abs(t.x - tx) < 2 && Math.abs(t.y - ty) < 2)) return false;
+            M.set(tx, ty, T.TREE); M.trees.push({ x: tx, y: ty, kind: kind || 0 });
+            return true;
+        },
+        scatterTrees(n, pad) {
+            for (let k = 0; k < n * 14 && M.trees.length < n; k++)
+                M.plantTree(2 + ((rnd() * (MW - 4)) | 0), (pad || 7) + ((rnd() * (MH - (pad || 7) - 7)) | 0), rnd());
+        },
+    };
     for (let i = 0; i < MW; i++) { g[i] = T.WALL; g[(MH - 1) * MW + i] = T.WALL; }
     for (let j = 0; j < MH; j++) { g[j * MW] = T.WALL; g[j * MW + MW - 1] = T.WALL; }
 
-    // 큰 길 (십자 + 외곽 순환로)
-    rect(1, Math.floor(MH / 2) - 1, MW - 2, 3, T.ROAD);
-    rect(Math.floor(MW / 2) - 1, 1, 3, MH - 2, T.ROAD);
-    rect(1, 4, MW - 2, 2, T.ROAD);
-    rect(1, MH - 6, MW - 2, 2, T.ROAD);
+    (MAPGEN[c.id] || MAPGEN.paris)(M, c, rnd);
 
-    // 건물 블록
-    const blocks = [];
-    for (let k = 0; k < 16; k++) {
-        const bw = 4 + Math.floor(rnd() * 4), bh = 3 + Math.floor(rnd() * 3);
-        const bx = 2 + Math.floor(rnd() * (MW - bw - 4));
-        const by = 7 + Math.floor(rnd() * (MH - bh - 14));
-        let ok = true;
-        for (let j = by - 1; j < by + bh + 1 && ok; j++)
-            for (let i = bx - 1; i < bx + bw + 1 && ok; i++)
-                if (tileOf(g, i, j) !== T.GROUND) ok = false;
-        if (!ok) continue;
-        rect(bx, by, bw, bh, T.WALL);
-        blocks.push({ x: bx, y: by, w: bw, h: bh });
-    }
-
-    // 풀숲 / 골목 (몬스터 출현 구역)
-    for (let k = 0; k < 20; k++) {
-        const cx = 3 + Math.floor(rnd() * (MW - 6)), cy = 7 + Math.floor(rnd() * (MH - 14));
-        const r = 1 + Math.floor(rnd() * 2.6);
-        for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
-            if (i * i + j * j > r * r + 1) continue;
-            if (tileOf(g, cx + i, cy + j) === T.GROUND) set(cx + i, cy + j, T.GRASS);
-        }
-    }
-
-    // 물웅덩이 (장식 + 길막)
-    for (let k = 0; k < 3; k++) {
-        const cx = 4 + Math.floor(rnd() * (MW - 8)), cy = 9 + Math.floor(rnd() * (MH - 18));
-        const r = 2 + Math.floor(rnd() * 2);
-        for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
-            if (i * i * 1.6 + j * j > r * r) continue;
-            if (tileOf(g, cx + i, cy + j) === T.GROUND || tileOf(g, cx + i, cy + j) === T.GRASS) set(cx + i, cy + j, T.WATER);
-        }
-    }
-
-    // 가게 문 — 큰길에 접한 건물 하나를 골라 문을 낸다
+    // 가게 문 — 길에 접한 집 하나에 낸다
     let door = null;
-    for (const b of blocks) {
-        const dx = b.x + Math.floor(b.w / 2), dy = b.y + b.h;
-        if (tileOf(g, dx, dy) === T.ROAD || tileOf(g, dx, dy) === T.GROUND) { door = { x: dx, y: b.y + b.h - 1 }; break; }
+    for (const b of M.blocks) {
+        const dx = b.x + (b.w / 2 | 0), dy = b.y + b.h;
+        if (M.at(dx, dy) === T.ROAD || M.at(dx, dy) === T.PLAZA || M.at(dx, dy) === T.GROUND) { door = { x: dx, y: b.y + b.h - 1 }; break; }
     }
-    if (!door) door = { x: Math.floor(MW / 2), y: 8 };
-    set(door.x, door.y, T.DOOR);
+    if (!door) { door = { x: MW / 2 | 0, y: 9 }; M.rect(door.x - 1, door.y - 1, 3, 2, T.WALL); M.blocks.push({ x: door.x - 1, y: door.y - 1, w: 3, h: 2 }); }
+    M.set(door.x, door.y, T.DOOR);
 
-    // 공항 (다음 도시로)
     const port = { x: MW - 5, y: 2 };
-    rect(port.x - 1, port.y, 3, 2, T.PORT);
+    M.rect(port.x - 1, port.y, 3, 2, T.PORT);
 
-    // 시작 위치 — 십자로 한가운데
-    const start = { x: Math.floor(MW / 2), y: Math.floor(MH / 2) };
+    const start = { x: MW / 2 | 0, y: MH / 2 | 0 };
+    for (let r = 0; r < 6; r++) { if (WALKABLE[M.at(start.x, start.y)]) break; start.y++; }
 
-    // 나무 — 주변 8칸이 전부 빈 땅인 자리에만 심는다.
-    // 그런 칸은 하나 막혀도 돌아갈 길이 항상 남아서 지도가 끊길 수가 없다.
-    const trees = [];
-    for (let k = 0; k < 420 && trees.length < 34; k++) {
-        const tx = 2 + Math.floor(rnd() * (MW - 4)), ty = 7 + Math.floor(rnd() * (MH - 14));
-        let open = true;
-        for (let j = -1; j <= 1 && open; j++) for (let i = -1; i <= 1 && open; i++)
-            if (tileOf(g, tx + i, ty + j) !== T.GROUND) open = false;
-        if (!open) continue;
-        if (trees.some(t => Math.abs(t.x - tx) < 3 && Math.abs(t.y - ty) < 3)) continue;
-        set(tx, ty, T.TREE);
-        trees.push({ x: tx, y: ty, kind: rnd() });
-    }
-
-    return { g, door, port, start, blocks, trees };
+    return { g, door, port, start, blocks: M.blocks, trees: M.trees, decos: M.decos, npcSpots: M.npcSpots };
 }
+
+const MAPGEN = {
+    // 🗼 파리 — 센강이 가로지르고 다리가 놓인 대로의 도시
+    paris(M, c, rnd) {
+        const riverY = 22;
+        M.rect(1, 4, MW - 2, 2, T.ROAD);                 // 북쪽 대로
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);    // 샹젤리제
+        M.rect(1, MH - 7, MW - 2, 2, T.ROAD);
+        M.rect(6, riverY, MW - 12, 3, T.WATER);          // 센강
+        [12, MW / 2 | 0, MW - 14].forEach(bx => M.rect(bx - 1, riverY, 4, 3, T.ROAD));  // 다리 셋
+        M.rect(MW / 2 - 5 | 0, 6, 11, 6, T.PLAZA);       // 에펠탑 광장
+        for (let i = 0; i < 6; i++) { M.deco(MW / 2 - 5 + i * 2 | 0, 12, 'lamp', true); }
+        // 가로수길
+        for (let x = 4; x < MW - 4; x += 3) { M.plantTree(x, 7, 0); M.plantTree(x, MH - 9, 0); }
+        // 대로변 아파트 — 길 위아래로 줄지어
+        M.rowHouses(3, MW / 2 - 4 | 0, 14, 3, rnd);
+        M.rowHouses(MW / 2 + 4 | 0, MW - 3, 14, 3, rnd);
+        M.rowHouses(3, MW / 2 - 4 | 0, 18, 3, rnd);
+        M.rowHouses(MW / 2 + 4 | 0, MW - 3, 18, 3, rnd);
+        M.rowHouses(3, MW / 2 - 4 | 0, 27, 4, rnd);
+        M.rowHouses(MW / 2 + 4 | 0, MW - 3, 27, 4, rnd);
+        for (let k = 0; k < 7; k++) M.patch(5 + (rnd() * (MW - 10) | 0), 26 + (rnd() * 8 | 0), 2 + (rnd() * 2 | 0));
+        for (let k = 0; k < 5; k++) M.patch(5 + (rnd() * (MW - 10) | 0), 14 + (rnd() * 6 | 0), 2);
+        M.scatterTrees(20, 14);
+        for (let k = 0; k < 9; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 15 + (rnd() * (MH - 24) | 0), rnd() < 0.5 ? 'bench' : 'pot', false);
+        M.npcSpots = [[MW / 2 - 6 | 0, 13], [14, 9], [MW - 16, 9], [11, riverY + 5], [MW / 2 + 7 | 0, MH - 10]];
+    },
+
+    // ⛩️ 교토 — 토리이가 늘어선 참배로와 대나무숲, 연못 정원
+    kyoto(M, c, rnd) {
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);    // 참배로
+        M.rect(1, 5, MW - 2, 2, T.ROAD);
+        M.rect(1, MH - 8, MW - 2, 2, T.ROAD);
+        for (let y = 9; y < MH - 10; y += 4) M.deco(MW / 2 - 2 | 0, y, 'torii', false);  // 참배로를 덮는 토리이 행렬
+        M.pond(12, 24, 6, 4);                            // 정원 연못
+        M.pond(13, 23, 2, 1);                            // 가운데 섬 (물 위에 땅)
+        M.rect(12, 23, 3, 1, T.GROUND);
+        M.plantTree(13, 23, 0.9);
+        M.rowHouses(3, MW / 2 - 5 | 0, 9, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 9, 3, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 14, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 14, 3, rnd);
+        M.rowHouses(22, MW - 3, 20, 3, rnd);
+        M.rowHouses(3, MW / 2 - 5 | 0, 29, 3, rnd);
+        M.rowHouses(MW / 2 + 5 | 0, MW - 3, 29, 3, rnd);
+        // 대나무숲 — 넓게
+        for (let k = 0; k < 11; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
+        M.scatterTrees(22, 9);
+        for (let k = 0; k < 8; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 'lantern', false);
+        M.npcSpots = [[MW / 2 - 5 | 0, 12], [MW / 2 + 4 | 0, 20], [18, 27], [MW - 12, 14], [9, 9]];
+    },
+
+    // 🐫 카이로 — 모래벌판, 오아시스, 천막 시장
+    cairo(M, c, rnd) {
+        M.rect(1, 6, MW - 2, 3, T.ROAD);                 // 대상로
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);
+        M.rect(MW / 2 - 6 | 0, 10, 13, 6, T.PLAZA);      // 피라미드 앞 광장
+        M.pond(10, 27, 5, 3);                            // 오아시스
+        for (let k = 0; k < 7; k++) M.plantTree(6 + (rnd() * 10 | 0), 23 + (rnd() * 8 | 0), 0.9);
+        M.pond(MW - 12, 20, 3, 2);
+        // 천막 시장 — 길 양옆으로
+        for (let x = 6; x < MW - 6; x += 4) { M.deco(x, 10, 'tent', true); M.deco(x + 2, 4, 'tent', true); }
+        M.rowHouses(3, MW / 2 - 4 | 0, 17, 3, rnd);
+        M.rowHouses(MW / 2 + 4 | 0, MW - 3, 17, 3, rnd);
+        M.rowHouses(20, MW - 3, 22, 3, rnd);
+        M.rowHouses(3, MW - 3, 33, 3, rnd);
+        for (let k = 0; k < 13; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 12 + (rnd() * (MH - 20) | 0), 2 + (rnd() * 3 | 0));
+        M.scatterTrees(10, 14);
+        for (let k = 0; k < 7; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 14 + (rnd() * (MH - 22) | 0), 'pot', false);
+        M.npcSpots = [[MW / 2 - 7 | 0, 17], [12, 12], [MW - 14, 12], [13, 24], [MW / 2 + 6 | 0, 30]];
+    },
+
+    // 🏛️ 로마 — 돌광장과 분수, 무너진 기둥, 사이프러스
+    roma(M, c, rnd) {
+        M.rect(1, 5, MW - 2, 2, T.ROAD);
+        M.rect(MW / 2 - 2 | 0, 1, 4, MH - 2, T.ROAD);
+        M.rect(1, MH - 8, MW - 2, 2, T.ROAD);
+        M.rect(MW / 2 - 8 | 0, 16, 17, 10, T.PLAZA);     // 중앙 포룸
+        M.deco(MW / 2 | 0, 21, 'fountain', true);
+        for (let i = 0; i < 5; i++) {                    // 무너진 기둥 두 줄
+            M.deco(MW / 2 - 7 + i * 3 | 0, 17, 'column', true);
+            M.deco(MW / 2 - 7 + i * 3 | 0, 24, 'column', true);
+        }
+        M.rowHouses(3, MW / 2 - 4 | 0, 9, 3, rnd);
+        M.rowHouses(MW / 2 + 4 | 0, MW - 3, 9, 3, rnd);
+        M.rowHouses(3, MW / 2 - 10 | 0, 13, 3, rnd);
+        M.rowHouses(MW / 2 + 10 | 0, MW - 3, 13, 3, rnd);
+        M.rowHouses(3, MW / 2 - 10 | 0, 28, 4, rnd);
+        M.rowHouses(MW / 2 + 10 | 0, MW - 3, 28, 4, rnd);
+        for (let k = 0; k < 9; k++) M.patch(4 + (rnd() * (MW - 8) | 0), 9 + (rnd() * (MH - 18) | 0), 2 + (rnd() * 2 | 0));
+        for (let x = 5; x < MW - 5; x += 4) { M.plantTree(x, 8, 0.2); M.plantTree(x + 2, MH - 10, 0.2); }
+        M.scatterTrees(16, 9);
+        for (let k = 0; k < 6; k++) M.deco(4 + (rnd() * (MW - 8) | 0), 10 + (rnd() * (MH - 20) | 0), 'bench', false);
+        M.npcSpots = [[MW / 2 - 9 | 0, 21], [MW / 2 + 9 | 0, 21], [14, 11], [MW - 13, 29], [10, 30]];
+    },
+
+    // 🗽 뉴욕 — 격자 도로, 고층 블록, 센트럴파크
+    ny(M, c, rnd) {
+        for (let y = 5; y < MH - 4; y += 7) M.rect(1, y, MW - 2, 3, T.ROAD);      // 가로 애비뉴
+        for (let x = 5; x < MW - 4; x += 9) M.rect(x, 1, 3, MH - 2, T.ROAD);      // 세로 스트리트
+        // 센트럴파크 — 이 도시의 유일한 녹지 (나무를 먼저 심어야 자리가 남는다)
+        M.rect(16, 12, 13, 17, T.GROUND);
+        for (let k = 0; k < 120; k++) M.plantTree(17 + (rnd() * 11 | 0), 13 + (rnd() * 15 | 0), rnd());
+        for (let k = 0; k < 6; k++) M.patch(18 + (rnd() * 9 | 0), 14 + (rnd() * 13 | 0), 1 + (rnd() * 2 | 0));
+        M.pond(22, 21, 3, 2);
+        // 격자 블록 안쪽을 빌딩으로 채운다
+        for (let y = 8; y < MH - 6; y += 7) for (let x = 8; x < MW - 5; x += 9) {
+            if (x > 14 && x < 30 && y > 10 && y < 30) continue;   // 공원 자리는 비움
+            M.rowHouses(x, x + 6, y, 4, rnd);
+        }
+        for (let k = 0; k < 16; k++) M.patch(3 + (rnd() * (MW - 6) | 0), 10 + (rnd() * (MH - 18) | 0), 1 + (rnd() * 2 | 0));   // 뒷골목
+        for (let k = 0; k < 12; k++) M.deco(3 + (rnd() * (MW - 6) | 0), 9 + (rnd() * (MH - 18) | 0), rnd() < 0.5 ? 'hydrant' : 'bench', false);
+        M.npcSpots = [[15, 16], [30, 23], [8, 12], [MW - 10, 19], [20, 33]];
+    },
+};
 function tileOf(g, x, y) { if (x < 0 || y < 0 || x >= MW || y >= MH) return T.WALL; return g[y * MW + x]; }
 
 // 재료 노드 / 하트 / 상호작용 지점
@@ -536,10 +821,27 @@ function buildHearts(c) {
     }
 }
 
+let npcs = [];
+function placeNpcs(c) {
+    npcs = [];
+    const list = NPCS[c.id] || [];
+    (MAP.npcSpots || []).forEach((sp, i) => {
+        if (!list[i]) return;
+        let best = null;
+        for (let r = 0; r < 7 && !best; r++)
+            for (let j = -r; j <= r && !best; j++) for (let k = -r; k <= r && !best; k++) {
+                const tx = sp[0] + k, ty = sp[1] + j;
+                if (WALKABLE[tileAt(tx, ty)] && tileAt(tx, ty) !== T.DOOR && tileAt(tx, ty) !== T.PORT) best = { tx, ty };
+            }
+        if (best) npcs.push(Object.assign({}, list[i], { x: best.tx * TS + TS / 2, y: best.ty * TS + TS - 2 }));
+    });
+}
 function enterCity(idx, keepPos) {
     G.cityIdx = idx;
     const c = city();
+    TH = THEME[c.id] || THEME.paris;
     MAP = buildMap(c);
+    placeNpcs(c);
     nodes = []; spawnNodes(c, 26);
     buildHearts(c);
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
@@ -562,6 +864,7 @@ function canWalk(x, y) {
 }
 
 cvs.addEventListener('pointerdown', e => {
+    if (TK) { talkAdvance(); return; }
     if (scene === 'world') {
         if (stick.on) return;
         stick.on = true; stick.id = e.pointerId;
@@ -648,11 +951,17 @@ function updateWorld(dt) {
     const dp = Math.hypot(p.x * TS + TS/2 - P.x, (p.y + 2) * TS - P.y);
     // 랜드마크 앞에 라이벌 커플이 서 있다
     const dl = Math.hypot((MW / 2) * TS - P.x, 3 * TS + 17 - P.y);
-    let nx = null;
-    if (dl < 31 && !G.boss[city().id]) nx = { kind:'boss', i:'⚔️', t:'도전!' };
+    let nx = null, nearNpc = null, nearD = 20;
+    for (const np of npcs) {
+        const d2 = Math.hypot(np.x - P.x, np.y - P.y);
+        if (d2 < nearD) { nearD = d2; nearNpc = np; }
+    }
+    if (nearNpc) nx = { kind:'npc', i:'💬', t:nearNpc.n, npc:nearNpc };
+    else if (dl < 31 && !G.boss[city().id]) nx = { kind:'boss', i:'⚔️', t:'도전!' };
     else if (dd < 19) nx = { kind:'shop', i:city().shop.i, t:city().shop.n };
     else if (dp < 22) nx = { kind:'port', i:'✈️', t:'공항' };
-    if ((nx && nx.kind) !== (interact && interact.kind)) {
+    const key = a2 => a2 ? a2.kind + (a2.npc ? a2.npc.n : '') : '';
+    if (key(nx) !== key(interact)) {
         interact = nx;
         const el = document.getElementById('actGo');
         el.classList.toggle('hide', !nx);
@@ -667,7 +976,8 @@ function updateWorld(dt) {
 function doInteract() {
     if (!interact) return;
     S.open();
-    if (interact.kind === 'shop') openShop();
+    if (interact.kind === 'npc') startTalk(interact.npc);
+    else if (interact.kind === 'shop') openShop();
     else if (interact.kind === 'port') openPort();
     else if (interact.kind === 'boss') {
         const c = city();
@@ -708,6 +1018,7 @@ function sprite(parts, out, s, ox, oy) {
 }
 
 // ───────── 바닥 타일 (16×16 도트) ─────────
+let TH = THEME.paris;
 function drawGroundTile(tx, ty, p) {
     const t = tileAt(tx, ty), X = tx * TS, Y = ty * TS;
     const isP = v => v === T.ROAD || v === T.PORT || v === T.DOOR;
@@ -715,8 +1026,7 @@ function drawGroundTile(tx, ty, p) {
     if (t === T.WATER) {
         R(X, Y, 16, 16, p.a1);
         for (let i = 0; i < 3; i++) {
-            const wy = Y + 3 + i * 5;
-            const off = ((gameT * 6 + tx * 5 + i * 7) | 0) % 16;
+            const wy = Y + 3 + i * 5, off = ((gameT * 6 + tx * 5 + i * 7) | 0) % 16;
             R(X + off, wy, 4, 1, p.a0);
             R(X + ((off + 8) % 16), wy + 2, 3, 1, p.a0);
         }
@@ -727,37 +1037,109 @@ function drawGroundTile(tx, ty, p) {
         return;
     }
 
+    if (t === T.PLAZA) {   // 돌 광장 — 큼직한 판석
+        R(X, Y, 16, 16, p.p0);
+        R(X, Y, 16, 1, p.p2); R(X, Y, 1, 16, p.p2);
+        R(X + 8, Y, 1, 16, shade(p.p0, -14)); R(X, Y + 8, 16, 1, shade(p.p0, -14));
+        if (th(tx, ty, 31) > 0.7) R(X + 3, Y + 11, 3, 1, p.p2);
+        return;
+    }
+
     if (isP(t)) {
-        R(X, Y, 16, 16, p.p1);
-        // 모래/자갈 무늬 — 레퍼런스의 바닥 패턴처럼 작은 점을 규칙적으로
-        for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
-            const r = th(tx * 4 + i, ty * 4 + j, 11);
-            const ax = X + i * 4 + 1, ay = Y + j * 4 + 1;
-            if (r > 0.62) { R(ax, ay, 2, 1, p.p0); R(ax + 1, ay + 1, 1, 1, p.p0); }
-            else if (r > 0.42) R(ax + 1, ay + 1, 1, 1, p.p2);
+        if (TH.pave === 'asphalt') {
+            R(X, Y, 16, 16, p.p1);
+            for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++)
+                if (th(tx * 4 + i, ty * 4 + j, 11) > 0.72) R(X + i * 4 + 1, Y + j * 4 + 1, 1, 1, p.p2);
+            // 차선: 사방이 길인 '가운데 차선'에만. 교차로는 횡단보도.
+            const mid = isP(tileAt(tx, ty - 1)) && isP(tileAt(tx, ty + 1)) && isP(tileAt(tx - 1, ty)) && isP(tileAt(tx + 1, ty));
+            if (mid) {
+                const vRoad = isP(tileAt(tx, ty - 2)) && isP(tileAt(tx, ty + 2));
+                const hRoad = isP(tileAt(tx - 2, ty)) && isP(tileAt(tx + 2, ty));
+                if (vRoad && hRoad) {   // 교차로 — 횡단보도
+                    for (let k = 0; k < 4; k++) R(X + 1 + k * 4, Y + 1, 2, 14, shade(p.p0, 40));
+                } else if (vRoad) { if ((ty & 1) === 0) R(X + 7, Y + 2, 2, 12, '#ffd43b'); }
+                else if (hRoad) { if ((tx & 1) === 0) R(X + 2, Y + 7, 12, 2, '#ffd43b'); }
+            }
+        } else if (TH.pave === 'stone') {
+            R(X, Y, 16, 16, p.p1);
+            for (let j = 0; j < 4; j++) {          // 포석 엇갈리게
+                const off = (j & 1) ? 2 : 0;
+                for (let i = -1; i < 4; i++) {
+                    const cx = X + off + i * 5, cy = Y + j * 4;
+                    if (cx + 4 <= X || cx >= X + 16) continue;
+                    R(Math.max(X, cx), cy, Math.min(4, X + 16 - cx), 3, th(tx * 7 + i, ty * 7 + j, 12) > 0.5 ? p.p0 : shade(p.p0, -16));
+                }
+            }
+        } else if (TH.pave === 'gravel') {
+            R(X, Y, 16, 16, p.p1);
+            for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++)
+                if (th(tx * 8 + i, ty * 8 + j, 13) > 0.62) R(X + i * 2, Y + j * 2, 2, 1, p.p0);
+        } else {   // 모래길
+            R(X, Y, 16, 16, p.p1);
+            for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+                const r = th(tx * 4 + i, ty * 4 + j, 11);
+                if (r > 0.6) { R(X + i * 4 + 1, Y + j * 4 + 1, 3, 1, p.p0); }
+                else if (r < 0.22) R(X + i * 4 + 2, Y + j * 4 + 2, 1, 1, p.p2);
+            }
         }
-        if (!isP(tileAt(tx, ty - 1))) R(X, Y, 16, 1, p.p2);
-        if (!isP(tileAt(tx, ty + 1))) R(X, Y + 15, 16, 1, p.p2);
-        if (!isP(tileAt(tx - 1, ty))) R(X, Y, 1, 16, p.p2);
-        if (!isP(tileAt(tx + 1, ty))) R(X + 15, Y, 1, 16, p.p2);
+        if (!isP(tileAt(tx, ty - 1)) && tileAt(tx, ty - 1) !== T.PLAZA) R(X, Y, 16, 1, p.p2);
+        if (!isP(tileAt(tx, ty + 1)) && tileAt(tx, ty + 1) !== T.PLAZA) R(X, Y + 15, 16, 1, p.p2);
+        if (!isP(tileAt(tx - 1, ty)) && tileAt(tx - 1, ty) !== T.PLAZA) R(X, Y, 1, 16, p.p2);
+        if (!isP(tileAt(tx + 1, ty)) && tileAt(tx + 1, ty) !== T.PLAZA) R(X + 15, Y, 1, 16, p.p2);
         return;
     }
 
     if (t === T.GRASS) {
-        R(X, Y, 16, 16, p.t2);
-        // 수풀 포기 두 덩이 — 여기서 몬스터가 튀어나온다
-        for (let k = 0; k < 2; k++) {
-            const gx = X + 1 + k * 8, gy = Y + 5 + (k ? 3 : 0);
-            const sw = Math.sin(gameT * 2 + tx + ty + k) > 0 ? 0 : 1;
-            R(gx + sw, gy, 2, 3, p.t0); R(gx + 4 + sw, gy, 2, 3, p.t0);
-            R(gx, gy + 3, 7, 4, p.t1);
-            R(gx, gy + 6, 7, 1, p.t2);
-            R(gx + 1, gy + 4, 2, 1, p.t0);
+        R(X, Y, 16, 16, TH.enc === 'dune' ? shade(p.g1, -18) : p.t2);
+        if (TH.enc === 'bamboo') {          // 대나무숲
+            for (let k = 0; k < 3; k++) {
+                const bx = X + 2 + k * 5, sw = Math.sin(gameT * 1.6 + tx + k) > 0 ? 0 : 1;
+                R(bx + sw, Y, 3, 16, p.t0);
+                R(bx + sw, Y + 4, 3, 1, p.t1); R(bx + sw, Y + 11, 3, 1, p.t1);
+                R(bx + sw, Y, 1, 16, p.t1);
+            }
+        } else if (TH.enc === 'dune') {     // 모래언덕 — 봉긋한 둔덕
+            const dk = shade(p.g2, -22), md = p.g2, lt = shade(p.g2, 34);
+            R(X, Y + 10, 16, 6, dk);
+            R(X + 1, Y + 7, 14, 4, md);
+            R(X + 3, Y + 5, 10, 3, md);
+            R(X + 5, Y + 3, 6, 3, lt);
+            R(X + 4, Y + 5, 8, 1, lt);
+            R(X + 2, Y + 8, 5, 1, lt); R(X + 9, Y + 9, 5, 1, lt);
+            R(X, Y + 13, 16, 1, dk);
+            for (let k = 0; k < 3; k++) R(X + 1 + k * 6, Y + 11, 3, 1, shade(dk, -18));
+        } else if (TH.enc === 'ruin') {     // 무너진 돌더미
+            R(X + 1, Y + 7, 7, 6, p.w1); R(X + 8, Y + 4, 6, 9, p.w0);
+            R(X + 1, Y + 7, 7, 1, p.w0); R(X + 8, Y + 4, 6, 1, '#ffffff');
+            R(X + 2, Y + 13, 12, 2, p.w2);
+            R(X + 4, Y + 9, 2, 2, p.t1);
+        } else {                            // 수풀 / 덤불
+            for (let k = 0; k < 2; k++) {
+                const gx = X + 1 + k * 8, gy = Y + 5 + (k ? 3 : 0);
+                const sw = Math.sin(gameT * 2 + tx + ty + k) > 0 ? 0 : 1;
+                R(gx + sw, gy, 2, 3, p.t0); R(gx + 4 + sw, gy, 2, 3, p.t0);
+                R(gx, gy + 3, 7, 4, p.t1);
+                R(gx, gy + 6, 7, 1, p.t2);
+                R(gx + 1, gy + 4, 2, 1, p.t0);
+            }
         }
         return;
     }
 
-    // 평지 잔디
+    // 평지
+    if (TH.ground === 'sand') {
+        R(X, Y, 16, 16, p.g1);
+        for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+            const r = th(tx * 4 + i, ty * 4 + j, 3);
+            if (r > 0.78) R(X + i * 4, Y + j * 4 + 1, 4, 1, p.g0);
+            else if (r < 0.16) R(X + i * 4 + 1, Y + j * 4 + 2, 2, 1, p.g2);
+        }
+        if (th(tx, ty, 7) > 0.93) {   // 작은 돌
+            const sx = X + 4 + ((th(tx, ty, 8) * 7) | 0), sy = Y + 6 + ((th(tx, ty, 9) * 6) | 0);
+            R(sx, sy, 4, 3, p.g2); R(sx, sy, 4, 1, shade(p.g2, 26));
+        }
+        return;
+    }
     R(X, Y, 16, 16, p.g1);
     for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
         const r = th(tx * 4 + i, ty * 4 + j, 3);
@@ -765,7 +1147,7 @@ function drawGroundTile(tx, ty, p) {
         else if (r < 0.14) { R(X + i * 4 + 1, Y + j * 4 + 2, 1, 1, p.g2); R(X + i * 4 + 2, Y + j * 4 + 1, 1, 1, p.g2); }
     }
     const d = th(tx, ty, 7);
-    if (d > 0.9) {   // 꽃
+    if (d > 0.9) {
         const fx = X + 3 + ((th(tx, ty, 8) * 9) | 0), fy = Y + 4 + ((th(tx, ty, 9) * 8) | 0);
         const col = d > 0.95 ? p.f0 : p.f1;
         R(fx, fy + 2, 1, 2, p.g2);
@@ -774,39 +1156,129 @@ function drawGroundTile(tx, ty, p) {
     }
 }
 
-// ───────── 나무 ─────────
+// ───────── 나무 (도시마다 수종이 다르다) ─────────
 function drawTree(t, p) {
     const X = t.x * TS, Y = t.y * TS;
     R(X + 4, Y + 14, 8, 2, 'rgba(0,0,0,.25)');
-    sprite([
-        [X + 6, Y + 1, 4, 14, '#7a5230'],
-        [X + 4, Y - 18, 8, 4, p.tr1],
-        [X + 2, Y - 15, 12, 5, p.tr1],
-        [X + 1, Y - 11, 14, 7, p.tr1],
-        [X + 2, Y - 5, 12, 5, p.tr1],
-        [X + 4, Y - 1, 8, 3, p.tr1],
-    ], p.out);
-    R(X + 3, Y - 14, 4, 3, p.tr0); R(X + 2, Y - 10, 3, 3, p.tr0); R(X + 5, Y - 17, 3, 2, p.tr0);
-    R(X + 9, Y - 4, 4, 3, p.tr2); R(X + 10, Y - 10, 3, 3, p.tr2);
+    const sw = Math.sin(gameT * 1.1 + t.x) > 0 ? 0 : 1;
+    if (TH.tree === 'palm') {
+        sprite([[X + 6, Y - 4, 4, 19, '#a8834c'],
+                [X - 2 + sw, Y - 10, 8, 3, p.tr1], [X + 10 - sw, Y - 10, 8, 3, p.tr1],
+                [X - 3 + sw, Y - 7, 7, 3, p.tr1], [X + 12 - sw, Y - 7, 7, 3, p.tr1],
+                [X + 3, Y - 14, 10, 4, p.tr1]], p.out);
+        R(X + 6, Y - 11, 4, 3, '#c89a52');
+        for (let k = 0; k < 3; k++) R(X + 5 + k * 2, Y + 2 + k * 4, 2, 2, '#8a6a3a');
+    } else if (TH.tree === 'cypress') {
+        sprite([[X + 6, Y + 6, 4, 9, '#7a5230'],
+                [X + 5, Y - 20, 6, 8, p.tr1], [X + 4, Y - 13, 8, 9, p.tr1], [X + 5, Y - 5, 6, 7, p.tr1]], p.out);
+        R(X + 5, Y - 18, 2, 6, p.tr0); R(X + 9, Y - 10, 2, 7, p.tr2);
+    } else if (TH.tree === 'sakura') {
+        sprite([[X + 6, Y + 1, 4, 14, '#6b4a2c'],
+                [X + 4, Y - 17, 8, 4, '#ffb7d5'], [X + 2, Y - 14, 12, 5, '#ffb7d5'],
+                [X + 1, Y - 10, 14, 6, '#ffb7d5'], [X + 3, Y - 5, 10, 5, '#ffb7d5']], p.out);
+        R(X + 3, Y - 13, 4, 3, '#ffe0ee'); R(X + 10, Y - 4, 3, 3, '#f090b8');
+        R(X + 4, Y - 16, 2, 2, '#ffe0ee');
+        if (((gameT * 2 + t.x) | 0) % 5 === 0) R(X + 14, Y - 2, 2, 2, '#ffd0e4');
+    } else if (TH.tree === 'pine') {
+        sprite([[X + 6, Y + 6, 4, 9, '#5c4330'],
+                [X + 6, Y - 20, 4, 5, p.tr1], [X + 4, Y - 16, 8, 5, p.tr1],
+                [X + 2, Y - 11, 12, 5, p.tr1], [X + 1, Y - 6, 14, 6, p.tr1]], p.out);
+        R(X + 5, Y - 15, 3, 3, p.tr0); R(X + 9, Y - 5, 4, 3, p.tr2);
+    } else {
+        sprite([[X + 6, Y + 1, 4, 14, '#7a5230'],
+                [X + 4, Y - 18, 8, 4, p.tr1], [X + 2, Y - 15, 12, 5, p.tr1],
+                [X + 1, Y - 11, 14, 7, p.tr1], [X + 2, Y - 5, 12, 5, p.tr1], [X + 4, Y - 1, 8, 3, p.tr1]], p.out);
+        R(X + 3, Y - 14, 4, 3, p.tr0); R(X + 2, Y - 10, 3, 3, p.tr0); R(X + 5, Y - 17, 3, 2, p.tr0);
+        R(X + 9, Y - 4, 4, 3, p.tr2); R(X + 10, Y - 10, 3, 3, p.tr2);
+    }
     R(X + 7, Y + 5, 2, 9, '#5c3c22');
 }
 
-// ───────── 길가 소품 ─────────
-function drawProp(pr, p) {
-    const X = pr.x * TS, Y = pr.y * TS;
-    if (pr.kind === 0) {           // 가로등
-        sprite([[X + 7, Y + 2, 2, 13, '#6c7a8c'], [X + 5, Y - 4, 6, 6, '#fff0b0']], p.out);
-        R(X + 6, Y - 3, 2, 2, '#ffffff');
-        R(X + 4, Y + 14, 8, 2, 'rgba(0,0,0,.22)');
-    } else if (pr.kind === 1) {    // 벤치
-        sprite([[X + 2, Y + 7, 12, 3, '#b07a48'], [X + 2, Y + 2, 12, 2, '#b07a48'],
-                [X + 3, Y + 10, 2, 4, '#7a5230'], [X + 11, Y + 10, 2, 4, '#7a5230']], p.out);
-        R(X + 2, Y + 7, 12, 1, '#d09a68');
-    } else {                       // 화분
-        sprite([[X + 5, Y + 8, 6, 6, '#c87a52'], [X + 6, Y + 3, 4, 5, p.tr1]], p.out);
-        R(X + 5, Y + 8, 6, 1, '#e8a070');
-        R(X + 6, Y + 2, 2, 2, p.f0); R(X + 9, Y + 3, 2, 2, p.f0);
+// ───────── 도시 장식물 ─────────
+function drawDeco(d, p) {
+    const X = d.x * TS, Y = d.y * TS;
+    switch (d.kind) {
+        case 'torii': {   // 길 위를 가로지르는 붉은 문
+            const w = TS * 4;
+            sprite([[X - 4, Y - 26, w + 8, 5, '#c92a2a'],
+                    [X + 2, Y - 19, w - 4, 4, '#c92a2a'],
+                    [X + 1, Y - 22, 5, 30, '#c92a2a'],
+                    [X + w - 6, Y - 22, 5, 30, '#c92a2a']], p.out);
+            R(X + 1, Y - 21, 2, 28, '#e86a6a'); R(X + w - 6, Y - 21, 2, 28, '#e86a6a');
+            R(X - 6, Y - 29, w + 12, 3, '#8b1f1f');
+            R(X - 4, Y - 26, w + 8, 1, '#e86a6a');
+            break;
+        }
+        case 'fountain':
+            sprite([[X - 2, Y + 2, 20, 12, p.w1], [X + 5, Y - 10, 6, 13, p.w0], [X + 2, Y - 14, 12, 4, p.w0]], p.out);
+            R(X, Y + 4, 16, 7, p.a1);
+            for (let k = 0; k < 3; k++) {
+                const o = ((gameT * 8 + k * 3) | 0) % 6;
+                R(X + 3 + k * 5, Y - 8 + o, 2, 3, p.a0);
+            }
+            R(X + 6, Y - 13, 4, 2, '#ffffff');
+            break;
+        case 'column':
+            sprite([[X + 3, Y - 20, 10, 24, p.w0]], p.out);
+            for (let k = 0; k < 5; k++) R(X + 5 + (k & 1) * 3, Y - 18 + k * 5, 2, 4, p.w2);
+            R(X + 1, Y - 23, 14, 4, p.w1); R(X + 1, Y - 23, 14, 1, '#ffffff');
+            R(X + 2, Y + 2, 12, 3, p.w1);
+            break;
+        case 'tent': {
+            const col = ((d.x + d.y) & 1) ? '#c9553f' : '#3f7fa8';
+            sprite([[X - 2, Y - 2, 20, 12, '#e8d9b0'], [X - 4, Y - 10, 24, 9, col]], p.out);
+            for (let k = 0; k < 5; k++) R(X - 3 + k * 5, Y - 10, 2, 9, '#fff4e2');
+            R(X - 2, Y + 2, 6, 6, '#b08848'); R(X + 10, Y + 2, 6, 6, '#b08848');
+            break;
+        }
+        case 'lantern':
+            sprite([[X + 5, Y - 2, 6, 8, '#f0c04a'], [X + 6, Y + 6, 4, 8, '#5c4330']], p.out);
+            R(X + 5, Y, 6, 1, '#8a5a1a'); R(X + 5, Y + 3, 6, 1, '#8a5a1a');
+            R(X + 6, Y - 1, 2, 2, '#fff0b0');
+            break;
+        case 'lamp':
+            sprite([[X + 6, Y - 10, 4, 24, '#6c7a8c'], [X + 4, Y - 16, 8, 7, '#fff0b0']], p.out);
+            R(X + 5, Y - 15, 3, 3, '#ffffff');
+            break;
+        case 'hydrant':
+            sprite([[X + 5, Y + 4, 6, 10, '#d93b3b'], [X + 4, Y + 1, 8, 4, '#d93b3b'],
+                    [X + 2, Y + 7, 12, 3, '#b02a2a']], p.out);
+            R(X + 6, Y + 2, 2, 2, '#ff8a8a');
+            break;
+        case 'bench':
+            sprite([[X + 2, Y + 7, 12, 3, '#b07a48'], [X + 2, Y + 2, 12, 2, '#b07a48'],
+                    [X + 3, Y + 10, 2, 4, '#7a5230'], [X + 11, Y + 10, 2, 4, '#7a5230']], p.out);
+            R(X + 2, Y + 7, 12, 1, '#d09a68');
+            break;
+        default:   // 화분
+            sprite([[X + 5, Y + 8, 6, 6, '#c87a52'], [X + 6, Y + 3, 4, 5, p.tr1]], p.out);
+            R(X + 5, Y + 8, 6, 1, '#e8a070');
+            R(X + 6, Y + 2, 2, 2, p.f0); R(X + 9, Y + 3, 2, 2, p.f0);
     }
+}
+
+// ───────── NPC ─────────
+function drawNpcPix(n) {
+    const X = Math.round(n.x) - 6, Y = Math.round(n.y) - 18;
+    const L = n.look, bob = (Math.sin(gameT * 1.8 + n.x) > 0.6) ? 1 : 0;
+    R(X + 2, Y + 18, 8, 2, 'rgba(0,0,0,.22)');
+    const kid = L.t === 'kid', oy = Y + (kid ? 4 : 0) + bob;
+    const parts = [
+        [X + 1, oy + 0, 10, 9, L.hair],
+        [X + 2, oy + 3, 8, 6, SK.skin],
+        [X + 1, oy + 0, 10, 4, L.hair],
+        [X + 3, oy + 5, 2, 2, SK.eye], [X + 7, oy + 5, 2, 2, SK.eye],
+        [X + 3, oy + 10, 6, 4, L.cloth],
+        [X + 2, oy + 13, 8, 3, L.cloth],
+        [X + 1, oy + 10, 2, 4, SK.skin], [X + 9, oy + 10, 2, 4, SK.skin],
+        [X + 3, oy + 16, 2, 2, '#46304e'], [X + 7, oy + 16, 2, 2, '#46304e'],
+    ];
+    if (L.t === 'woman') { parts.push([X + 0, oy + 2, 2, 8, L.hair], [X + 10, oy + 2, 2, 8, L.hair]); }
+    if (L.t === 'old') { parts.push([X + 2, oy + 8, 8, 2, '#dcdcdc'], [X + 11, oy + 10, 2, 8, '#8a6a4a']); }
+    if (L.t === 'man') { parts.push([X + 1, oy + 0, 10, 2, shade(L.hair, -20)]); }
+    sprite(parts, SK.out);
+    R(X + 4, oy + 8, 4, 1, '#c08070');
+    if (((gameT * 1.2 + n.x) | 0) % 7 === 0) { R(X + 11, oy - 4, 2, 4, '#fff8ef'); R(X + 10, oy - 5, 4, 2, '#fff8ef'); }
 }
 
 // ───────── 건물 ─────────
@@ -919,15 +1391,7 @@ function drawWorld() {
     const x0 = Math.max(0, (cam.x / TS | 0) - 1), x1 = Math.min(MW, ((cam.x + VW) / TS | 0) + 2);
     const y0 = Math.max(0, (cam.y / TS | 0) - 2), y1 = Math.min(MH, ((cam.y + VH) / TS | 0) + 3);
 
-    const props = [];
-    for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) {
-        drawGroundTile(tx, ty, p);
-        if (tileAt(tx, ty) === T.ROAD && th(tx, ty, 60) > 0.955) {
-            const near = tileAt(tx, ty + 1) === T.GRASS || tileAt(tx, ty + 1) === T.GROUND
-                      || tileAt(tx - 1, ty) === T.GROUND || tileAt(tx + 1, ty) === T.GROUND;
-            if (near) props.push({ x: tx, y: ty, kind: (th(tx, ty, 61) * 3) | 0 });
-        }
-    }
+    for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) drawGroundTile(tx, ty, p);
 
     drawLandmark(c, p);
 
@@ -951,7 +1415,11 @@ function drawWorld() {
         if (t.y * TS < cam.y - TS * 3 || t.y * TS > cam.y + VH + TS * 2) return;
         items.push({ y: (t.y + 1) * TS, f: () => drawTree(t, p) });
     });
-    props.forEach(pr => items.push({ y: (pr.y + 1) * TS, f: () => drawProp(pr, p) }));
+    (MAP.decos || []).forEach(d => {
+        if (d.y * TS < cam.y - TS * 3 || d.y * TS > cam.y + VH + TS * 2) return;
+        items.push({ y: (d.y + 1) * TS, f: () => drawDeco(d, p) });
+    });
+    npcs.forEach(n => items.push({ y: n.y, f: () => drawNpcPix(n) }));
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
     if (!G.boss[c.id]) {
@@ -1014,7 +1482,7 @@ function drawStick() {
     ctx.restore();
 }
 function drawMiniMap() {
-    const sc = 2.1, mw = MW * sc, mh = MH * sc, X = 12, Y = H - mh - 20;
+    const sc = 2.1, mw = MW * sc, mh = MH * sc, X = 12, Y = H - mh - (TK ? Math.min(150, H * 0.22) + 34 : 20);
     ctx.save();
     ctx.globalAlpha = 0.92;
     ctx.fillStyle = 'rgba(42,28,24,.8)';
@@ -1891,7 +2359,16 @@ function loop(ts) {
     if (!running) return;
     const dt = Math.min(0.05, (ts - lastT) / 1000);
     lastT = ts; gameT += dt;
-    if (scene === 'world') { updateWorld(dt); drawWorld(); }
+    if (scene === 'world') {
+        if (TK) {
+            const full = TK.npc.lines[TK.i];
+            if (TK.ch < full.length) TK.ch = Math.min(full.length, TK.ch + dt * 42);
+            updatePops(dt);
+            document.getElementById('acts').style.display = 'none';
+        } else updateWorld(dt);
+        drawWorld();
+        if (TK) drawTalkBox();
+    }
     else if (scene === 'battle') { updateBattle(dt); if (B) drawBattle(); }
     saveT += dt;
     if (saveT > 6) { saveT = 0; save(); }
