@@ -619,8 +619,9 @@ function activePets() {
     return party().map(k => {
         const p = (G.pets || []).find(x => x.kind === k);
         const db = p && PET_DB[p.kind];
-        return db ? { kind:p.kind, n:p.n, legend:p.legend, e:db.e,
-                      v: db.v * (p.legend ? 2 : 1) * (1 + (p.lv - 1) * 0.2), d: db.d, lv: p.lv } : null;
+        const tg = p ? (p.tier != null ? p.tier : (p.legend ? 1 : 0)) : 0;
+        return db ? { kind:p.kind, n:p.n, legend:p.legend, tier:tg, e:db.e,
+                      v: db.v * (TIER_PV[tg] || 1) * (1 + (p.lv - 1) * 0.2), d: db.d, lv: p.lv } : null;
     }).filter(Boolean);
 }
 function activePet() { return activePets()[0] || null; }
@@ -628,12 +629,47 @@ function petBonus(e) { return activePets().reduce((a, p) => a + (p.e === e ? p.v
 
 // 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
 function legendRate() { return 0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0); }
-const LEGEND_PRE = ['✨전설의 ', '👑황금 ', '🌟신화의 '];
+// 등급마다 색이 다르다. 숫자가 아니라 "색"으로 바로 알아보게.
+const TIERS = [null,
+    { id:1, pre:'✨전설의 ',  n:'전설', out:'#ffb000', spark:'#fff2a8', aura:'#ffd84d', ui:'#c9881a',
+      mul:2.8, atk:1.50, def:1.40, exp:8,  gold:10, w:60, cat:0.42 },
+    { id:2, pre:'👑황금 ',   n:'황금', out:'#ff7a1a', spark:'#ffe08a', aura:'#ff9e3d', ui:'#d1610c',
+      mul:3.6, atk:1.70, def:1.55, exp:15, gold:24, w:28, cat:0.30 },
+    { id:3, pre:'🌟신화의 ',  n:'신화', out:'#b14bff', spark:'#8ce7ff', aura:'#e0a6ff', ui:'#8a2be2',
+      mul:4.8, atk:1.95, def:1.70, exp:28, gold:45, w:12, cat:0.20, rainbow:true,
+      cyc:['#b14bff','#d98cff','#8ce7ff','#ffffff','#7b2fe0','#c77dff'] },
+];
+TIERS[1].cyc = ['#ffb000','#ffd84d'];
+TIERS[2].cyc = ['#ff7a1a','#ffb43d','#ffe08a'];
+const RAINBOW = ['#ff6b8a','#ffb000','#ffe066','#51cf66','#4dabf7','#b14bff'];
+const TIER_PV = [1, 2, 2.6, 3.4];                 // 펫 능력치 배수
+function tierOf(t) { if (t === true) t = 1; return TIERS[t | 0] || null; }
+function tierCol(t, time) {                        // 등급이 높을수록 빠르게 번뜩인다
+    const T2 = tierOf(t); if (!T2) return null;
+    if (!T2.rainbow) return T2.out;
+    return T2.cyc[((time * 9) | 0) % T2.cyc.length];
+}
+function tierGlow(t, time, i) {                    // 오라용 색 (한 칸씩 어긋나게)
+    const T2 = tierOf(t); if (!T2) return null;
+    if (!T2.cyc) return T2.aura;
+    return T2.cyc[(((time * 7) | 0) + (i | 0)) % T2.cyc.length];
+}
+function rollTier() {
+    const tot = TIERS.slice(1).reduce((a, x) => a + x.w, 0);
+    let r = Math.random() * tot;
+    for (let i = 1; i < TIERS.length; i++) { r -= TIERS[i].w; if (r <= 0) return i; }
+    return 1;
+}
+function tierTag(t) {
+    const T2 = tierOf(t); if (!T2) return '';
+    return ' <span style="color:' + T2.ui + ';font-weight:900;font-size:.78em">' + T2.n + '</span>';
+}
 
 function catchChance(e) {
     const hpR = e.hp / e.max;
     let c = 0.2 + (1 - hpR) * 0.62;
-    if (e.legend) c *= 0.4;
+    const T2 = tierOf(e.tier != null ? e.tier : e.legend);
+    if (T2) c *= T2.cat;
     if (G.charm) c += 0.12;
     return Math.max(0.05, Math.min(0.95, c));
 }
@@ -648,9 +684,17 @@ function tryCatch() {
     if (ok) {
         const db = PET_DB[B.e.draw];
         const have = (G.pets || []).find(x => x.kind === B.e.draw);
-        if (have) { have.lv++; blog('🪄 또 잡았다! ' + have.n + ' Lv' + have.lv + '!'); }
+        const ct = B.e.tier | 0, CT = tierOf(ct);
+        if (have) {
+            have.lv++;
+            if (ct > (have.tier | 0)) {            // 더 높은 등급을 잡으면 펫도 승급한다
+                have.tier = ct; have.legend = true;
+                have.n = CT.pre.trim().slice(0, 2).trim() + (db ? db.n : have.n).replace(/^[^가-힣a-zA-Z]+/, '');
+                blog('🪄 ' + have.n + ' — ' + CT.n + ' 등급으로 빛난다! Lv' + have.lv + '!');
+            } else blog('🪄 또 잡았다! ' + have.n + ' Lv' + have.lv + '!');
+        }
         else {
-            const np = { kind: B.e.draw, n: (B.e.legend ? '✨' : '') + (db ? db.n : B.e.n), lv: 1, legend: !!B.e.legend };
+            const np = { kind: B.e.draw, n: (CT ? CT.pre.trim().slice(0, 2).trim() : '') + (db ? db.n : B.e.n), lv: 1, legend: ct > 0, tier: ct };
             G.pets.push(np);
             if (party().length < PARTY_MAX) party().push(np.kind);
             blog('🪄 ' + np.n + ' 을(를) 잡았다!');
@@ -1492,19 +1536,77 @@ function syncStaff() {
     while (staff.length < n) {
         const d = MAP.door;
         staff.push({ x: P.x + (Math.random() - 0.5) * 40, y: P.y + 20 + Math.random() * 20,
-                     node: null, mode: 'seek', cookT: 0,
+                     node: null, mode: 'seek', cookT: 0, path: null, pi: 0, repathT: 0, stuck: 0, resets: 0,
+                     goalX: 0, goalY: 0,
                      carry: 0, bob: Math.random() * 6, look: STAFF_LOOK[staff.length % 3] });
     }
     while (staff.length > n) staff.pop();
 }
+// 타일 격자 위 최단경로 (너비 우선) — 직선으로만 가면 건물 모서리에 끼인다
+function bfsPath(sx, sy, tx, ty) {
+    if (sx === tx && sy === ty) return [];
+    if (!WALKABLE[tileAt(tx, ty)]) return null;
+    const N = MW * MH, start = sy * MW + sx, goal = ty * MW + tx;
+    const prev = new Int32Array(N).fill(-1), seen = new Uint8Array(N);
+    const q = new Int32Array(N); let head = 0, tail = 0;
+    q[tail++] = start; seen[start] = 1;
+    let found = false;
+    while (head < tail) {
+        const cur = q[head++];
+        if (cur === goal) { found = true; break; }
+        const cx = cur % MW, cy = (cur / MW) | 0;
+        for (let d = 0; d < 4; d++) {
+            const nx = cx + [1, -1, 0, 0][d], ny = cy + [0, 0, 1, -1][d];
+            if (nx < 1 || ny < 1 || nx >= MW - 1 || ny >= MH - 1) continue;
+            const ni = ny * MW + nx;
+            if (seen[ni] || !WALKABLE[MAP.g[ni]]) continue;
+            seen[ni] = 1; prev[ni] = cur; q[tail++] = ni;
+        }
+    }
+    if (!found) return null;
+    const path = [];
+    let c = goal;
+    while (c !== -1 && c !== start) { path.push({ x: c % MW, y: (c / MW) | 0 }); c = prev[c]; }
+    return path.reverse();
+}
+function staffRepath(st, tx, ty) {
+    st.path = bfsPath(Math.floor(st.x / TS), Math.floor(st.y / TS), Math.floor(tx / TS), Math.floor(ty / TS));
+    st.pi = 0;
+    st.repathT = 1.2;
+}
 function moveStaff(st, tx, ty, dt) {
-    const dx = tx - st.x, dy = ty - st.y, d = Math.hypot(dx, dy) || 1;
+    st.repathT = (st.repathT || 0) - dt;
+    // 목표가 바뀌었거나 길이 끊겼으면 다시 계산
+    if (!st.path || st.repathT <= 0 || st.pi >= st.path.length) {
+        if (st.goalX !== tx || st.goalY !== ty || !st.path || st.repathT <= 0) {
+            st.goalX = tx; st.goalY = ty;
+            staffRepath(st, tx, ty);
+        }
+    }
+    let gx = tx, gy = ty;
+    if (st.path && st.path.length) {
+        if (st.pi >= st.path.length) st.pi = st.path.length - 1;
+        const w = st.path[st.pi];
+        gx = w.x * TS + TS / 2; gy = w.y * TS + TS / 2;
+        if (Math.hypot(gx - st.x, gy - st.y) < 7) { st.pi++; if (st.pi < st.path.length) { const w2 = st.path[st.pi]; gx = w2.x * TS + TS / 2; gy = w2.y * TS + TS / 2; } }
+    }
+    const dx = gx - st.x, dy = gy - st.y, d = Math.hypot(dx, dy) || 1;
     const sp = 108 * dt;
     const nx = st.x + dx / d * sp, ny = st.y + dy / d * sp;
+    const moved0 = st.x + st.y;
     if (canWalkAt(nx, st.y, 4)) st.x = nx;
-    else st.y += (Math.random() - 0.5) * 20 * dt;     // 벽에 걸리면 살짝 비켜선다
     if (canWalkAt(st.x, ny, 4)) st.y = ny;
-    else st.x += (Math.random() - 0.5) * 20 * dt;
+    // 끼임 감지 — 1.2초 동안 거의 안 움직였으면 길을 새로 뽑고, 그래도 안 되면 가게 앞으로 복귀
+    if (Math.abs(st.x + st.y - moved0) < sp * 0.25) st.stuck = (st.stuck || 0) + dt;
+    else st.stuck = 0;
+    if (st.stuck > 1.2) {
+        st.stuck = 0; st.node = null; st.path = null;
+        if ((st.resets = (st.resets || 0) + 1) > 2) {
+            st.resets = 0;
+            st.x = P.x + (Math.random() - 0.5) * 30;
+            st.y = P.y + 18 + Math.random() * 14;
+        }
+    }
 }
 function staffCook(st) {
     const c = city(), lv = upLv('shop');
@@ -1538,7 +1640,7 @@ function updateStaff(dt) {
                 const d = Math.hypot(n.x - P.x, n.y - P.y) + Math.hypot(n.x - st.x, n.y - st.y) * 0.5;
                 if (d < bd && !staff.some(o => o !== st && o.node === n)) { bd = d; best = n; }
             }
-            st.node = best;
+            if (st.node !== best) { st.node = best; st.path = null; }
         }
         if (!st.node) continue;
         if (Math.hypot(st.node.x - st.x, st.node.y - st.y) < 13) {
@@ -2132,7 +2234,10 @@ function drawWorld() {
     staff.forEach(st => items.push({ y: st.y, f: () => drawStaff(st) }));
     party().forEach((k, i) => {
         const pp = petPs[i];
-        if (pp) items.push({ y: pp.y - 1, f: () => drawMobPix(k, pp.x, pp.y + 4, 1, gameT, 0) });
+        if (!pp) return;
+        const rec = (G.pets || []).find(x => x.kind === k);
+        const tg = rec ? (rec.tier != null ? rec.tier : (rec.legend ? 1 : 0)) : 0;
+        items.push({ y: pp.y - 1, f: () => drawMobPix(k, pp.x, pp.y + 4, 1, gameT, 0, tg) });
     });
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
@@ -2389,19 +2494,57 @@ function mobParts(kind, t) {
         }
     }
 }
-function drawMobPix(kind, cx, cy, s, t, hurt, legend) {
+function drawMobPix(kind, cx, cy, s, t, hurt, tier) {
     t = t || 0;
     if (hurt > 0 && ((t * 24) | 0) % 2) return;
+    const T2 = tierOf(tier);
     const bob = (Math.sin(t * 2.2) * 1.2) | 0;
     const ox = Math.round(cx) - 10 * s, oy = Math.round(cy) - 21 * s + bob * s;
-    R(ox + 2 * s, oy + 21 * s, 16 * s, 2 * s, 'rgba(0,0,0,.22)');
-    sprite(mobParts(kind, t), legend ? '#ffb000' : SK.out, s, ox, oy);
-    if (legend) {   // 전설 — 금빛 반짝임
-        for (let i = 0; i < 5; i++) {
-            const a = t * 2 + i * 1.25;
-            const sx2 = ox + 10 * s + Math.cos(a) * 15 * s, sy2 = oy + 10 * s + Math.sin(a) * 13 * s;
-            if (((t * 6 + i) | 0) % 3) R(sx2, sy2, 2 * s, 2 * s, '#fff2a8');
+    const mx = ox + 10 * s, my = oy + 11 * s;
+    if (T2) {       // 등급 오라 — 스프라이트 뒤에 먼저 깔린다
+        const col = tierGlow(tier, t, 0);
+        const aur = s >= 2 ? 1 : 0.68;               // 따라다니는 펫은 오라도 작게
+        px.globalAlpha = 0.14 + T2.id * 0.035 + Math.sin(t * 4) * 0.04;
+        const rr = Math.round((12 + T2.id) * aur);   // 은은하게 번지는 빛무리
+        for (let yy = -rr; yy <= rr; yy++) {
+            const w = Math.round(Math.sqrt(Math.max(0, 1 - (yy / rr) * (yy / rr))) * (rr - 1));
+            if (w > 0) R(mx - w * s, my + yy * s, w * 2 * s, s, col);
         }
+        px.globalAlpha = 1;
+        for (let k = 0; k < T2.id; k++) {            // 도는 호 — 꽉 찬 원보다 훨씬 간지난다
+            const r = (11 + k * 2.6) * s * aur + Math.sin(t * 3 - k * 0.9) * 1.3 * s;
+            const sp = t * (1.6 + k * 0.7) * (k % 2 ? -1 : 1);
+            const n2 = Math.max(10, (r / s * 1.6) | 0);
+            for (let a = 0; a < n2; a++) {
+                if ((a / n2 + 0.001) % 0.34 > 0.2) continue;   // 끊긴 호
+                const an = a / n2 * Math.PI * 2 + sp;
+                R(mx + Math.cos(an) * r, my + Math.sin(an) * r * 0.92, s, s, tierGlow(tier, t, k));
+            }
+        }
+        const seg = 12 + T2.id * 4;                  // 발밑을 도는 등급 링
+        for (let a = 0; a < seg; a++) {
+            const an = a / seg * Math.PI * 2 + t * (1 + T2.id * 0.25);
+            const sy3 = Math.sin(an);
+            R(mx + Math.cos(an) * 14 * s * aur, oy + 21 * s + sy3 * 4 * s * aur, s, s + (sy3 > 0 ? s : 0), tierGlow(tier, t, a));
+        }
+    }
+    R(ox + 2 * s, oy + 21 * s, 16 * s, 2 * s, 'rgba(0,0,0,.22)');
+    sprite(mobParts(kind, t), T2 ? tierCol(tier, t) : SK.out, s, ox, oy);
+    if (T2) {       // 등급 반짝임 — 높을수록 많고 빠르다
+        const n = 4 + T2.id * 2;
+        for (let i = 0; i < n; i++) {
+            const a = t * (2 + T2.id * 0.5) + i * (Math.PI * 2 / n);
+            const sx2 = ox + 10 * s + Math.cos(a) * 15 * s, sy2 = oy + 10 * s + Math.sin(a) * 13 * s;
+            if (((t * 6 + i) | 0) % 3) {
+                R(sx2, sy2, 2 * s, 2 * s, T2.spark);
+                if (T2.id >= 2) R(sx2 + s * 0.5, sy2 - s, s, s, '#ffffff');
+            }
+        }
+        if (T2.id >= 3) {
+            pxStar(mx, oy - 2 * s, (3 + Math.abs(Math.sin(t * 4)) * 2) | 0, '#ffffff');
+            pxStar(mx - 13 * s, oy + 3 * s, 2, T2.spark);
+            pxStar(mx + 13 * s, oy + 6 * s, 2, T2.spark);
+        } else if (T2.id >= 2) pxStar(mx, oy - 1 * s, (2 + Math.abs(Math.sin(t * 3)) * 1.5) | 0, '#fff6cf');
     }
 }
 
@@ -2471,26 +2614,31 @@ function startBattle(bossOf) {
         const m = c.mobs[Math.floor(Math.random() * c.mobs.length)];
         const r = 0.88 + Math.random() * 0.3;
         const k = mobScale(c);
-        const legend = Math.random() < legendRate();
-        const L = legend ? 2.8 : 1;
-        const hp = Math.round(m.hp * r * k * L);
-        e = { n: (legend ? LEGEND_PRE[(Math.random() * 3) | 0] : '') + m.n, draw: m.draw, legend,
-              hp, max: hp, atk: Math.round(m.atk * k * (legend ? 1.5 : 1)), def: Math.round(m.def * k * (legend ? 1.4 : 1)),
-              exp: Math.round(m.exp * (1 + (k - 1) * 0.5) * (legend ? 8 : 1)),
-              gold: Math.round(m.gold * (1 + (k - 1) * 0.5) * (legend ? 10 : 1)), boss: false };
+        const tier = Math.random() < legendRate() ? rollTier() : 0;
+        const T2 = tierOf(tier);
+        const hp = Math.round(m.hp * r * k * (T2 ? T2.mul : 1));
+        e = { n: (T2 ? T2.pre : '') + m.n, draw: m.draw, legend: tier > 0, tier,
+              hp, max: hp, atk: Math.round(m.atk * k * (T2 ? T2.atk : 1)), def: Math.round(m.def * k * (T2 ? T2.def : 1)),
+              exp: Math.round(m.exp * (1 + (k - 1) * 0.5) * (T2 ? T2.exp : 1)),
+              gold: Math.round(m.gold * (1 + (k - 1) * 0.5) * (T2 ? T2.gold : 1)), boss: false };
     }
     B = {
         e, phase: 'intro', t: 0, ringT: 0, menu: 'root', btns: [],
         log: [bossOf ? bossOf.intro : '앗! ' + jo(e.n, '이', '가') + ' 나타났다!'],
         say: null, fxT: 0, fxKind: '', flash: 0, pendDmg: null, pendHeal: 0, masterT: 0, masterS: '',
         eShow: 1, pShow: 1,
-        guard: 0, edeb: 0, estun: 0, hurtP: 0, hurtE: 0, shake: 0, busy: 0, result: null,
+        guard: 0, edeb: 0, estun: 0, hurtP: 0, hurtE: 0, shake: 0, busy: 0, result: null, tierT: 0,
     };
     scene = 'battle';
     if (e.legend) {
-        B.log = ['⭐ 공기가 달라졌다... ' + e.n + ' 이(가) 나타났다!'];
-        B.flash = 0.9;
-        [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, 0.18, { delay: i * 0.08, type: 'triangle', vol: 0.16 }));
+        const T3 = tierOf(e.tier);
+        B.log = [(T3.id >= 3 ? '🌟 세상이 멈췄다...!! ' : T3.id >= 2 ? '👑 눈이 부시다...! ' : '⭐ 공기가 달라졌다... ') +
+                 jo(e.n, '이', '가') + ' 나타났다!'];
+        B.flash = 0.7 + T3.id * 0.25;
+        B.tierT = 1.5 + T3.id * 0.35;
+        const base = [523, 659, 784, 1047, 1319, 1568];
+        base.slice(0, 3 + T3.id).concat(T3.id >= 3 ? [2093, 2637] : []).forEach((f, i) =>
+            tone(f, 0.18 + T3.id * 0.03, { delay: i * 0.075, type: T3.id >= 3 ? 'square' : 'triangle', vol: 0.15 + T3.id * 0.02 }));
     } else if (!bossOf && MOB_SAY[e.draw]) B.log.push('💢 "' + MOB_SAY[e.draw] + '"');
     S.encount();
     document.getElementById('hud').style.opacity = '0';
@@ -2720,6 +2868,7 @@ function updateBattle(dt) {
     updateFx(dt);
     updateEF(dt);
     if (B.masterT > 0) B.masterT -= dt;
+    if (B.tierT > 0) B.tierT -= dt;
     // HP바가 뚝 떨어지지 않고 스르륵 줄어든다
     const et = B.e.hp / B.e.max, pt = G.hp / maxHp();
     B.eShow += (et - B.eShow) * Math.min(1, dt * 6);
@@ -2830,7 +2979,7 @@ function drawBattle() {
     platformPix(ex, ey + 3, 44 * (es / 2), p);
     platformPix(pxx, pyy + 3, 42, p);
 
-    if (B.e.hp > 0 || B.result !== 'win') drawMobPix(B.e.draw, ex, ey, es, B.t, B.hurtE, B.e.legend);
+    if (B.e.hp > 0 || B.result !== 'win') drawMobPix(B.e.draw, ex, ey, es, B.t, B.hurtE, B.e.tier != null ? B.e.tier : B.e.legend);
     // 대기 중이던 데미지 숫자를 화면 좌표로 띄운다
     if (B.pendDmg) {
         const d = B.pendDmg; B.pendDmg = null;
@@ -2842,6 +2991,19 @@ function drawBattle() {
     if (B.fxT > 0 && Math.random() < 0.6) fx(pxx + 8, pyy - 14, B.fxKind, 2);
     drawFx();
     if (B.flash > 0) { px.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, B.flash) + ')'; px.fillRect(-20, 0, VW + 40, VH); }
+    if (B.tierT > 0) {                 // 등급 연출 — 색 광선이 화면을 쓸고 지나간다
+        const ET2 = tierOf(B.e.tier);
+        if (ET2) {
+            const a3 = Math.min(1, B.tierT / 1.4);
+            const col2 = tierGlow(B.e.tier, B.t, 0);
+            px.globalAlpha = 0.28 * a3;
+            for (let i = 0; i < 7; i++) {
+                const yy = ((i * 29 + B.t * 70) % (vPanelY + 24)) - 12;
+                px.fillStyle = col2; px.fillRect(-20, yy | 0, VW + 40, 2);
+            }
+            px.globalAlpha = 1;
+        }
+    }
 
     if (B.phase === 'intro') {
         const k = Math.min(1, B.ringT / 0.75);
@@ -2893,11 +3055,38 @@ function drawBattle() {
         ctx.fillStyle = '#e8597a'; ctx.fillText('🔥 ' + B.masterS, W / 2, H * 0.3);
         ctx.globalAlpha = 1;
     }
+    if (B.tierT > 0) {
+        const ET3 = tierOf(B.e.tier);
+        if (ET3) {
+            const a4 = Math.min(1, B.tierT / 0.5);
+            const pop = Math.min(1, (((ET3.id >= 3 ? 1.85 : ET3.id >= 2 ? 1.5 : 1.5) - B.tierT) / 0.22));
+            ctx.globalAlpha = a4;
+            ctx.textAlign = 'center';
+            ctx.font = 'bold ' + Math.round((19 + ET3.id * 4) * Math.max(0.2, pop)) + 'px sans-serif';
+            const cc = ET3.rainbow ? tierCol(B.e.tier, B.t) : ET3.ui;
+            const yy2 = H * 0.135;
+            ctx.lineWidth = 8; ctx.strokeStyle = '#fff8ef';
+            ctx.strokeText(ET3.pre.trim() + ' 등장!', W / 2, yy2);
+            ctx.fillStyle = cc; ctx.fillText(ET3.pre.trim() + ' 등장!', W / 2, yy2);
+            ctx.font = 'bold 11.5px sans-serif'; ctx.fillStyle = 'rgba(90,64,56,.8)';
+            ctx.fillText(ET3.n + ' 등급 · 경험치 ×' + ET3.exp + ' · 돈 ×' + ET3.gold, W / 2, yy2 + 18);
+            ctx.globalAlpha = 1;
+        }
+    }
     drawDmg();
     const bw = Math.min(214, W * 0.54);
     card(W - bw - 14, 14, bw, 50, 14, p.r2);
-    ctx.fillStyle = '#5d4038'; ctx.font = 'bold 13.5px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(B.e.n + (B.e.boss ? ' 👑' : ''), W - bw - 2, 34);
+    const ET = tierOf(B.e.tier != null ? B.e.tier : B.e.legend);
+    ctx.font = 'bold 13.5px sans-serif'; ctx.textAlign = 'left';
+    if (ET) {
+        ctx.lineWidth = 3.5; ctx.strokeStyle = '#fff8ef';
+        ctx.strokeText(B.e.n, W - bw - 2, 34);
+        ctx.fillStyle = ET.rainbow ? tierCol(B.e.tier, B.t) : ET.ui;
+        ctx.fillText(B.e.n, W - bw - 2, 34);
+    } else {
+        ctx.fillStyle = '#5d4038';
+        ctx.fillText(B.e.n + (B.e.boss ? ' 👑' : ''), W - bw - 2, 34);
+    }
     bar(W - bw - 2, 42, bw - 24, 10, B.eShow, '#ff6b8a', '#ffb067');
     if (B.edeb > 0) { ctx.fillStyle = '#b06a1f'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('공격력↓', W - bw - 2, 62); }
 
@@ -2952,8 +3141,11 @@ function drawBattle() {
             mk(18 + (w3 + gap) * 2, by, w3, bh, '🏃 도망', null, tryRun, false, 2);
         }
     } else if (B.menu === 'skill') {
-        const sk = mySkills(), w2 = (fullW - gap) / 2, rh = bh * 0.78;
-        sk.slice(0, 6).forEach((s2, i) => {
+        const sk = mySkills(), w2 = (fullW - gap) / 2;
+        const rowsN = Math.ceil(sk.length / 2);
+        const avail = H - by - 46;
+        const rh = Math.max(26, Math.min(bh * 0.78, avail / rowsN - 6));
+        sk.forEach((s2, i) => {
             const x = 18 + (i % 2) * (w2 + gap), y = by + Math.floor(i / 2) * (rh + 6);
             const off = G.mp < s2.mp || (s2.costGold && G.gold < s2.costGold);
             const u2 = skUse(s2.id) % SK_MASTER;
@@ -2961,7 +3153,7 @@ function drawBattle() {
                (s2.mp ? '기력 ' + s2.mp : '기력 0') + ' · 숙련 ' + u2 + '/' + SK_MASTER,
                () => useSkill(s2), off, i % 3);
         });
-        const yb = by + Math.ceil(Math.min(6, sk.length) / 2) * (rh + 6);
+        const yb = by + rowsN * (rh + 6);
         if (yb + 34 < H - 14) mk(18, yb, fullW, 30, '↩ 뒤로', null, () => { B.menu = 'root'; }, false, 2);
         else B.btns.push({ x: 0, y: 0, w: W, h: panelY, fn: () => { B.menu = 'root'; } });
     } else {
@@ -3233,7 +3425,10 @@ function openMenu() {
     if (!(G.pets || []).length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">' + (G.unlock && G.unlock.catch ? '전투에서 적 체력을 40% 밑으로 깎고 🪄 포획을 눌러보세요.' : '교토의 보스를 이기면 몬스터를 잡을 수 있게 돼요.') + '</div>';
     (G.pets || []).forEach(pt => {
         const db = PET_DB[pt.kind], on = party().indexOf(pt.kind) >= 0;
-        h += rowHtml(on ? '🐾' : '·', pt.n + ' <span style="opacity:.6;font-size:.8em">Lv' + pt.lv + (on ? ' · 데리고 다니는 중' : '') + '</span>',
+        const ptg = pt.tier != null ? pt.tier : (pt.legend ? 1 : 0), PT = tierOf(ptg);
+        h += rowHtml(on ? '🐾' : '·',
+            '<span style="' + (PT ? 'color:' + PT.ui + ';font-weight:900' : '') + '">' + pt.n + '</span>' + tierTag(ptg) +
+            ' <span style="opacity:.6;font-size:.8em">Lv' + pt.lv + (on ? ' · 데리고 다니는 중' : '') + '</span>',
             db ? db.d : '', on ? '✓' : '선택', 'setPet(\'' + pt.kind + '\')', false);
     });
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 동료</div>';
@@ -3340,7 +3535,7 @@ function buyMerch(i) {
         const have = (G.pets || []).find(x => x.kind === k);
         if (have) { have.lv++; msg('🥚', '알이 부화했다!', '<b>' + have.n + '</b> 이(가) Lv' + have.lv + ' 가 됐어요!'); }
         else {
-            const np = { kind:k, n: PET_DB[k].n, lv:1, legend:false };
+            const np = { kind:k, n: PET_DB[k].n, lv:1, legend:false, tier:0 };
             G.pets.push(np); if (party().length < PARTY_MAX) party().push(k);
             msg('🥚', '알이 부화했다!', '<b>' + np.n + '</b> 이(가) 동료가 됐어요!<br><span style="opacity:.75">' + PET_DB[k].d + '</span>');
         }
