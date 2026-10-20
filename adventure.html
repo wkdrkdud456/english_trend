@@ -98,7 +98,7 @@
 
     /* ───── 오버레이 카드 ───── */
     .ov { position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;
-          background:rgba(60,35,55,.6); backdrop-filter:blur(3px);
+          background:rgba(60,35,55,.66);
           display:none; justify-content:center; align-items:center; padding:20px; }
     .ov.show { display:flex; animation:fade .25s; }
     .card {
@@ -162,6 +162,14 @@
         </div>
         <button class="pbtn" onclick="startGame()">🎮 여행 시작!</button>
         <button class="pbtn g" id="btnContinue" onclick="continueGame()" style="display:none">▶️ 이어하기</button>
+    </div>
+</div>
+
+<div class="ov" id="ovCut" style="background:rgba(10,8,20,.94)" onclick="cutAdvance()">
+    <div style="max-width:360px;width:100%;text-align:center;padding:10px">
+        <div id="cutEm" style="font-size:2.6em;margin-bottom:14px"></div>
+        <div id="cutTx" style="color:#fff3e4;font-size:1.02em;line-height:2;font-weight:700;min-height:160px;white-space:pre-wrap"></div>
+        <div id="cutHint" style="color:#ffd43b;font-size:.8em;font-weight:800;margin-top:18px;opacity:0">▼ 탭해서 계속</div>
     </div>
 </div>
 
@@ -271,6 +279,9 @@ const CITIES = [
         { n:'크루아상', i:'🥐', need:{'밀가루':2,'버터':1}, price:45 },
         { n:'딸기 타르트', i:'🍰', need:{'밀가루':2,'딸기':2}, price:85 },
         { n:'쇼콜라 바게트', i:'🥖', need:{'밀가루':3,'초콜릿':2}, price:130 },
+        { n:'캉파뉴', i:'🍞', need:{'밀가루':4,'버터':2}, price:290, t:1 },
+        { n:'크렘 브륄레', i:'🍮', need:{'버터':3,'초콜릿':2,'딸기':2}, price:560, t:2 },
+        { n:'웨딩 케이크', i:'🎂', need:{'밀가루':5,'버터':4,'딸기':4,'초콜릿':3}, price:1400, t:3 },
     ]},
     mobs:[
         { n:'에펠탑 유령', draw:'ghost', hp:65, atk:12, def:3, exp:33, gold:20 },
@@ -291,6 +302,9 @@ const CITIES = [
         { n:'연어 초밥', i:'🍣', need:{'쌀':2,'생선':2}, price:110 },
         { n:'말차 모찌', i:'🍡', need:{'쌀':2,'말차':2}, price:140 },
         { n:'장어 덮밥', i:'🍱', need:{'쌀':3,'생선':2,'간장':2}, price:230 },
+        { n:'돈코츠 라멘', i:'🍜', need:{'쌀':2,'간장':3,'생선':1}, price:620, t:1 },
+        { n:'말차 파르페', i:'🍧', need:{'말차':4,'쌀':2}, price:1050, t:2 },
+        { n:'오마카세', i:'🥢', need:{'생선':5,'쌀':4,'간장':3,'말차':2}, price:2400, t:3 },
     ]},
     mobs:[
         { n:'스시 닌자', draw:'ninja', hp:175, atk:33, def:14, exp:118, gold:70 },
@@ -311,6 +325,9 @@ const CITIES = [
         { n:'양고기 케밥', i:'🥙', need:{'향신료':2,'대추야자':1}, price:180 },
         { n:'대추야자 디저트', i:'🍮', need:{'대추야자':3,'향신료':1}, price:240 },
         { n:'황금 쿠스쿠스', i:'🍛', need:{'황금모래':2,'향신료':2,'파피루스':1}, price:380 },
+        { n:'피타 세트', i:'🫓', need:{'향신료':3,'대추야자':3}, price:980, t:1 },
+        { n:'바클라바', i:'🍯', need:{'대추야자':4,'황금모래':2,'향신료':2}, price:1750, t:2 },
+        { n:'파라오의 만찬', i:'👑', need:{'황금모래':5,'향신료':4,'대추야자':4,'파피루스':3}, price:3900, t:3 },
     ]},
     mobs:[
         { n:'붕대 미라', draw:'mummy', hp:400, atk:55, def:28, exp:225, gold:200 },
@@ -331,6 +348,9 @@ const CITIES = [
         { n:'마르게리타', i:'🍕', need:{'토마토':2,'치즈':2,'바질':1}, price:330 },
         { n:'까르보나라', i:'🍝', need:{'치즈':3,'올리브':2}, price:420 },
         { n:'딸기 젤라또', i:'🍨', need:{'치즈':2,'올리브':1,'바질':2}, price:560 },
+        { n:'콰트로 포르마지', i:'🧀', need:{'치즈':5,'바질':2}, price:1900, t:1 },
+        { n:'트러플 파스타', i:'🍄', need:{'올리브':4,'치즈':3,'토마토':3}, price:3200, t:2 },
+        { n:'황제의 코스', i:'🏛️', need:{'토마토':5,'치즈':5,'올리브':4,'바질':4}, price:7000, t:3 },
     ]},
     mobs:[
         { n:'검투사 석상', draw:'gladiator', hp:900, atk:95, def:60, exp:410, gold:500 },
@@ -351,6 +371,9 @@ const CITIES = [
         { n:'클래식 버거', i:'🍔', need:{'소고기':2,'번':2,'체다':1}, price:700 },
         { n:'매운맛 버거', i:'🌭', need:{'소고기':2,'핫소스':2,'번':1}, price:900 },
         { n:'전설의 더블버거', i:'🍟', need:{'소고기':4,'번':2,'체다':2,'핫소스':2}, price:1500 },
+        { n:'타코 플래터', i:'🌮', need:{'소고기':3,'핫소스':3,'체다':2}, price:2400, t:1 },
+        { n:'드라이에이징 스테이크', i:'🥩', need:{'소고기':6,'체다':3}, price:4200, t:2 },
+        { n:'자유의 버거 타워', i:'🗽', need:{'소고기':8,'번':6,'체다':5,'핫소스':4}, price:9500, t:3 },
     ]},
     mobs:[
         { n:'택시 괴물', draw:'taxi', hp:1200, atk:122, def:100, exp:690, gold:1200 },
@@ -387,6 +410,240 @@ const ITEMS = [
     { id:'drink', n:'에너지드링크', i:'🥤', price:90,  d:'기력 50% 회복' },
 ];
 
+
+
+
+
+// ───────── 전투 연출 ─────────
+// 숫자가 안 뜨고 이펙트가 없으면 "눌렀는데 뭐가 일어났는지" 알 수가 없다.
+const FX = [];          // 도트 파티클 (가상 해상도 좌표)
+const DMG = [];         // 데미지 숫자 (화면 좌표, 또렷하게)
+function fx(x, y, kind, n) {
+    for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 10 + Math.random() * 40;
+        FX.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 20, life: 0.5 + Math.random() * 0.5, kind, r: Math.random() });
+    }
+}
+function dmgPop(x, y, txt, col, big) { DMG.push({ x, y, txt, col, big, life: 0.95, vy: -46 }); }
+function updateFx(dt) {
+    for (let i = FX.length - 1; i >= 0; i--) {
+        const f = FX[i];
+        f.x += f.vx * dt; f.y += f.vy * dt;
+        f.vy += (f.kind === 'bubble' ? -22 : 90) * dt;
+        f.life -= dt;
+        if (f.life <= 0) FX.splice(i, 1);
+    }
+    for (let i = DMG.length - 1; i >= 0; i--) {
+        const d = DMG[i];
+        d.y += d.vy * dt; d.vy += 90 * dt; d.life -= dt;
+        if (d.life <= 0) DMG.splice(i, 1);
+    }
+}
+function drawFx() {
+    for (const f of FX) {
+        const a = Math.min(1, f.life * 2.2);
+        if (a < 0.35 && ((gameT * 20) | 0) % 2) continue;
+        const X = f.x | 0, Y = f.y | 0;
+        switch (f.kind) {
+            case 'bubble': R(X, Y, 3, 3, '#ffffff'); R(X, Y, 1, 1, '#cfe9f5'); break;
+            case 'coin':   R(X, Y, 4, 4, '#ffd43b'); R(X + 1, Y + 1, 1, 2, '#b88a20'); break;
+            case 'heart':  R(X + 1, Y, 1, 1, '#ff6fa8'); R(X + 3, Y, 1, 1, '#ff6fa8'); R(X, Y + 1, 5, 2, '#ff6fa8'); R(X + 2, Y + 3, 1, 1, '#ff6fa8'); break;
+            case 'star':   R(X + 2, Y, 2, 6, '#fff4a8'); R(X, Y + 2, 6, 2, '#fff4a8'); break;
+            case 'sweat':  R(X, Y, 2, 3, '#8fd0f0'); break;
+            case 'spark':  R(X, Y, 2, 2, f.r > 0.5 ? '#ffd0e8' : '#ffffff'); break;
+            case 'cloud':  R(X, Y, 5, 3, '#c8c8d8'); break;
+            default:       R(X, Y, 3, 3, '#ff8a5c');
+        }
+    }
+}
+function drawDmg() {
+    ctx.textAlign = 'center';
+    for (const d of DMG) {
+        ctx.globalAlpha = Math.min(1, d.life * 1.8);
+        ctx.font = 'bold ' + (d.big ? 30 : 21) + 'px sans-serif';
+        ctx.lineWidth = d.big ? 7 : 5; ctx.strokeStyle = 'rgba(40,25,45,.85)';
+        ctx.strokeText(d.txt, d.x, d.y);
+        ctx.fillStyle = d.col; ctx.fillText(d.txt, d.x, d.y);
+    }
+    ctx.globalAlpha = 1;
+}
+// 기술마다 다른 이펙트
+const FX_OF = { dish:'bubble', yageun:'sweat', aegyo:'spark', salary:'coin', sulk:'cloud', kiss:'heart', ult:'star' };
+// 동훈이가 기술을 쓰면서 하는 말 — 캐릭터에 생명을 준다
+const SAY = {
+    dish:   ['이 정도 설거지는 매일 해!', '퐁퐁 묻었다!', '손목 나가겠네...'],
+    yageun: ['야근보단 낫지.', '버티는 건 자신 있어.', '새벽 세 시도 버텼어.'],
+    aegyo:  ['여보~ 사랑해~', '뿌잉뿌잉!', '...이거 진짜 해야 돼?'],
+    salary: ['이번 달 월급이다!', '카드값... 아니, 받아라!', '돈으로 되는 일도 있어!'],
+    sulk:   ['나 삐쳤어.', '...말 안 해.', '먼저 말 걸어줄 때까지 안 해.'],
+    kiss:   ['소현이가 힘을 줬다!', '한 번만 더...?', '이거면 열흘은 버텨.'],
+    ult:    ['주말에도 못 보던 그 마음!', '이게 부부다!!', '떨어져 있던 시간만큼!!'],
+};
+const MOB_SAY = {
+    ghost:'우우우...', bird:'빵 내놔!', mime:'(말이 없다)', ninja:'초밥을 지켜라!',
+    fox:'캬캬캬!', bamboo:'사각... 사각...', mummy:'...끄으으', scorpion:'찌릭!',
+    sphinx:'수수께끼를 풀어라', gladiator:'결투다!', fairy:'물장난하자~', wraith:'돌아가라...',
+    taxi:'빵빵!! 비켜!', squirrel:'도토리 내놔!', wzombie:'야근... 야근...',
+};
+
+// ───────── 스토리 / 컷신 ─────────
+// 왜 여행하는지, 왜 싸우는지를 조각조각 흘려준다.
+const STORY = {
+prologue: { em:'💍', lines:[
+  '어느 날 아침, 옆자리가 비어 있었다.',
+  '베개 위에 반지 하나와 쪽지 한 장.',
+  '"미안.\n나를 찾고 싶으면\n우리가 가기로 했던 곳들을 가봐."\n\n— 동훈',
+  '반지를 쥐자 따뜻했다.\n\n던지면... 동훈이가 나온다.',
+  '그런데 말을 하지 않는다.\n눈을 마주치면 피한다.\n\n기억이 없는 것 같다.',
+  '소현이는 가방을 멨다.\n\n첫 번째 도시는 — 파리.',
+]},
+memory: {
+  paris: { em:'🧼', lines:[
+    '…반지가 떨리더니, 기억 한 조각이 돌아왔다.',
+    '"싱크대에 그릇이 산처럼 쌓인 밤."',
+    '"네가 한숨 쉬니까 내가 그랬지.\n\'내가 할게. 가서 쉬어.\'"',
+    '"…그게 우리 첫 집이었어."',
+    '동훈이가 처음으로 소현이를 똑바로 봤다.' ]},
+  kyoto: { em:'🍜', lines:[
+    '또 한 조각.',
+    '"야근하고 새벽 두 시에 들어왔는데"',
+    '"식탁에 라면이 놓여 있더라.\n다 불어서 떡이 돼 있었어."',
+    '"…그날 먹은 게 제일 맛있었다."',
+    '동훈이의 손끝이 조금 따뜻해졌다.' ]},
+  cairo: { em:'🌙', lines:[
+    '이번 조각은 좀 아팠다.',
+    '"둘 다 너무 지쳐서"',
+    '"하루 종일 한 마디도 안 한 날이 있었잖아."',
+    '"미안하다고 말하고 싶었는데\n입이 안 떨어졌어."',
+    '"…그 말을 하려고 여기까지 온 것 같아."' ]},
+  roma: { em:'📝', lines:[
+    '"냉장고에 붙여둔 메모 기억나?"',
+    '"\'언젠가 같이 갈 곳\' 리스트."',
+    '"열다섯 줄이었는데"',
+    '"…한 줄도 못 지웠지."',
+    '소현이는 주머니 속 편지 조각을 만졌다.\n열다섯 조각. 열다섯 줄.' ]},
+  ny:   { em:'🪞', lines:[
+    '마지막 도시. 거울 앞에 누군가 서 있다.',
+    '동훈이와 똑같이 생긴 사람.',
+    '"나는 네가 버린 시간이야."',
+    '"약속만 하고, 미루기만 하던 나."',
+    '동훈이가 처음으로 앞으로 나섰다.\n\n"…이번엔 안 도망쳐."' ]},
+},
+// 편지 조각 15개 = 냉장고에 붙여뒀던 "언젠가 같이 갈 곳" 15줄
+letter: [
+  '1. 에펠탑 아래에서 사진 찍기',
+  '2. 센강 다리에서 해 지는 거 보기',
+  '3. 빵집 열기 전에 줄 서보기',
+  '4. 교토 대나무숲 같이 걷기',
+  '5. 벚꽃 질 때 한 번 더 오기',
+  '6. 절 계단에서 쉬어가기',
+  '7. 사막에서 별 보기',
+  '8. 낙타 타고 웃긴 사진 찍기',
+  '9. 피라미드 앞에서 소원 빌기',
+  '10. 분수에 동전 던지기',
+  '11. 젤라또 두 개 사서 바꿔 먹기',
+  '12. 콜로세움에서 네 손 잡기',
+  '13. 뉴욕 야경 보면서 아무 말 안 하기',
+  '14. 센트럴파크 벤치에서 같이 졸기',
+  '15. 돌아가서 같이 설거지하기',
+],
+ending: { em:'💌', lines:[
+  '편지가 완성되는 순간, 반지가 빛났다.',
+  '동훈이가 — 처음으로 입을 열었다.',
+  '"열다섯 줄, 다 지웠네."',
+  '"미안해. 바쁘다는 말로 너무 많이 미뤘어."',
+  '"이제 진짜 같이 가자."',
+  '…그리고 반지는 조용히 손가락으로 돌아갔다.\n\n🎉 THE END 🎉',
+]},
+};
+
+let CUT = null;
+function startCut(em, lines, after) {
+    CUT = { em, lines, i: 0, ch: 0, after: after || null };
+    ['hud','bars','acts'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    const ov = document.getElementById('ovCut');
+    document.getElementById('cutEm').textContent = em;
+    document.getElementById('cutTx').textContent = '';
+    document.getElementById('cutHint').style.opacity = '0';
+    ov.classList.add('show');
+    S.open();
+    endStick();
+}
+function cutTick(dt) {
+    if (!CUT) return;
+    const full = CUT.lines[CUT.i];
+    if (CUT.ch < full.length) {
+        CUT.ch = Math.min(full.length, CUT.ch + dt * 34);
+        document.getElementById('cutTx').textContent = full.slice(0, CUT.ch | 0);
+        if (CUT.ch >= full.length) document.getElementById('cutHint').style.opacity = '1';
+    }
+}
+function cutAdvance() {
+    if (!CUT) return;
+    const full = CUT.lines[CUT.i];
+    if (CUT.ch < full.length) { CUT.ch = full.length; document.getElementById('cutTx').textContent = full; document.getElementById('cutHint').style.opacity = '1'; return; }
+    if (CUT.i < CUT.lines.length - 1) {
+        CUT.i++; CUT.ch = 0;
+        document.getElementById('cutTx').textContent = '';
+        document.getElementById('cutHint').style.opacity = '0';
+        S.step();
+        return;
+    }
+    const after = CUT.after;
+    CUT = null;
+    document.getElementById('ovCut').classList.remove('show');
+    ['hud','bars','acts'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+    if (after) after();
+}
+function letterCount() { return Object.keys(G.hearts || {}).length; }
+function checkEnding() {
+    if (G.story.ended) return;
+    const allBoss = CITIES.every(c => G.boss[c.id]);
+    if (allBoss && letterCount() >= 15) {
+        G.story.ended = true; save();
+        setTimeout(() => startCut(STORY.ending.em, STORY.ending.lines), 600);
+    }
+}
+
+// ───────── 영구 업그레이드 ─────────
+// 설계 의도: 초반엔 일부러 답답하게 하나씩 줍게 하고,
+// 업그레이드를 살 때마다 "수집 그 자체"가 눈에 띄게 빨라지도록 만든다.
+const PICK_R   = [11, 26, 42, 64, 95, 140];                 // 자석 반경
+const SPEED    = [66, 82, 102, 128, 160];                   // 이동 속도
+const SHOP_T   = [5.5, 4.2, 3.2, 2.4, 1.6];                 // 판매 주기(초)
+const SHOP_MUL = [1, 1.15, 1.35, 1.6, 2.0];                 // 판매가 배수
+const RIDE_N   = ['맨발', '운동화', '자전거', '스쿠터', '자동차'];
+const RIDE_I   = ['👣', '👟', '🚲', '🛵', '🚗'];
+
+const UPGRADES = [
+    { id:'magnet', n:'자석', i:'🧲', max:5, cost:[400, 1400, 4500, 14000, 42000],
+      d: lv => lv >= 5 ? '최대 강화! 반경 ' + PICK_R[5] + '' : '재료 수집 반경 ' + PICK_R[lv] + ' → ' + PICK_R[lv + 1],
+      f: '멀리 있는 재료가 알아서 빨려와요' },
+    { id:'ride', n:'탈것', i:'🚗', max:4, cost:[700, 2600, 9000, 30000],
+      d: lv => lv >= 4 ? '최대 강화! ' + RIDE_N[4] : RIDE_N[lv] + ' → ' + RIDE_N[lv + 1] + ' (속도 ' + SPEED[lv] + '→' + SPEED[lv + 1] + ')',
+      f: '도시를 훨씬 빨리 누벼요' },
+    { id:'cart', n:'수레', i:'🧺', max:3, cost:[1200, 4800, 16000],
+      d: lv => lv >= 3 ? '최대 강화! 한 번에 4개' : '한 번 주울 때 ' + (lv + 1) + '개 → ' + (lv + 2) + '개',
+      f: '재료를 한 번에 여러 개 집어요' },
+    { id:'shop', n:'가게 확장', i:'🏪', max:4, cost:[1800, 6000, 20000, 60000],
+      d: lv => lv >= 4 ? '최대 확장! 전설의 가게' : '판매 ' + SHOP_T[lv] + '초→' + SHOP_T[lv + 1] + '초, 가격 ×' + SHOP_MUL[lv + 1] + ' · 새 메뉴 해금',
+      f: '손님이 더 빨리, 더 비싸게 사 가요' },
+    { id:'part', n:'알바생', i:'🧑‍🍳', max:3, cost:[3500, 12000, 40000],
+      d: lv => lv >= 3 ? '최대 고용! 3명' : '알바생 ' + lv + '명 → ' + (lv + 1) + '명',
+      f: '돌아다니지 않아도 알아서 재료를 주워와요' },
+];
+function upLv(id) { return (G.up && G.up[id]) || 0; }
+function upCost(u) { return u.cost[upLv(u.id)]; }
+function pickRadius() { return PICK_R[upLv('magnet')]; }
+function moveSpeed()  { return SPEED[upLv('ride')]; }
+function pickCount()  { return 1 + upLv('cart'); }
+function shopPeriod() { return SHOP_T[upLv('shop')]; }
+function shopMul()    { return SHOP_MUL[upLv('shop')]; }
+
+// ───────── 스킬북 (기술 강화) ─────────
+function skLv(id) { return (G.sk && G.sk[id]) || 1; }
+function skPow(sk) { return sk.pow * (1 + (skLv(sk.id) - 1) * 0.28); }
+function skBookCost(sk) { return Math.round(500 * Math.pow(skLv(sk.id), 2.1) * (1 + sk.lv * 0.25)); }
 
 // ───────── NPC & 대화 ─────────
 const NPCS = {
@@ -565,6 +822,7 @@ function newGame() {
     return {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
+        up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, story: {}, partT: 0,
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
@@ -864,6 +1122,7 @@ function canWalk(x, y) {
 }
 
 cvs.addEventListener('pointerdown', e => {
+    if (CUT) { cutAdvance(); return; }
     if (TK) { talkAdvance(); return; }
     if (scene === 'world') {
         if (stick.on) return;
@@ -895,7 +1154,7 @@ let interact = null;          // 지금 상호작용 가능한 대상
 let encounterGauge = 0;
 
 function updateWorld(dt) {
-    const sp = 66;
+    const sp = moveSpeed();
     let dx = stick.dx, dy = stick.dy;
     const mag = Math.hypot(dx, dy);
     if (mag > 1) { dx /= mag; dy /= mag; }
@@ -923,15 +1182,32 @@ function updateWorld(dt) {
     // 재료 줍기
     for (let i = nodes.length - 1; i >= 0; i--) {
         const n = nodes[i];
-        if (Math.hypot(n.x - P.x, n.y - P.y) < 11) {
-            G.mats[n.mat.n] = (G.mats[n.mat.n] || 0) + 1;
+        const d0 = Math.hypot(n.x - P.x, n.y - P.y);
+        if (d0 < pickRadius()) {
+            if (d0 > 12) {   // 자석 — 멀리 있는 건 빨려온다
+                n.x += (P.x - n.x) * Math.min(1, dt * 7);
+                n.y += (P.y - n.y) * Math.min(1, dt * 7);
+                continue;
+            }
+            const got = pickCount();
+            G.mats[n.mat.n] = (G.mats[n.mat.n] || 0) + got;
             nodes.splice(i, 1);
             S.pick();
-            pop(n.x, n.y, n.mat.i + ' ' + n.mat.n, n.mat.c);
-            toast(n.mat.i + ' ' + jo(n.mat.n, '을', '를') + ' 주웠다!');
+            pop(n.x, n.y, n.mat.i + (got > 1 ? ' ×' + got : ''), n.mat.c);
         }
     }
     if (nodes.length < 26 && Math.random() < dt * 0.9) spawnNodes(city(), 26);
+    // 알바생 — 멀리 있는 재료를 알아서 주워온다
+    const part = upLv('part');
+    if (part > 0 && nodes.length) {
+        G.partT = (G.partT || 0) + dt * part;
+        while (G.partT >= 4) {
+            G.partT -= 4;
+            const n2 = nodes.pop();
+            if (!n2) break;
+            G.mats[n2.mat.n] = (G.mats[n2.mat.n] || 0) + pickCount();
+        }
+    }
 
     // 숨겨진 하트
     for (const h of hearts) {
@@ -939,9 +1215,11 @@ function updateWorld(dt) {
         if (Math.hypot(h.x - P.x, h.y - P.y) < 11) {
             h.got = true; G.hearts[h.key] = true;
             S.levelup();
-            const total = Object.keys(G.hearts).length;
+            const total = letterCount();
             pop(h.x, h.y, '💗', '#ff8fc7');
-            msg('💗', '편지 조각을 찾았다!', '동훈이가 숨겨둔 편지 조각 ' + total + '번째.<br>15개를 다 모으면 편지가 완성돼요.');
+            const line = STORY.letter[total - 1] || '';
+            msg('💗', '편지 조각 ' + total + '/15', '<b style="color:#c04a60">' + line + '</b><br><br>냉장고에 붙어 있던 그 리스트다.<br>열다섯 줄을 다 모으면 편지가 완성돼요.');
+            checkEnding();
         }
     }
 
@@ -1757,9 +2035,12 @@ function startBattle(bossOf) {
     B = {
         e, phase: 'intro', t: 0, ringT: 0, menu: 'root', btns: [],
         log: [bossOf ? bossOf.intro : '앗! ' + jo(e.n, '이', '가') + ' 나타났다!'],
+        say: null, fxT: 0, fxKind: '', flash: 0, pendDmg: null, pendHeal: 0,
+        eShow: 1, pShow: 1,
         guard: 0, edeb: 0, estun: 0, hurtP: 0, hurtE: 0, shake: 0, busy: 0, result: null,
     };
     scene = 'battle';
+    if (!bossOf && MOB_SAY[e.draw]) B.log.push('💢 "' + MOB_SAY[e.draw] + '"');
     S.encount();
     document.getElementById('hud').style.opacity = '0';
     document.getElementById('bars').style.opacity = '0';
@@ -1792,28 +2073,35 @@ function useSkill(sk) {
     B.phase = 'anim'; B.busy = 0.5; B.menu = 'root';
 
     let txt = '동훈이의 ' + sk.n + '!';
+    const say = SAY[sk.id];
+    if (say) B.say = { t: 1.4, s: say[(Math.random() * say.length) | 0] };
+    B.fxKind = FX_OF[sk.id] || 'hit';
+    B.fxT = 0.45;
     if (sk.pow > 0) {
         const hits = sk.hits || 1;
         let total = 0, anyCrit = false;
         for (let i = 0; i < hits; i++) {
-            const r = dmgCalc(atkOf(), sk.pow, B.e.def, sk.crit);
+            const r = dmgCalc(atkOf(), skPow(sk), B.e.def, sk.crit);
             total += r.d; anyCrit = anyCrit || r.crit;
         }
         const ex = hasAnimal('extra');
         if (ex && Math.random() < ex.val) {
-            const r = dmgCalc(atkOf(), sk.pow * 0.5, B.e.def, 0);
+            const r = dmgCalc(atkOf(), skPow(sk) * 0.5, B.e.def, 0);
             total += r.d;
             txt += ' ' + ex.i + ' 추가타!';
         }
         B.e.hp = Math.max(0, B.e.hp - total);
-        B.hurtE = 0.45; B.shake = 0.35;
+        B.hurtE = 0.45; B.shake = anyCrit ? 0.6 : 0.35;
+        if (anyCrit) B.flash = 0.25;
         anyCrit ? S.crit() : S.hit();
+        B.pendDmg = { v: total, crit: anyCrit, foe: true };
         txt += (anyCrit ? ' 💥치명타! ' : ' ') + total + ' 데미지!';
     }
     if (sk.healP) {
         const h = Math.round(maxHp() * sk.healP);
         G.hp = Math.min(maxHp(), G.hp + h);
         S.heal(); txt += ' HP ' + h + ' 회복!';
+        B.pendHeal = h;
     }
     if (sk.guard) { B.guard = sk.guard; txt += ' 방어 태세!'; }
     if (sk.debuff) { B.edeb = sk.debuff; txt += ' ' + B.e.n + '의 공격력이 뚝 떨어졌다!'; }
@@ -1852,6 +2140,7 @@ function enemyTurn() {
     d = Math.max(1, Math.round(d));
     G.hp = Math.max(0, G.hp - d);
     B.hurtP = 0.45; B.shake = 0.3;
+    B.pendDmg = { v: d, crit: false, foe: false };
     S.hit();
     blog(B.e.n + '의 공격! ' + d + ' 데미지!');
     syncHud();
@@ -1896,7 +2185,17 @@ function winBattle() {
             G.animals.push(c.animal.id);
             lvUp += '<br><br>' + c.animal.i + ' <b>' + c.animal.n + '</b>' + (jo(c.animal.n, '이', '가').slice(-1)) + ' 동료가 됐다!<br><span style="opacity:.7">' + c.animal.desc + '</span>';
         }
+        const mem = STORY.memory[c.id];
         msg('🏆', c.boss.n + ' 격파!', c.boss.win + '<br><br>' + body + lvUp + '<br><br>✈️ 공항에서 다음 도시로 갈 수 있어요!');
+        if (mem && !G.story[c.id]) {
+            G.story[c.id] = true;
+            const old = document.getElementById('mBtn').onclick;
+            document.getElementById('mBtn').onclick = function () {
+                document.getElementById('ovMsg').classList.remove('show');
+                document.getElementById('mBtn').onclick = old;
+                startCut(mem.em, mem.lines, checkEnding);
+            };
+        }
     } else {
         msg('🎉', e.n + ' 격파!', body + lvUp);
     }
@@ -1918,6 +2217,14 @@ function updateBattle(dt) {
     B.hurtP = Math.max(0, B.hurtP - dt);
     B.hurtE = Math.max(0, B.hurtE - dt);
     B.shake = Math.max(0, B.shake - dt);
+    B.flash = Math.max(0, (B.flash || 0) - dt * 3);
+    if (B.say) { B.say.t -= dt; if (B.say.t <= 0) B.say = null; }
+    if (B.fxT > 0) B.fxT -= dt;
+    updateFx(dt);
+    // HP바가 뚝 떨어지지 않고 스르륵 줄어든다
+    const et = B.e.hp / B.e.max, pt = G.hp / maxHp();
+    B.eShow += (et - B.eShow) * Math.min(1, dt * 6);
+    B.pShow += (pt - B.pShow) * Math.min(1, dt * 6);
     if (B.busy > 0) {
         B.busy -= dt;
         if (B.busy <= 0) {
@@ -2023,6 +2330,17 @@ function drawBattle() {
     platformPix(pxx, pyy + 3, 42, p);
 
     if (B.e.hp > 0 || B.result !== 'win') drawMobPix(B.e.draw, ex, ey, es, B.t, B.hurtE);
+    // 대기 중이던 데미지 숫자를 화면 좌표로 띄운다
+    if (B.pendDmg) {
+        const d = B.pendDmg; B.pendDmg = null;
+        const tx = d.foe ? ex : pxx, ty = (d.foe ? ey : pyy) - 18;
+        dmgPop(tx * Z, ty * Z, (d.crit ? '💥 ' : '') + d.v, d.crit ? '#ffd43b' : (d.foe ? '#fff0f0' : '#ff8a8a'), d.crit);
+        fx(tx - 6, ty + 4, d.foe ? (B.fxKind || 'hit') : 'hit', d.crit ? 18 : 11);
+    }
+    if (B.pendHeal) { dmgPop(pxx * Z, (pyy - 26) * Z, '+' + B.pendHeal, '#8ce99a', false); fx(pxx - 6, pyy - 14, 'heart', 10); B.pendHeal = 0; }
+    if (B.fxT > 0 && Math.random() < 0.6) fx(pxx + 8, pyy - 14, B.fxKind, 2);
+    drawFx();
+    if (B.flash > 0) { px.fillStyle = 'rgba(255,255,255,' + Math.min(0.75, B.flash) + ')'; px.fillRect(-20, 0, VW + 40, VH); }
 
     if (B.phase === 'intro') {
         const k = Math.min(1, B.ringT / 0.75);
@@ -2052,18 +2370,31 @@ function drawBattle() {
         ctx.fillStyle = '#e8597a'; ctx.fillText('가라! 동훈!', W / 2, H * 0.24);
         ctx.globalAlpha = 1;
     }
+    if (B.say) {
+        ctx.font = 'bold 13.5px sans-serif'; ctx.textAlign = 'center';
+        const tw = ctx.measureText(B.say.s).width + 26;
+        const sx = Math.min(W - tw / 2 - 10, Math.max(tw / 2 + 10, pxx * Z));
+        const sy = (pyy - 32) * Z;
+        ctx.fillStyle = 'rgba(42,28,24,.2)'; rr(sx - tw / 2 + 2, sy - 20, tw, 28, 12); ctx.fill();
+        ctx.fillStyle = '#fff8ef'; rr(sx - tw / 2, sy - 22, tw, 28, 12); ctx.fill();
+        ctx.strokeStyle = '#e8597a'; ctx.lineWidth = 2.2; rr(sx - tw / 2, sy - 22, tw, 28, 12); ctx.stroke();
+        ctx.fillStyle = '#c04a60'; ctx.fillText(B.say.s, sx, sy - 3);
+        ctx.beginPath(); ctx.moveTo(sx - 6, sy + 5); ctx.lineTo(sx + 6, sy + 5); ctx.lineTo(sx, sy + 13);
+        ctx.closePath(); ctx.fillStyle = '#fff8ef'; ctx.fill();
+    }
+    drawDmg();
     const bw = Math.min(214, W * 0.54);
     card(W - bw - 14, 14, bw, 50, 14, p.r2);
     ctx.fillStyle = '#5d4038'; ctx.font = 'bold 13.5px sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(B.e.n + (B.e.boss ? ' 👑' : ''), W - bw - 2, 34);
-    bar(W - bw - 2, 42, bw - 24, 10, B.e.hp / B.e.max, '#ff6b8a', '#ffb067');
+    bar(W - bw - 2, 42, bw - 24, 10, B.eShow, '#ff6b8a', '#ffb067');
     if (B.edeb > 0) { ctx.fillStyle = '#b06a1f'; ctx.font = 'bold 10px sans-serif'; ctx.fillText('공격력↓', W - bw - 2, 62); }
 
     const pw = Math.min(222, W * 0.6);
     card(14, panelY - 80, pw, 66, 14, '#e8597a');
     ctx.fillStyle = '#5d4038'; ctx.font = 'bold 13.5px sans-serif';
     ctx.fillText(formOf().n + ' Lv' + G.lv + (B.guard > 0 ? ' 🛡️' : ''), 26, panelY - 60);
-    bar(26, panelY - 52, pw - 70, 10, G.hp / maxHp(), '#ff5c7a', '#ff9770');
+    bar(26, panelY - 52, pw - 70, 10, B.pShow, '#ff5c7a', '#ff9770');
     bar(26, panelY - 37, pw - 70, 8, G.mp / maxMp(), '#4dabf7', '#74f0d0');
     ctx.fillStyle = '#8a6a62'; ctx.font = 'bold 10.5px sans-serif';
     ctx.fillText(G.hp + '/' + maxHp(), 26 + pw - 64, panelY - 44);
@@ -2152,7 +2483,7 @@ function stockTotal() { let n = 0; for (const k in G.stock) n += G.stock[k]; ret
 function tickShop(dt) {
     if (stockTotal() <= 0) return;
     G.shopAt += dt;
-    const period = 5.5;
+    const period = shopPeriod();
     while (G.shopAt >= period) {
         G.shopAt -= period;
         const keys = Object.keys(G.stock).filter(k => G.stock[k] > 0);
@@ -2160,8 +2491,9 @@ function tickShop(dt) {
         const k = keys[Math.floor(Math.random() * keys.length)];
         G.stock[k]--;
         if (G.stock[k] <= 0) delete G.stock[k];
-        let price = 0, icon = '🍽️';
+        let price = 0, icon = '🍽️';   // 가게 등급에 따라 판매가가 오른다
         for (const c of CITIES) for (const m of c.shop.menu) if (m.n === k) { price = m.price; icon = m.i; }
+        price = Math.round(price * shopMul());
         G.gold += price;
         S.coin();
         toast(icon + ' ' + jo(k, '이', '가') + ' 팔렸어요! +' + price + '원');
@@ -2173,7 +2505,7 @@ function tickShop(dt) {
 const PANEL = document.getElementById('panel');
 function closePanel() { PANEL.classList.remove('show'); S.open(); }
 function panelOpen(title, sub, rows, closeLabel) {
-    document.getElementById('pTitle').textContent = title;
+    document.getElementById('pTitle').innerHTML = title;
     document.getElementById('pSub').innerHTML = sub;
     document.getElementById('pList').innerHTML = rows;
     document.getElementById('pClose').textContent = closeLabel || '닫기';
@@ -2186,50 +2518,93 @@ function rowHtml(icon, name, desc, val, fn, off) {
         (val ? '<div class="rv">' + val + '</div>' : '') + '</div>';
 }
 
-function openShop() {
+let shopTab = 'cook';
+function openShop(tab) {
     const c = city();
-    // 가게 = 거점. 밖에서 회복할 방법이 없으면 탐험이 성립하지 않는다.
     if (G.hp < maxHp() || G.mp < maxMp()) {
         G.hp = maxHp(); G.mp = maxMp();
         S.heal(); syncHud();
         toast('🛋️ 가게에서 한숨 돌렸어요! 체력·기력 전부 회복');
     }
-    let h = '<div class="rd" style="margin:2px 0 8px;opacity:.75">재료로 요리하면 진열대에 올라가고, 돌아다니는 동안 손님이 사 갑니다.</div>';
-    h += '<div class="rd" style="margin:10px 0 6px;font-weight:900;opacity:.9">🍳 요리하기</div>';
-    c.shop.menu.forEach((m, i) => {
-        const need = Object.entries(m.need).map(([k, v]) => {
-            const have = G.mats[k] || 0;
-            const mi = c.mats.find(x => x.n === k);
-            return '<span style="color:' + (have >= v ? '#8ce99a' : '#ff8787') + '">' + (mi ? mi.i : '') + k + ' ' + have + '/' + v + '</span>';
-        }).join(' · ');
-        const can = Object.entries(m.need).every(([k, v]) => (G.mats[k] || 0) >= v);
-        h += rowHtml(m.i, m.n + (G.stock[m.n] ? ' <span style="opacity:.6;font-size:.8em">진열 ' + G.stock[m.n] + '</span>' : ''),
-                     need, m.price + '원', 'cook(' + i + ')', !can);
-    });
-    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🛒 사기</div>';
-    ITEMS.forEach((it, i) => {
-        h += rowHtml(it.i, it.n + ' <span style="opacity:.6;font-size:.8em">보유 ' + (G.items[it.id] || 0) + '</span>',
-                     it.d, itemPrice(it) + '원', 'buy(' + i + ')', G.gold < itemPrice(it));
-    });
-    panelOpen(c.shop.i + ' ' + c.shop.n,
-        '💰 ' + G.gold + '원 · 진열대 ' + stockTotal() + '개', h);
+    if (tab) shopTab = tab;
+    const TABS = [['cook','🍳 요리'], ['up','⚙️ 강화'], ['book','📕 스킬북'], ['item','🛒 아이템']];
+    let h = '<div style="display:flex;gap:6px;margin-bottom:12px">' + TABS.map(([id, label]) =>
+        '<div onclick="openShop(\'' + id + '\')" style="flex:1;text-align:center;padding:9px 2px;border-radius:12px;' +
+        'font-size:.78em;font-weight:900;cursor:pointer;border:2px solid ' +
+        (shopTab === id ? '#e8597a;background:#ffe3ea;color:#c04a60' : 'rgba(200,140,120,.3);background:#fffdf8;color:#a08880') +
+        '">' + label + '</div>').join('') + '</div>';
+
+    if (shopTab === 'cook') {
+        const lv = upLv('shop');
+        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">요리해서 진열대에 올려두면, 돌아다니는 동안 손님이 사 갑니다.</div>';
+        c.shop.menu.forEach((m, i) => {
+            if ((m.t || 0) > lv) {
+                h += rowHtml('🔒', '<span style="opacity:.55">' + m.n + '</span>',
+                    '가게 확장 Lv' + m.t + ' 에서 해금 · ' + Math.round(m.price * SHOP_MUL[m.t]) + '원짜리', '', '', true);
+                return;
+            }
+            const need = Object.entries(m.need).map(([k, v]) => {
+                const have = G.mats[k] || 0;
+                const mi = c.mats.find(x => x.n === k);
+                return '<span style="color:' + (have >= v ? '#2f9e44' : '#e03131') + '">' + (mi ? mi.i : '') + k + ' ' + have + '/' + v + '</span>';
+            }).join(' · ');
+            const can = Object.entries(m.need).every(([k, v]) => (G.mats[k] || 0) >= v);
+            h += rowHtml(m.i, m.n + (G.stock[m.n] ? ' <span style="opacity:.6;font-size:.8em">진열 ' + G.stock[m.n] + '</span>' : ''),
+                         need, Math.round(m.price * shopMul()) + '원', 'cook(' + i + ')', !can);
+        });
+    } else if (shopTab === 'up') {
+        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">한 번 사면 모든 도시에서 계속 적용돼요.</div>';
+        UPGRADES.forEach((u, i) => {
+            const lv = upLv(u.id), maxed = lv >= u.max;
+            const icon = u.id === 'ride' ? RIDE_I[lv] : u.i;
+            h += rowHtml(icon, u.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + '/' + u.max + '</span>',
+                u.d(lv) + '<br><span style="opacity:.6">' + u.f + '</span>',
+                maxed ? 'MAX' : upCost(u).toLocaleString() + '원',
+                maxed ? '' : 'buyUp(' + i + ')', maxed || G.gold < upCost(u));
+        });
+    } else if (shopTab === 'book') {
+        h += '<div class="rd" style="margin:2px 0 8px;opacity:.75">기술 위력이 레벨당 28% 올라요. 레벨이 안 올라도 세질 수 있어요.</div>';
+        mySkills().forEach((sk, i) => {
+            const lv = skLv(sk.id);
+            h += rowHtml('📕', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + '</span>',
+                sk.d + (sk.pow ? '<br>위력 ' + (skPow(sk)).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) : ''),
+                skBookCost(sk).toLocaleString() + '원', 'buyBook(\'' + sk.id + '\')', G.gold < skBookCost(sk));
+        });
+        const next = SKILLS.find(x => x.lv > G.lv);
+        if (next) h += '<div class="rd" style="opacity:.55;padding:4px 2px">🔒 Lv' + next.lv + ' 달성하면 <b>' + next.n + '</b> 습득</div>';
+    } else {
+        ITEMS.forEach((it, i) => {
+            h += rowHtml(it.i, it.n + ' <span style="opacity:.6;font-size:.8em">보유 ' + (G.items[it.id] || 0) + '</span>',
+                         it.d, itemPrice(it) + '원', 'buy(' + i + ')', G.gold < itemPrice(it));
+        });
+    }
+    panelOpen(c.shop.i + ' ' + c.shop.n + ' <span style="font-size:.6em;opacity:.6">Lv' + (upLv('shop') + 1) + '</span>',
+        '💰 ' + G.gold.toLocaleString() + '원 · 진열대 ' + stockTotal() + '개 · ' + RIDE_I[upLv('ride')] + ' ' + RIDE_N[upLv('ride')], h);
 }
-function cook(i) {
-    const m = city().shop.menu[i];
-    if (!Object.entries(m.need).every(([k, v]) => (G.mats[k] || 0) >= v)) { S.deny(); return; }
-    for (const [k, v] of Object.entries(m.need)) G.mats[k] -= v;
-    G.stock[m.n] = (G.stock[m.n] || 0) + 1;
-    S.pick(); toast(m.i + ' ' + m.n + ' 완성! 진열대에 올렸어요');
+function buyUp(i) {
+    const u = UPGRADES[i];
+    if (upLv(u.id) >= u.max || G.gold < upCost(u)) { S.deny(); return; }
+    G.gold -= upCost(u);
+    G.up[u.id] = upLv(u.id) + 1;
+    S.levelup();
+    const lv = G.up[u.id];
+    toast((u.id === 'ride' ? RIDE_I[lv] : u.i) + ' ' + u.n + ' Lv' + lv + ' 획득!');
+    if (u.id === 'shop') {
+        const unlocked = city().shop.menu.filter(m => (m.t || 0) === lv);
+        if (unlocked.length) msg('🍞', '새 메뉴 해금!', unlocked.map(m => m.i + ' <b>' + m.n + '</b>').join('<br>') + '<br><br>더 비싼 걸 팔 수 있게 됐어요!');
+    }
     syncHud(); save(); openShop();
 }
-function buy(i) {
-    const it = ITEMS[i];
-    const pr = itemPrice(it);
-    if (G.gold < pr) { S.deny(); return; }
-    G.gold -= pr; G.items[it.id] = (G.items[it.id] || 0) + 1;
-    S.coin(); syncHud(); save(); openShop();
+function buyBook(id) {
+    const sk = SKILLS.find(x => x.id === id);
+    const cost = skBookCost(sk);
+    if (G.gold < cost) { S.deny(); return; }
+    G.gold -= cost;
+    G.sk[id] = skLv(id) + 1;
+    S.levelup();
+    toast('📕 ' + sk.n + ' Lv' + G.sk[id] + '!');
+    syncHud(); save(); openShop();
 }
-
 function openBag() {
     if (scene !== 'world') return;
     S.open();
@@ -2264,6 +2639,12 @@ function openMenu() {
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🐾 동료</div>';
     if (!G.animals.length) h += '<div class="rd" style="opacity:.6;padding:6px 2px">보스를 이기면 그 도시의 동물 친구가 합류해요.</div>';
     CITIES.forEach(c => { if (G.animals.includes(c.animal.id)) h += rowHtml(c.animal.i, c.animal.n, c.animal.desc, c.icon); });
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">📜 편지 (' + letterCount() + '/15)</div>';
+    if (!letterCount()) h += '<div class="rd" style="opacity:.6;padding:6px 2px">아직 한 조각도 못 찾았어요. 도시마다 세 개씩 숨어 있어요.</div>';
+    for (let i = 0; i < 15; i++) {
+        h += '<div class="rd" style="padding:3px 4px;' + (i < letterCount() ? 'color:#c04a60;font-weight:800' : 'opacity:.35') + '">' +
+             (i < letterCount() ? STORY.letter[i] : (i + 1) + '. ????????') + '</div>';
+    }
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">⚙️ 설정</div>';
     h += rowHtml(soundOn ? '🔊' : '🔇', '소리 ' + (soundOn ? '켜짐' : '꺼짐'), '탭해서 바꿔요', '', 'toggleSound()');
     h += rowHtml('🗑️', '처음부터 다시', '모든 진행이 사라져요', '', 'wipe()');
@@ -2340,7 +2721,7 @@ function startGame() {
     scene = 'world'; running = true; lastT = performance.now();
     ac(); save();
     requestAnimationFrame(loop);
-    toast('🕹️ 화면을 눌러서 밀면 걸어가요!');
+    startCut(STORY.prologue.em, STORY.prologue.lines, () => toast('🕹️ 화면을 눌러서 밀면 걸어가요!'));
 }
 function continueGame() {
     const s = sLoad(SAVE_KEY, null);
@@ -2359,6 +2740,7 @@ function loop(ts) {
     if (!running) return;
     const dt = Math.min(0.05, (ts - lastT) / 1000);
     lastT = ts; gameT += dt;
+    if (CUT) { cutTick(dt); requestAnimationFrame(loop); return; }
     if (scene === 'world') {
         if (TK) {
             const full = TK.npc.lines[TK.i];
