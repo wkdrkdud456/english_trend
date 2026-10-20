@@ -426,6 +426,170 @@ const ITEMS = [
 
 
 
+
+// ───────── 스킬 전용 이펙트 ─────────
+// 스킬마다 완전히 다른 연출을 그리고, 스킬 레벨이 오르면 연출도 같이 세진다.
+const EF = [];
+const EF_DUR = { dish:0.75, yageun:0.8, aegyo:0.75, salary:0.85, sulk:0.9, kiss:0.9, ult:1.25 };
+function castEffect(id, fx, fy, tx, ty, lv) {
+    EF.push({ id, t:0, dur: EF_DUR[id] || 0.7, fx, fy, tx, ty, lv: lv || 1 });
+}
+function updateEF(dt) {
+    for (let i = EF.length - 1; i >= 0; i--) { EF[i].t += dt; if (EF[i].t >= EF[i].dur) EF.splice(i, 1); }
+}
+const LERP = (a, b, t) => a + (b - a) * t;
+function pxRing(cx, cy, r, col, th2) {
+    const step = Math.max(0.12, 1.6 / Math.max(2, r));
+    for (let a = 0; a < Math.PI * 2; a += step) R(cx + Math.cos(a) * r, cy + Math.sin(a) * r, th2 || 2, th2 || 2, col);
+}
+function pxStar(cx, cy, r, col) {
+    R(cx - 1, cy - r, 3, r * 2, col); R(cx - r, cy - 1, r * 2, 3, col);
+    R(cx - r * 0.5, cy - r * 0.5, 2, 2, col); R(cx + r * 0.4, cy + r * 0.4, 2, 2, col);
+    R(cx + r * 0.4, cy - r * 0.5, 2, 2, col); R(cx - r * 0.5, cy + r * 0.4, 2, 2, col);
+}
+function drawEF() {
+    for (const e of EF) {
+        const k = e.t / e.dur, lv = Math.min(10, e.lv);
+        const n = 1 + lv * 0.35;                       // 레벨이 오르면 양이 늘고
+        const big = 1 + (lv - 1) * 0.12;               // 크기도 커진다
+        const gold = lv >= 5, rainbow = lv >= 9;
+        switch (e.id) {
+            case 'dish': {                             // 설거지 연타 — 거품 3연타 + 스펀지 궤적
+                for (let h = 0; h < 3; h++) {
+                    const s0 = h * 0.16, p2 = (e.t - s0) / 0.34;
+                    if (p2 < 0 || p2 > 1) continue;
+                    const x = LERP(e.fx, e.tx, p2), y = LERP(e.fy, e.ty, p2) - Math.sin(p2 * Math.PI) * 14;
+                    R(x - 4, y - 3, 8, 6, h % 2 ? '#ffe066' : '#8ce99a');   // 스펀지
+                    R(x - 4, y - 3, 8, 2, '#51cf66');
+                    for (let i = 0; i < 5 * n; i++) {
+                        const a = (i / (5 * n)) * 6.28 + e.t * 7;
+                        const rr2 = (5 + p2 * 13) * big;
+                        R(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2, 3, 3, i % 3 ? '#ffffff' : '#cfe9f5');
+                    }
+                }
+                if (k > 0.45) {
+                    const q = (k - 0.45) / 0.55;
+                    pxRing(e.tx, e.ty, (4 + q * 26) * big, '#ffffff', 2);
+                }
+                break;
+            }
+            case 'yageun': {                           // 야근 버티기 — 방어막 + 땀
+                const r = (8 + k * 22) * big;
+                pxRing(e.fx, e.fy - 4, r, gold ? '#ffd43b' : '#ffc078', 3);
+                pxRing(e.fx, e.fy - 4, r * 0.66, '#fff3bf', 2);
+                for (let i = 0; i < 5 * n; i++) {
+                    const a = i * 1.1 + e.t * 3;
+                    const sx = e.fx + Math.cos(a) * r * 0.9, sy = e.fy - 4 + Math.sin(a) * r * 0.7 - k * 16;
+                    R(sx, sy, 2, 4, '#8fd0f0');
+                }
+                if (k < 0.35) { px.fillStyle = 'rgba(255,220,120,' + (0.3 * (1 - k / 0.35)) + ')'; px.fillRect(0, 0, VW, VH); }
+                break;
+            }
+            case 'aegyo': {                            // 애교 공격 — 하트와 반짝이가 날아간다
+                for (let i = 0; i < 6 * n; i++) {
+                    const off = i * 0.07, p2 = k - off;
+                    if (p2 < 0 || p2 > 1) continue;
+                    const wob = Math.sin(p2 * 9 + i) * 11 * big;
+                    const x = LERP(e.fx, e.tx, p2), y = LERP(e.fy, e.ty, p2) + wob;
+                    const c2 = rainbow ? ['#ff6fa8','#ffd43b','#74c0fc','#8ce99a'][i % 4] : (i % 2 ? '#ff9ecf' : '#ffd0e4');
+                    R(x + 1, y, 2, 2, c2); R(x + 4, y, 2, 2, c2);
+                    R(x, y + 2, 7, 3, c2); R(x + 2, y + 5, 3, 2, c2);
+                }
+                if (k > 0.6) { px.fillStyle = 'rgba(255,150,200,' + (0.26 * (1 - (k - 0.6) / 0.4)) + ')'; px.fillRect(0, 0, VW, VH); }
+                break;
+            }
+            case 'salary': {                           // 월급 박치기 — 동전 비 + 충격파
+                for (let i = 0; i < 9 * n; i++) {
+                    const off = (i % 6) * 0.045, p2 = k - off;
+                    if (p2 < 0 || p2 > 1) continue;
+                    const x = LERP(e.fx, e.tx + ((i * 37) % 30) - 15, p2);
+                    const y = LERP(e.fy - 10, e.ty, p2) - Math.sin(p2 * Math.PI) * 26;
+                    R(x, y, 5 * big, 5 * big, '#ffd43b'); R(x + 1, y + 1, 2, 3, '#b88a20');
+                }
+                for (let i = 0; i < 3 * n; i++) {      // 흩날리는 지폐
+                    const p2 = Math.max(0, k - i * 0.1);
+                    const x = LERP(e.fx, e.tx, p2) + Math.sin(e.t * 6 + i) * 10;
+                    R(x, e.fy - 20 + p2 * 30, 8, 4, '#b2f2bb'); R(x + 2, e.fy - 19 + p2 * 30, 4, 2, '#2f9e44');
+                }
+                if (k > 0.55) {
+                    const q = (k - 0.55) / 0.45;
+                    pxRing(e.tx, e.ty, (6 + q * 34) * big, '#ffd43b', 3);
+                    pxRing(e.tx, e.ty, (2 + q * 22) * big, '#fff4a8', 2);
+                }
+                break;
+            }
+            case 'sulk': {                             // 삐짐 — 먹구름과 번개
+                const cy = e.ty - 30 - (1 - Math.min(1, k * 3)) * 10;
+                const w = (18 + Math.min(1, k * 3) * 16) * big;
+                for (let i = 0; i < 4; i++) {
+                    const bx = e.tx - w / 2 + (i * w) / 4;
+                    R(bx, cy + (i % 2 ? 2 : 0), w / 3, 9, i % 2 ? '#8a8a9a' : '#6c6c80');
+                }
+                R(e.tx - w / 2, cy + 7, w, 4, '#56566a');
+                if (k > 0.4) {
+                    for (let i = 0; i < 2 + n; i++) {
+                        if (((e.t * 22 + i) | 0) % 3) continue;
+                        const lx = e.tx - w / 3 + ((i * 53) % Math.max(1, w));
+                        R(lx, cy + 10, 3, 8, '#fff4a8'); R(lx + 2, cy + 17, 3, 8, '#ffd43b');
+                    }
+                    px.fillStyle = 'rgba(60,60,90,' + (0.2 * (1 - k)) + ')'; px.fillRect(0, 0, VW, VH);
+                }
+                break;
+            }
+            case 'kiss': {                             // 뽀뽀 — 큰 하트가 날아와 터지고 회복 입자가 솟는다
+                if (k < 0.5) {
+                    const p2 = k / 0.5;
+                    const x = LERP(-14, e.fx, p2), y = LERP(e.fy - 6, e.fy - 10, p2) - Math.sin(p2 * Math.PI) * 18;
+                    const sc2 = 3 * big;
+                    R(x, y, sc2, sc2, '#ff4f8a'); R(x + sc2 * 2, y, sc2, sc2, '#ff4f8a');
+                    R(x - sc2 * 0.3, y + sc2, sc2 * 3.6, sc2 * 1.4, '#ff4f8a');
+                    R(x + sc2 * 0.8, y + sc2 * 2.2, sc2 * 1.6, sc2, '#ff4f8a');
+                    R(x + sc2 * 0.2, y + sc2 * 0.3, sc2, sc2 * 0.8, '#ffc0da');
+                } else {
+                    const q = (k - 0.5) / 0.5;
+                    pxRing(e.fx, e.fy - 10, (4 + q * 30) * big, '#ff8fc7', 3);
+                    for (let i = 0; i < 8 * n; i++) {
+                        const a = i * 0.8;
+                        const rr2 = q * 28 * big;
+                        R(e.fx + Math.cos(a) * rr2, e.fy - 10 + Math.sin(a) * rr2 - q * 14, 3, 3, i % 2 ? '#8ce99a' : '#ffd0e4');
+                    }
+                }
+                break;
+            }
+            case 'ult': {                              // 주말부부 합체기 — 집중 → 섬광 → 광선 → 폭발
+                if (k < 0.32) {                        // 기 모으기
+                    const q = k / 0.32;
+                    for (let i = 0; i < 8 * n; i++) {
+                        const a = i * 0.8 + e.t * 5, rr2 = (46 - q * 40) * big;
+                        R(e.fx + Math.cos(a) * rr2, e.fy - 12 + Math.sin(a) * rr2, 3, 3, gold ? '#ffd43b' : '#a0d8ff');
+                    }
+                    pxRing(e.fx, e.fy - 12, (44 - q * 36) * big, '#fff4a8', 2);
+                } else if (k < 0.44) {                 // 섬광
+                    px.fillStyle = 'rgba(255,255,255,' + (1 - (k - 0.32) / 0.12) + ')';
+                    px.fillRect(0, 0, VW, VH);
+                } else {                               // 광선 + 폭발
+                    const q = (k - 0.44) / 0.56;
+                    const bx = Math.min(e.fx, e.tx), bw = Math.abs(e.tx - e.fx);
+                    const th3 = (10 + Math.sin(e.t * 30) * 3) * big * (1 - q * 0.4);
+                    const by = LERP(e.fy - 12, e.ty, 0.5);
+                    R(bx, by - th3 / 2, bw * Math.min(1, q * 2.4), th3, rainbow ? '#ff9ecf' : (gold ? '#ffd43b' : '#a0d8ff'));
+                    R(bx, by - th3 / 4, bw * Math.min(1, q * 2.4), th3 / 2, '#ffffff');
+                    if (q > 0.35) {
+                        const w2 = (q - 0.35) / 0.65;
+                        pxRing(e.tx, e.ty, (6 + w2 * 52) * big, '#ffffff', 3);
+                        pxRing(e.tx, e.ty, (2 + w2 * 34) * big, gold ? '#ffd43b' : '#a0d8ff', 3);
+                        for (let i = 0; i < 7 * n; i++) {
+                            const a = i * 0.9 + e.t * 2;
+                            pxStar(e.tx + Math.cos(a) * w2 * 46, e.ty + Math.sin(a) * w2 * 40, 4 * big, rainbow ? ['#ff6fa8','#ffd43b','#74c0fc'][i % 3] : '#fff4a8');
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+}
+
 // ───────── 펫 (잡은 몬스터) & 전설 몬스터 ─────────
 // 같은 유형을 5번 반복하는 게 지루한 원인 → 도시를 깰 때마다 "할 수 있는 행동"을 하나씩 연다.
 const PET_DB = {
@@ -727,7 +891,9 @@ function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.3); 
 function shopMul()    { return SHOP_MUL[upLv('shop')]; }
 
 // ───────── 스킬북 (기술 강화) ─────────
+const SK_MASTER = 100;   // 이만큼 쓰면 숙련도로 레벨업
 function skLv(id) { return (G.sk && G.sk[id]) || 1; }
+function skUse(id) { return (G.skUse && G.skUse[id]) || 0; }
 function skPow(sk) { return sk.pow * (1 + (skLv(sk.id) - 1) * 0.28); }
 function skBookCost(sk) { return Math.round(500 * Math.pow(skLv(sk.id), 2.1) * (1 + sk.lv * 0.25)); }
 
@@ -909,7 +1075,7 @@ function newGame() {
         cityIdx: 0, gold: 150, lv: 1, exp: 0, hp: 80, mp: 29,
         mats: {}, stock: {}, items: { candy: 2, drink: 1 }, talked: {},
         up: { magnet:0, ride:0, cart:0, shop:0, part:0 }, sk: {}, learned: {}, story: {}, partT: 0,
-        pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {},
+        pets: [], pet: null, party: [], unlock: {}, charm: false, merch: {}, skUse: {},
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
     };
@@ -2316,7 +2482,7 @@ function startBattle(bossOf) {
     B = {
         e, phase: 'intro', t: 0, ringT: 0, menu: 'root', btns: [],
         log: [bossOf ? bossOf.intro : '앗! ' + jo(e.n, '이', '가') + ' 나타났다!'],
-        say: null, fxT: 0, fxKind: '', flash: 0, pendDmg: null, pendHeal: 0,
+        say: null, fxT: 0, fxKind: '', flash: 0, pendDmg: null, pendHeal: 0, masterT: 0, masterS: '',
         eShow: 1, pShow: 1,
         guard: 0, edeb: 0, estun: 0, hurtP: 0, hurtE: 0, shake: 0, busy: 0, result: null,
     };
@@ -2357,6 +2523,18 @@ function useSkill(sk) {
     if (sk.costGold) { G.gold -= sk.costGold; blog('💸 ' + sk.costGold + '원을 던졌다!'); }
     B.phase = 'anim'; B.busy = 0.5; B.menu = 'root';
 
+    // 스킬 전용 이펙트 (레벨이 오르면 연출도 세진다)
+    if (B.posP && B.posE) castEffect(sk.id, B.posP.x, B.posP.y, B.posE.x, B.posE.y, skLv(sk.id));
+    // 숙련도 — 100번 쓰면 레벨이 오른다
+    if (!G.skUse) G.skUse = {};
+    G.skUse[sk.id] = (G.skUse[sk.id] || 0) + 1;
+    if (G.skUse[sk.id] % SK_MASTER === 0) {
+        G.sk[sk.id] = skLv(sk.id) + 1;
+        B.masterT = 1.8; B.masterS = sk.n + ' 숙련! Lv' + G.sk[sk.id];
+        S.levelup();
+        blog('🔥 ' + SK_MASTER + '번 사용! ' + sk.n + ' 이(가) Lv' + G.sk[sk.id] + ' 가 됐다!');
+        save();
+    }
     let txt = '동훈이의 ' + sk.n + '!';
     const say = SAY[sk.id];
     if (say) B.say = { t: 1.4, s: say[(Math.random() * say.length) | 0] };
@@ -2540,6 +2718,8 @@ function updateBattle(dt) {
     if (B.say) { B.say.t -= dt; if (B.say.t <= 0) B.say = null; }
     if (B.fxT > 0) B.fxT -= dt;
     updateFx(dt);
+    updateEF(dt);
+    if (B.masterT > 0) B.masterT -= dt;
     // HP바가 뚝 떨어지지 않고 스르륵 줄어든다
     const et = B.e.hp / B.e.max, pt = G.hp / maxHp();
     B.eShow += (et - B.eShow) * Math.min(1, dt * 6);
@@ -2645,6 +2825,7 @@ function drawBattle() {
     const ex = Math.round(VW * 0.66), ey = Math.round(vPanelY * (B.e.boss ? 0.5 : 0.44));
     const pxx = Math.round(VW * 0.32), pyy = Math.round(vPanelY * 0.86);
     const es = B.e.boss ? 3 : 2, ps = 2;
+    B.posP = { x: pxx, y: pyy - 22 }; B.posE = { x: ex, y: ey };
 
     platformPix(ex, ey + 3, 44 * (es / 2), p);
     platformPix(pxx, pyy + 3, 42, p);
@@ -2677,6 +2858,7 @@ function drawBattle() {
     } else if (!(B.result === 'lose' && B.busy < 0.4)) {
         drawDonghoonPix(pxx, pyy, ps, formOf(), B.t, B.hurtP);
     }
+    drawEF();          // 스킬 연출은 캐릭터 위에
     px.restore();
     blit();
 
@@ -2701,6 +2883,15 @@ function drawBattle() {
         ctx.fillStyle = '#c04a60'; ctx.fillText(B.say.s, sx, sy - 3);
         ctx.beginPath(); ctx.moveTo(sx - 6, sy + 5); ctx.lineTo(sx + 6, sy + 5); ctx.lineTo(sx, sy + 13);
         ctx.closePath(); ctx.fillStyle = '#fff8ef'; ctx.fill();
+    }
+    if (B.masterT > 0) {
+        const a2 = Math.min(1, B.masterT * 1.6);
+        ctx.globalAlpha = a2;
+        ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
+        ctx.lineWidth = 7; ctx.strokeStyle = '#fff8ef';
+        ctx.strokeText('🔥 ' + B.masterS, W / 2, H * 0.3);
+        ctx.fillStyle = '#e8597a'; ctx.fillText('🔥 ' + B.masterS, W / 2, H * 0.3);
+        ctx.globalAlpha = 1;
     }
     drawDmg();
     const bw = Math.min(214, W * 0.54);
@@ -2765,7 +2956,10 @@ function drawBattle() {
         sk.slice(0, 6).forEach((s2, i) => {
             const x = 18 + (i % 2) * (w2 + gap), y = by + Math.floor(i / 2) * (rh + 6);
             const off = G.mp < s2.mp || (s2.costGold && G.gold < s2.costGold);
-            mk(x, y, w2, rh, s2.n, s2.mp ? '기력 ' + s2.mp : '기력 0', () => useSkill(s2), off, i % 3);
+            const u2 = skUse(s2.id) % SK_MASTER;
+            mk(x, y, w2, rh, s2.n + ' ' + '★'.repeat(Math.min(3, skLv(s2.id))) + (skLv(s2.id) > 3 ? '+' : ''),
+               (s2.mp ? '기력 ' + s2.mp : '기력 0') + ' · 숙련 ' + u2 + '/' + SK_MASTER,
+               () => useSkill(s2), off, i % 3);
         });
         const yb = by + Math.ceil(Math.min(6, sk.length) / 2) * (rh + 6);
         if (yb + 34 < H - 14) mk(18, yb, fullW, 30, '↩ 뒤로', null, () => { B.menu = 'root'; }, false, 2);
@@ -2909,8 +3103,12 @@ function openShop(tab) {
             const known = G.lv >= sk.lv || (G.learned && G.learned[sk.id]);
             const lv = skLv(sk.id);
             if (known) {
+                const u = skUse(sk.id) % SK_MASTER, pct = Math.round(u / SK_MASTER * 100);
+                const bar2 = '<div style="height:6px;border-radius:3px;background:rgba(200,140,120,.25);margin-top:4px;overflow:hidden">' +
+                    '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#ffb340,#e8597a)"></div></div>' +
+                    '<div style="font-size:.66em;opacity:.7;margin-top:2px">숙련도 ' + u + ' / ' + SK_MASTER + ' — ' + SK_MASTER + '번 쓰면 공짜로 레벨업</div>';
                 h += rowHtml('📕', sk.n + ' <span style="opacity:.6;font-size:.8em">Lv' + lv + ' → Lv' + (lv + 1) + '</span>',
-                    sk.d + (sk.pow ? '<br><b>위력 ' + skPow(sk).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) + '</b>' : ''),
+                    sk.d + (sk.pow ? '<br><b>위력 ' + skPow(sk).toFixed(2) + ' → ' + (sk.pow * (1 + lv * 0.28)).toFixed(2) + '</b>' : '') + bar2,
                     skBookCost(sk).toLocaleString() + '원', 'buyBook(\'' + sk.id + '\')', G.gold < skBookCost(sk));
             } else {
                 const cost = skBookCost(sk) * 3;
