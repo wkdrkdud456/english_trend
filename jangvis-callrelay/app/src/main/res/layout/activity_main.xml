@@ -49,6 +49,18 @@
             android:text="설정 저장 · 연결 확인" />
 
         <Button
+            android:id="@+id/open_calls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="통화 목록 – 골라서 Dynalist 전송" />
+
+        <Switch
+            android:id="@+id/hold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="공유한 통화는 목록에 보관 후 골라서 전송" />
+
+        <Button
             android:id="@+id/retry"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

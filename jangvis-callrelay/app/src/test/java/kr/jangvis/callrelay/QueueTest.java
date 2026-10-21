@@ -132,4 +132,34 @@ public class QueueTest {
         assertEquals(Queue.InsertResult.DUPLICATE, q.insert("a1", "t", "x", "", "DOC", "share", later));
         assertNull(q.find("a1").lastError);
     }
+
+    @Test
+    public void heldItemsWaitForSelection() {
+        q.insert("h1", "t", "x", "", "DOC", "share", 1, Queue.HELD);
+        q.insert("h2", "t", "y", "", null, "share", 2, Queue.HELD);
+        q.insert("h3", "t", "z", "", "DOC", "share", 3, Queue.HELD);
+        assertTrue("보관 항목은 전송 후보가 아님", q.ready(100, 10).isEmpty());
+        assertEquals(-1, q.nextWakeAt());
+        java.util.List<String> sel = java.util.Arrays.asList("h1", "h2");
+        assertEquals(2, q.queueSelected(sel, "NEWDOC", 10));
+        assertEquals("DOC", q.find("h1").destination);
+        assertEquals("목적지 없던 항목만 현재 문서로", "NEWDOC", q.find("h2").destination);
+        assertEquals(Queue.HELD, q.find("h3").state);
+        assertEquals(2, q.ready(100, 10).size());
+        // 이미 대기 중인 항목은 다시 선택해도 변화 없음
+        assertEquals(0, q.queueSelected(sel, "NEWDOC", 11));
+    }
+
+    @Test
+    public void dismissOnlyHeldOrError() {
+        q.insert("h1", "t", "x", "", "DOC", "share", 1, Queue.HELD);
+        q.insert("p1", "t", "y", "", "DOC", "share", 2);
+        assertEquals(1, q.dismiss(java.util.Arrays.asList("h1", "p1"), 5));
+        assertEquals(Queue.DISMISSED, q.find("h1").state);
+        assertEquals("", q.find("h1").text);
+        assertEquals(Queue.PENDING, q.find("p1").state);
+        assertEquals(1, q.pickList(10).size());
+        // 숨긴 통화를 다시 불러와도 중복으로 처리
+        assertEquals(Queue.InsertResult.DUPLICATE, q.insert("h1", "t", "x", "", "DOC", "folder", 6, Queue.HELD));
+    }
 }

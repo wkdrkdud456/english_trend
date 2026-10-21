@@ -94,7 +94,7 @@ public class ShareActivityTest {
         assertTrue(r.message, r.ok);
         assertFalse(r.duplicate);
         Queue.Item it = q.find(r.itemId);
-        assertEquals(Queue.PENDING, it.state);
+        assertEquals("기본: 목록에 보관, 사용자가 고를 때까지 전송 안 함", Queue.HELD, it.state);
         assertEquals(text, it.text);
         assertEquals("DOC_A_123456", it.destination);
         assertEquals("통화 · 통화 녹음 홍길동_251021_101112", it.title);
@@ -148,7 +148,7 @@ public class ShareActivityTest {
         i.putExtra(Intent.EXTRA_TEXT, "짧은 녹취");
         ShareActivity.Result r = activity.importShared(i, null);
         assertTrue(r.ok);
-        assertTrue(r.message.contains("본문만으로"));
+        assertTrue(r.message.contains("본문으로 중복 판단"));
         // 자동화 세션 키가 있으면 같은 본문도 통화별로 구분
         ShareActivity.Result r2 = activity.importShared(i, "notif-abc");
         assertFalse(r2.duplicate);
@@ -157,6 +157,7 @@ public class ShareActivityTest {
     @Test
     public void withoutDestinationStillImports() {
         State.setDoc(RuntimeEnvironment.getApplication(), null, null);
+        State.setHoldShares(RuntimeEnvironment.getApplication(), false);
         Intent i = new Intent(Intent.ACTION_SEND);
         i.setType("text/plain");
         i.putExtra(Intent.EXTRA_TEXT, "문서 설정 전 공유");
@@ -164,6 +165,42 @@ public class ShareActivityTest {
         assertTrue(r.ok);
         assertNull(q.find(r.itemId).destination);
         assertTrue(r.message.contains("문서가 아직 설정되지"));
+    }
+
+    @Test
+    public void immediateModeQueuesForSending() {
+        State.setHoldShares(RuntimeEnvironment.getApplication(), false);
+        Intent i = new Intent(Intent.ACTION_SEND);
+        i.setType("text/plain");
+        i.putExtra(Intent.EXTRA_SUBJECT, "통화 녹음 즉시");
+        i.putExtra(Intent.EXTRA_TEXT, "바로 전송");
+        ShareActivity.Result r = activity.importShared(i, null);
+        assertEquals(Queue.PENDING, q.find(r.itemId).state);
+    }
+
+    @Test
+    public void automationShareIsSentEvenInHoldMode() {
+        Intent i = new Intent(Intent.ACTION_SEND);
+        i.setType("text/plain");
+        i.putExtra(Intent.EXTRA_TEXT, "자동화 공유");
+        ShareActivity.Result r = activity.importShared(i, "notif-xyz");
+        assertEquals(Queue.PENDING, q.find(r.itemId).state);
+    }
+
+    @Test
+    public void multipleFilesShare() {
+        FakeFiles.data = "여러 파일 중 하나".getBytes(StandardCharsets.UTF_8);
+        fileShare(); // 스트림 등록
+        Intent i = new Intent(Intent.ACTION_SEND_MULTIPLE);
+        i.setType("text/plain");
+        java.util.ArrayList<Uri> uris = new java.util.ArrayList<>();
+        uris.add(FILE);
+        uris.add(FILE);
+        i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        ShareActivity.Result r = activity.importShared(i, null);
+        assertTrue(r.message, r.ok);
+        assertTrue(r.message, r.message.contains("새로 보관 1") && r.message.contains("이미 있음 1"));
+        assertEquals(1, q.recent(10).size());
     }
 
     @Test

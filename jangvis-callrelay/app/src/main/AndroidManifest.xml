@@ -40,7 +40,17 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/*" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CallListActivity"
+            android:exported="false"
+            android:label="통화 목록" />
 
         <service
             android:name=".UploadJob"

@@ -26,6 +26,10 @@ public final class Queue extends SQLiteOpenHelper {
     public static final String SENT = "sent";
     public static final String ERROR = "error";
     public static final String UNCERTAIN = "uncertain";
+    /** 수동 선택 전송: 목록에 보관만 하고, 사용자가 고를 때 pending으로 바꾼다. */
+    public static final String HELD = "held";
+    /** 목록에서 숨김(ID는 남겨 같은 통화를 다시 불러와도 다시 나타나지 않게 함). */
+    public static final String DISMISSED = "dismissed";
 
     /** 프로세스가 죽어 sending에 남은 항목을 uncertain으로 돌리는 기준. */
     public static final long STALE_SENDING_MS = 5 * 60_000L;
@@ -96,11 +100,16 @@ public final class Queue extends SQLiteOpenHelper {
     /** 새 항목 저장. 같은 ID가 있으면 아무것도 바꾸지 않는다. */
     public InsertResult insert(String id, String title, String text, String callKey, String destination,
                                String source, long now) {
+        return insert(id, title, text, callKey, destination, source, now, PENDING);
+    }
+
+    public InsertResult insert(String id, String title, String text, String callKey, String destination,
+                               String source, long now, String state) {
         ContentValues v = new ContentValues();
         v.put("id", id);
         v.put("title", title);
         v.put("text", text);
-        v.put("state", PENDING);
+        v.put("state", state);
         v.put("created", now);
         if (destination == null) v.putNull("destination");
         else v.put("destination", destination);
@@ -250,9 +259,63 @@ public final class Queue extends SQLiteOpenHelper {
         return getWritableDatabase().update("items", v, "destination IS NULL", null);
     }
 
+    /** 통화 목록 화면: 숨김을 뺀 항목(최신순). */
+    public List<Item> pickList(int limit) {
+        List<Item> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().query("items",
+                new String[]{"id", "title", "text", "state", "created", "destination", "attempts", "uncertain_count",
+                        "next_at", "node_id", "last_error", "updated", "call_key", "source"},
+                "state!='dismissed'", null, null, null, "created DESC", Integer.toString(limit))) {
+            while (c.moveToNext()) out.add(read(c));
+        }
+        return out;
+    }
+
+    /** 선택 항목 전송: 보관·오류 항목만 pending으로. 목적지가 없으면 지금 설정된 문서로 지정. */
+    public int queueSelected(List<String> ids, String currentDoc, long now) {
+        SQLiteDatabase db = getWritableDatabase();
+        int n = 0;
+        db.beginTransaction();
+        try {
+            for (String id : ids) {
+                ContentValues v = new ContentValues();
+                v.put("state", PENDING);
+                v.put("attempts", 0);
+                v.put("next_at", 0);
+                v.put("updated", now);
+                int k = db.update("items", v, "id=? AND state IN ('held','error') AND destination IS NOT NULL",
+                        new String[]{id});
+                if (k == 0 && currentDoc != null) {
+                    v.put("destination", currentDoc);
+                    k = db.update("items", v, "id=? AND state IN ('held','error') AND destination IS NULL",
+                            new String[]{id});
+                }
+                n += k;
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+        return n;
+    }
+
+    /** 선택 항목 숨기기: 보관·오류 항목만(전송 중·완료 항목은 건드리지 않음). 본문도 지운다. */
+    public int dismiss(List<String> ids, long now) {
+        SQLiteDatabase db = getWritableDatabase();
+        int n = 0;
+        for (String id : ids) {
+            ContentValues v = new ContentValues();
+            v.put("state", DISMISSED);
+            v.put("text", "");
+            v.put("updated", now);
+            n += db.update("items", v, "id=? AND state IN ('held','error')", new String[]{id});
+        }
+        return n;
+    }
+
     public Map<String, Integer> counts() {
         Map<String, Integer> m = new LinkedHashMap<>();
-        for (String s : new String[]{PENDING, SENDING, SENT, ERROR, UNCERTAIN}) m.put(s, 0);
+        for (String s : new String[]{HELD, PENDING, SENDING, SENT, ERROR, UNCERTAIN}) m.put(s, 0);
         try (Cursor c = getReadableDatabase().rawQuery("SELECT state, COUNT(*) FROM items GROUP BY state", null)) {
             while (c.moveToNext()) m.put(c.getString(0), c.getInt(1));
         }

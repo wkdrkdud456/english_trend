@@ -125,6 +125,24 @@ public final class State {
         prefs(c).edit().putBoolean(K_AUTO, on).apply();
     }
 
+    /** 사람이 공유한 통화를 바로 보내지 않고 '통화 목록'에 보관할지(기본: 보관). */
+    public static boolean holdShares(Context c) {
+        return prefs(c).getBoolean("hold_shares", true);
+    }
+
+    public static void setHoldShares(Context c, boolean on) {
+        prefs(c).edit().putBoolean("hold_shares", on).apply();
+    }
+
+    /** '통화 목록'에서 연결한 녹취 폴더(SAF 트리 URI), 없으면 null. */
+    public static String folderUri(Context c) {
+        return prefs(c).getString("folder_uri", null);
+    }
+
+    public static void setFolderUri(Context c, String uri) {
+        prefs(c).edit().putString("folder_uri", uri).apply();
+    }
+
     public static boolean diagEnabled(Context c) {
         return prefs(c).getBoolean(K_DIAG, false);
     }

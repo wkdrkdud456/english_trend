@@ -90,6 +90,21 @@ public class MainActivity extends Activity {
                 saveAndCheck();
             }
         });
+        click(R.id.open_calls, new Runnable() {
+            @Override
+            public void run() {
+                startActivity(new Intent(MainActivity.this, CallListActivity.class));
+            }
+        });
+        Switch hold = findViewById(R.id.hold);
+        hold.setChecked(State.holdShares(this));
+        hold.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton b, boolean on) {
+                State.setHoldShares(MainActivity.this, on);
+                toast(on ? "공유한 통화는 '통화 목록'에 보관됩니다." : "공유한 통화를 바로 전송합니다.");
+            }
+        });
         click(R.id.retry, new Runnable() {
             @Override
             public void run() {
@@ -340,7 +355,8 @@ public class MainActivity extends Activity {
         if (automationAvailable(this)) sb.append("권한: 알림 접근 ").append(SamsungListener.isConnected() ? "켜짐" : "꺼짐")
                 .append(" · 접근성 ").append(SamsungAutomation.isEnabled() ? "켜짐" : "꺼짐")
                 .append(" · 자동 전송 ").append(State.autoEnabled(this) ? "켜짐" : "꺼짐").append('\n');
-        sb.append("대기열: 대기 ").append(c.get(Queue.PENDING))
+        sb.append("대기열: 보관 ").append(c.get(Queue.HELD))
+                .append(" · 대기 ").append(c.get(Queue.PENDING))
                 .append(" · 전송 중 ").append(c.get(Queue.SENDING))
                 .append(" · 완료 ").append(c.get(Queue.SENT))
                 .append(" · 오류 ").append(c.get(Queue.ERROR))
