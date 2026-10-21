@@ -68,6 +68,8 @@ public class SamsungAutomation extends AccessibilityService {
         long startedAt, stepStartedAt, lastScrollAt;
         int actions, lockRetries;
         long shadeAt;
+        /** 열기 동작이 activity가 아니면(중계 방식) 직접 보내지 않고 알림창에서 누른다. */
+        boolean viaShade;
         boolean shadeClicked;
     }
 
@@ -251,13 +253,21 @@ public class SamsungAutomation extends AccessibilityService {
         t.shadeAt = 0;
         t.shadeClicked = false;
         showProgress(s, "삼성 통화 화면을 여는 중…");
-        if (State.diagEnabled(s)) State.diag(s, "자동화 시작 " + t.pkg + " 열기유형=" + intentKind(t.intent));
+        String kind = intentKind(t.intent);
+        // activity가 아닌 열기 동작(broadcast·service)은 다른 앱이 보내면 화면은 막히고 알림만 지워질 수 있다
+        // (실기기: 보낸 뒤 화면이 열리지 않고 알림이 사라짐). 이 경우 알림창에서 사람이 누르는 경로를 쓴다.
+        t.viaShade = !"activity".equals(kind);
+        if (State.diagEnabled(s)) {
+            State.diag(s, "자동화 시작 " + t.pkg + " 열기유형=" + kind + (t.viaShade ? " → 알림창에서 누름" : " → 열기 동작 실행"));
+        }
         State.setAutomationStatus(s, "자동화 시작" + (t.test ? "(연결 시험)" : "") + " – 삼성 화면을 엽니다");
-        try {
-            t.intent.send(s, 0, null, null, null, null, launchOptions());
-        } catch (PendingIntent.CanceledException e) {
-            abort(s, "알림의 열기 동작이 만료됨(알림이 갱신·삭제됨)", false);
-            return;
+        if (!t.viaShade) {
+            try {
+                t.intent.send(s, 0, null, null, null, null, launchOptions());
+            } catch (PendingIntent.CanceledException e) {
+                abort(s, "알림의 열기 동작이 만료됨(알림이 갱신·삭제됨)", false);
+                return;
+            }
         }
         main.removeCallbacks(TICK);
         main.postDelayed(TICK, TICK_MS);
@@ -409,7 +419,11 @@ public class SamsungAutomation extends AccessibilityService {
             abort(this, "삼성 통화 화면이 열리지 않음(앞 화면: " + active + ")", true);
             return;
         }
-        if (t.shadeAt == 0 && elapsed > SHADE_FALLBACK_AFTER_MS) {
+        if (t.shadeAt == 0 && (t.viaShade || elapsed > SHADE_FALLBACK_AFTER_MS)) {
+            if (!SamsungListener.isActive(t.key)) {
+                abort(this, "삼성 알림이 이미 사라져 열 수 없음(사라진 이유는 진단 기록) – 수동으로 공유하세요", true);
+                return;
+            }
             if (t.title == null || t.title.trim().isEmpty()) {
                 abort(this, "열기 동작으로 화면이 열리지 않았고, 알림 제목이 없어 알림창에서 찾을 수 없음", true);
                 return;

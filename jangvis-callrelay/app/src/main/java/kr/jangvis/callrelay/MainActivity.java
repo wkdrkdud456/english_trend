@@ -333,6 +333,7 @@ public class MainActivity extends Activity {
         Map<String, Integer> c = q.counts();
         StringBuilder sb = new StringBuilder();
         String d = State.docId(this);
+        sb.append("버전 ").append(versionName()).append('\n');
         sb.append("Dynalist: ").append(State.hasToken(this) ? "토큰 저장됨" : "토큰 없음")
                 .append(" · 문서 ").append(d == null ? "미설정" : (State.docTitle(this) == null ? d : State.docTitle(this)))
                 .append('\n');
@@ -365,6 +366,14 @@ public class MainActivity extends Activity {
         items.setText(list.isEmpty() ? "아직 가져온 통화가 없습니다." : il.toString().trim());
         diagLog.setText(State.diagEnabled(this) || !State.diagText(this).isEmpty()
                 ? State.diagText(this) : "진단 기록 꺼짐");
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "?";
+        }
     }
 
     private static String fmt(long t) {

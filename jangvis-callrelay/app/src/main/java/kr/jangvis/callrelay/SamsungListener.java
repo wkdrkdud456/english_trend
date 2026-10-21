@@ -120,6 +120,48 @@ public class SamsungListener extends NotificationListenerService {
         SamsungAutomation.onNotificationRemoved(sbn.getKey());
     }
 
+    /** 사라진 이유까지 받는 버전(API 26+). 완료 알림이 왜 금방 사라지는지 진단에 남긴다. */
+    @Override
+    public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap, int reason) {
+        if (sbn == null || !Policy.isSamsungSource(sbn.getPackageName())) return;
+        if (State.diagEnabled(this)) {
+            Seen s = inspect(sbn);
+            if (s.kind == Policy.NotificationKind.TRANSCRIPT_DONE || s.kind == Policy.NotificationKind.RECORDING_DONE) {
+                long shown = (System.currentTimeMillis() - sbn.getPostTime()) / 1000;
+                State.diag(this, "알림 사라짐 " + s.pkg + " 판정=" + s.kind + " 이유=" + removalReason(reason)
+                        + " 표시 " + shown + "초");
+            }
+        }
+        SamsungAutomation.onNotificationRemoved(sbn.getKey());
+    }
+
+    static String removalReason(int r) {
+        switch (r) {
+            case REASON_CLICK: return "알림 누름";
+            case REASON_CANCEL: return "사용자가 지움";
+            case REASON_CANCEL_ALL: return "모두 지우기";
+            case REASON_APP_CANCEL: return "삼성 앱이 지움";
+            case REASON_APP_CANCEL_ALL: return "삼성 앱이 모두 지움";
+            case REASON_TIMEOUT: return "시간 초과";
+            case REASON_GROUP_SUMMARY_CANCELED: return "묶음 정리";
+            case REASON_PACKAGE_BANNED: return "알림 차단됨";
+            case REASON_SNOOZED: return "다시 알림";
+            default: return "코드 " + r;
+        }
+    }
+
+    /** 해당 알림이 아직 알림창에 있는지. */
+    static boolean isActive(String key) {
+        SamsungListener l = instance;
+        if (l == null || key == null) return false;
+        try {
+            StatusBarNotification[] a = l.getActiveNotifications(new String[]{key});
+            return a != null && a.length > 0 && a[0] != null;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     /**
      * '알림 연결 시험': 현재 표시 중인 삼성 변환 완료 알림 중 가장 최근 것으로 자동화를 실행한다.
      * @return 사용자에게 보여줄 결과 문구
