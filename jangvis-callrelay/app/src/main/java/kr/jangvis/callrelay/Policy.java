@@ -38,7 +38,17 @@ public final class Policy {
     public static final Set<String> SAMSUNG_PACKAGES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "com.samsung.android.dialer",
             "com.samsung.android.app.telephonyui",
-            "com.sec.android.app.voicenote")));
+            "com.sec.android.app.voicenote",
+            // 실기기(S25 Ultra) 화면: '통화 녹음 완료' 알림이 위 3개가 아닌 패키지에서 옴 → 통화 화면(InCallUI) 추정
+            "com.samsung.android.incallui")));
+
+    /** 허용 목록 밖에서 통화 녹음 관련 알림을 찾기 위한 단서(진단 전용, 판정·자동화에는 쓰지 않음). */
+    private static final Pattern CALL_HINT = Pattern.compile("통화|녹음|call|record|transcri", Pattern.CASE_INSENSITIVE);
+
+    public static boolean looksCallRelated(String title, String text) {
+        String s = (title == null ? "" : title) + " " + (text == null ? "" : text);
+        return CALL_HINT.matcher(s).find();
+    }
 
     /**
      * 시스템 공유 화면 후보. One UI 8.5에서 실제 어느 패키지가 공유 화면을 띄우는지는 미검증이다.

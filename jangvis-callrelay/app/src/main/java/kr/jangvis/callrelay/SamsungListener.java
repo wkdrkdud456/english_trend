@@ -67,7 +67,11 @@ public class SamsungListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn == null || !Policy.isSamsungSource(sbn.getPackageName())) return;
+        if (sbn == null) return;
+        if (!Policy.isSamsungSource(sbn.getPackageName())) {
+            discover(sbn);
+            return;
+        }
         if ((sbn.getNotification().flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
         Seen s = inspect(sbn);
         if (State.diagEnabled(this)) {
@@ -89,6 +93,23 @@ public class SamsungListener extends NotificationListenerService {
         }
         if (!State.markSignatureNew(this, s.signature, System.currentTimeMillis())) return; // 반복 이벤트
         SamsungAutomation.enqueue(this, s.key, s.signature, s.pkg, sbn.getNotification().contentIntent, false);
+    }
+
+    /**
+     * 진단이 켜져 있으면 허용 목록 밖의 통화 녹음 관련 알림을 패키지 이름과 문구 골격만 기록한다.
+     * 이 알림으로 자동화를 시작하지는 않는다(허용 목록은 코드에서만 바꾼다).
+     */
+    private void discover(StatusBarNotification sbn) {
+        if (!State.diagEnabled(this)) return;
+        Notification n = sbn.getNotification();
+        Bundle ex = n.extras;
+        CharSequence t = ex == null ? null : ex.getCharSequence(Notification.EXTRA_TITLE);
+        CharSequence x = ex == null ? null : ex.getCharSequence(Notification.EXTRA_TEXT);
+        String title = t == null ? "" : t.toString();
+        String text = x == null ? "" : x.toString();
+        if (!Policy.looksCallRelated(title, text)) return;
+        Seen s = inspect(sbn);
+        State.diag(this, "허용 목록 밖 알림 " + s.pkg + " 판정=" + s.kind + " 문구=[" + s.skeleton + "]");
     }
 
     @Override
@@ -123,8 +144,22 @@ public class SamsungListener extends NotificationListenerService {
             }
         }
         if (best == null) {
-            return "표시 중인 삼성 알림 " + samsung + "개 중 '텍스트 변환 완료'로 판정된 알림이 없습니다. "
+            // 허용 목록 밖 패키지에서 완료로 보이는 알림이 있는지 패키지 이름만 알려준다(본문 표시 없음).
+            StringBuilder other = new StringBuilder();
+            if (all != null) {
+                for (StatusBarNotification sbn : all) {
+                    if (Policy.isSamsungSource(sbn.getPackageName())) continue;
+                    if (inspect(sbn).kind != Policy.NotificationKind.TRANSCRIPT_DONE) continue;
+                    if (other.indexOf(sbn.getPackageName()) < 0) other.append("\n• ").append(sbn.getPackageName());
+                }
+            }
+            String msg = "표시 중인 삼성 알림 " + samsung + "개 중 '텍스트 변환 완료'로 판정된 알림이 없습니다. "
                     + "통화 후 변환 완료 알림이 실제로 오는지 '삼성 알림 진단'으로 확인하세요.";
+            if (other.length() > 0) {
+                msg += "\n\n허용 목록 밖에서 완료 알림으로 보이는 패키지:" + other
+                        + "\n이 패키지 이름을 알려주시면 허용 목록에 추가합니다.";
+            }
+            return msg;
         }
         State.markSignatureNew(c, best.signature, System.currentTimeMillis());
         SamsungAutomation.enqueue(c, best.key, best.signature, best.pkg, best.sbn.getNotification().contentIntent, true);

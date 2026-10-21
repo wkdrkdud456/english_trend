@@ -300,6 +300,7 @@ public class MainActivity extends Activity {
             try {
                 Dynalist.Doc d = Dynalist.parseDoc(r.json);
                 State.setDoc(this, docId, d.title);
+                State.setStatus(this, "연결 확인됨 – 공유한 통화를 전송할 준비가 됐습니다");
                 sb.append("연결 성공: 문서 '").append(d.title).append("' (노드 ").append(d.nodeCount)
                         .append("개, 루트 노드 ID ").append(d.rootId).append(")\n");
             } catch (JSONException e) {

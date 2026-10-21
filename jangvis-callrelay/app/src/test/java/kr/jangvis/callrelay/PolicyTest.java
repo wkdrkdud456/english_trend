@@ -160,6 +160,10 @@ public class PolicyTest {
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify("통화 녹음 완료", "텍스트로 변환할 수 있습니다", false, false));
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify("부재중 전화", "홍길동", false, false));
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify(null, null, false, false));
+        // S25 Ultra 실기기 알림(2026-10-21 화면)
+        assertEquals(Policy.NotificationKind.TRANSCRIPT_DONE, Policy.classify("통화 녹음 완료",
+                "통화 녹음이 저장되고 텍스트로 변환되었습니다. 통화 내용을 간략히 보려면 요약을 누르세요.", false, false));
+        assertTrue(Policy.isSamsungSource("com.samsung.android.incallui"));
         // 원본 프로토타입 검사 사례
         assertEquals(Policy.NotificationKind.TRANSCRIPT_DONE, Policy.classify("통화", "텍스트 변환 완료", false, false));
         assertEquals(Policy.NotificationKind.TRANSCRIPT_DONE, Policy.classify("Call", "Transcription complete", false, false));
