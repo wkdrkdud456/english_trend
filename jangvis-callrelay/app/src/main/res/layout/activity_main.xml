@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textAppearance="@android:style/TextAppearance.DeviceDefault.Large" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textIsSelectable="true" />
+
+        <!-- 1. Dynalist -->
+        <TextView
+            style="@style/Section"
+            android:text="1. Dynalist 연결" />
+
+        <EditText
+            android:id="@+id/token"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="개인 API 토큰 (Dynalist 설정 → Developer)"
+            android:inputType="textPassword" />
+
+        <EditText
+            android:id="@+id/doc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="전용 수집 문서 URL 또는 문서 ID"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="설정 저장 · 연결 확인" />
+
+        <Button
+            android:id="@+id/retry"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="오류 항목 재시도" />
+
+        <!-- 2. 자동화 -->
+        <TextView
+            style="@style/Section"
+            android:text="2. 자동 전송 (삼성 완료 알림 → 공유 자동화)" />
+
+        <Switch
+            android:id="@+id/auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="자동 전송 (기본 꺼짐)" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="켜면 삼성의 '텍스트 변환 완료' 알림이 왔을 때 삼성 통화 화면이 앞으로 열리고 더보기 → 공유 → 텍스트 파일 → 장비스 통화 연결을 자동으로 누릅니다. 잠금 중에는 기다렸다가 잠금 해제 후 진행합니다. 메뉴 이름이 예상과 다르면 중단합니다."
+            android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small" />
+
+        <Button
+            android:id="@+id/open_listener"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="알림 접근 권한 설정 열기" />
+
+        <Button
+            android:id="@+id/open_accessibility"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="접근성 권한 설정 열기" />
+
+        <Button
+            android:id="@+id/test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="알림 연결 시험 (실제 녹취 전송)" />
+
+        <Button
+            android:id="@+id/cancel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="자동화 취소" />
+
+        <!-- 3. 진단 -->
+        <TextView
+            style="@style/Section"
+            android:text="3. 삼성 알림 진단" />
+
+        <Switch
+            android:id="@+id/diag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="진단 기록 (통화 본문·이름·번호는 기록하지 않음)" />
+
+        <Button
+            android:id="@+id/clear_diag"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="진단 기록 지우기" />
+
+        <TextView
+            android:id="@+id/diag_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true"
+            android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small" />
+
+        <!-- 4. 대기열 -->
+        <TextView
+            style="@style/Section"
+            android:text="4. 최근 항목" />
+
+        <TextView
+            android:id="@+id/items"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textIsSelectable="true"
+            android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small" />
+    </LinearLayout>
+</ScrollView>

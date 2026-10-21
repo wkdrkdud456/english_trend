@@ -1,0 +1,48 @@
+name: callrelay-android
+
+# 장비스 통화 연결(Android) 표준 Gradle/AGP 빌드: 단위 검사(Robolectric 포함) + lint + 디버그 APK
+on:
+  push:
+    paths:
+      - 'jangvis-callrelay/**'
+      - '.github/workflows/callrelay-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jangvis-callrelay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK 36
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: Lint
+        run: ./gradlew --no-daemon lintDebug
+      - name: Assemble debug APK
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Verify APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK" | head -5
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | head -3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: callrelay-debug
+          path: |
+            jangvis-callrelay/app/build/outputs/apk/debug/*.apk
+            jangvis-callrelay/app/build/reports/
+            jangvis-callrelay/app/build/test-results/
+          if-no-files-found: warn

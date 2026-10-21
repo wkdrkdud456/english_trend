@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 이벤트는 삼성 통화/음성녹음, 시스템 공유 화면, 이 앱에서만 받는다.
+     실제 One UI 8.5 공유 화면 패키지는 실기기 진단으로 확인해야 한다. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/automation_description"
+    android:notificationTimeout="200"
+    android:packageNames="com.samsung.android.dialer,com.samsung.android.app.telephonyui,com.sec.android.app.voicenote,android,com.android.intentresolver,com.samsung.android.intentresolver,kr.jangvis.callrelay" />

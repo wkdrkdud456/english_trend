@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+}
+
+def appDir = file('../../app/src')
+def manual = file('../../build/manual')
+def androidJar = project.findProperty('androidJar') ?: System.getenv('COMPILE_JAR')
+if (androidJar == null) throw new GradleException('-PandroidJar=<android-all-16 jar> 가 필요합니다')
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java.srcDirs = [new File(appDir, 'main/java'), new File(manual, 'gen')]
+    }
+    test {
+        java.srcDirs = [new File(appDir, 'test/java')]
+        // Robolectric 검사는 androidx.test(Google Maven)가 필요하므로 AGP 빌드에서만 실행
+        java.exclude '**/QueueTest.java', '**/UploadJobTest.java', '**/ShareActivityTest.java'
+        resources.srcDirs = [new File(appDir, 'test/resources')]
+    }
+}
+
+dependencies {
+    compileOnly files(androidJar)
+    testCompileOnly files(androidJar)
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20250517'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+}
+
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    maxHeapSize = '2g'
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'full'
+    }
+}

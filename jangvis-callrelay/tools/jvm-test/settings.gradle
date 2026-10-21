@@ -1,0 +1,4 @@
+// AGP 없이(=Android SDK 다운로드 없이) 단위 검사만 돌리는 보조 빌드.
+// 사용: tools/build-apk.sh 실행 후
+//   gradle -p tools/jvm-test test -PandroidJar=/path/android-all-16-robolectric-13921718.jar
+rootProject.name = 'callrelay-jvm-test'

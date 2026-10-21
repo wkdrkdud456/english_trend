@@ -1,0 +1,78 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 선택: 같은 테스트 서명으로 계속 업데이트하려면 프로젝트 루트에 keystore.properties를 둔다(저장소에 올리지 않음).
+//   storeFile=/절대/경로/test-signing.p12
+//   storePassword=...
+//   keyAlias=test
+//   keyPassword=...
+def ksFile = rootProject.file('keystore.properties')
+def ks = new Properties()
+if (ksFile.exists()) ksFile.withInputStream { ks.load(it) }
+
+android {
+    namespace 'kr.jangvis.callrelay'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'kr.jangvis.callrelay'
+        minSdk 30
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    signingConfigs {
+        if (ks.getProperty('storeFile')) {
+            test {
+                storeFile file(ks.getProperty('storeFile'))
+                storePassword ks.getProperty('storePassword')
+                keyAlias ks.getProperty('keyAlias')
+                keyPassword ks.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (ks.getProperty('storeFile')) signingConfig signingConfigs.test
+        }
+        release {
+            minifyEnabled false
+            signingConfig ks.getProperty('storeFile') ? signingConfigs.test : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                maxHeapSize = '2g'
+                testLogging {
+                    events 'passed', 'skipped', 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds false
+        // 한국어 전용 앱: 하드코딩 문구 경고는 오류로 보지 않는다
+        disable 'HardcodedText', 'SetTextI18n'
+    }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20250517'
+    testImplementation 'org.robolectric:robolectric:4.16'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+}
