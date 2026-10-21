@@ -273,11 +273,16 @@ public final class Queue extends SQLiteOpenHelper {
         }
     }
 
-    /** 다음에 깨어나야 할 시각(대기 중인 항목 중 가장 이른 next_at), 없으면 -1. */
+    /**
+     * 다음에 깨어나야 할 시각(대기 중인 항목 중 가장 이른 next_at), 없으면 -1.
+     * sending에 남은 항목은 오래된 선점을 정리할 시각을 포함한다.
+     */
     public long nextWakeAt() {
         try (Cursor c = getReadableDatabase().rawQuery(
-                "SELECT MIN(next_at) FROM items WHERE destination IS NOT NULL AND (state='pending' OR (state='uncertain' AND uncertain_count<?))",
-                new String[]{Integer.toString(Policy.MAX_UNCERTAIN)})) {
+                "SELECT MIN(t) FROM ("
+                        + "SELECT next_at AS t FROM items WHERE destination IS NOT NULL AND (state='pending' OR (state='uncertain' AND uncertain_count<?))"
+                        + " UNION ALL SELECT claimed_at+? AS t FROM items WHERE state='sending')",
+                new String[]{Integer.toString(Policy.MAX_UNCERTAIN), Long.toString(STALE_SENDING_MS + 1_000L)})) {
             if (c.moveToFirst() && !c.isNull(0)) return c.getLong(0);
             return -1;
         }
