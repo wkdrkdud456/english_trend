@@ -12,7 +12,8 @@
 #   RES_JAR      aapt 리소스 링크용 android.jar (기본: platform 23)
 #   KEYSTORE     서명 키스토어(없으면 테스트 키를 새로 만든다)      [기본: build/test-signing.p12]
 #   KS_PASS      키스토어 비밀번호                                   [기본: 임의 생성 후 build/test-signing.pass에 저장]
-#   OUT          결과 APK 경로                                       [기본: build/jangvis-callrelay.apk]
+#   FLAVOR       core(공유→Dynalist만) 또는 full(+알림·접근성 자동화)  [기본: core]
+#   OUT          결과 APK 경로                                       [기본: build/jangvis-callrelay-<FLAVOR>.apk]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,19 +22,33 @@ B="$ROOT/build/manual"
 COMPILE_JAR="${COMPILE_JAR:?COMPILE_JAR(API 36 android-all jar) 경로가 필요합니다}"
 RES_JAR="${RES_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar}"
 KEYSTORE="${KEYSTORE:-$ROOT/build/test-signing.p12}"
-OUT="${OUT:-$ROOT/build/jangvis-callrelay.apk}"
+FLAVOR="${FLAVOR:-core}"
+case "$FLAVOR" in core|full) ;; *) echo "FLAVOR는 core 또는 full" >&2; exit 2;; esac
+OUT="${OUT:-$ROOT/build/jangvis-callrelay-$FLAVOR.apk}"
 VERSION_CODE="${VERSION_CODE:-1}"
-VERSION_NAME="${VERSION_NAME:-0.1.0}"
+VERSION_NAME="${VERSION_NAME:-0.1.0}-$FLAVOR"
 DX="$(command -v dalvik-exchange || command -v dx)"
 
 rm -rf "$B"
 mkdir -p "$B/gen" "$B/classes" "$B/dex" "$(dirname "$OUT")"
 
 echo "[1/6] 리소스 링크 (aapt)"
-# 소스 매니페스트에는 package가 없으므로(AGP namespace 사용) 직접 빌드용 사본에 넣는다.
-sed 's|<manifest xmlns:android="http://schemas.android.com/apk/res/android">|<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="kr.jangvis.callrelay">|' \
-  "$APP/AndroidManifest.xml" > "$B/AndroidManifest.xml"
-grep -q 'package="kr.jangvis.callrelay"' "$B/AndroidManifest.xml"
+# 소스 매니페스트에는 package가 없으므로(AGP namespace 사용) 직접 빌드용 사본에 넣고,
+# full이면 app/src/full/AndroidManifest.xml의 <application> 내용을 합친다(AGP 매니페스트 병합과 같은 결과).
+python3 - "$APP/AndroidManifest.xml" "$ROOT/app/src/full/AndroidManifest.xml" "$FLAVOR" "$B/AndroidManifest.xml" <<'PY'
+import re, sys
+main, full, flavor, out = sys.argv[1:]
+s = open(main, encoding='utf-8').read()
+s = s.replace('<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+              '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="kr.jangvis.callrelay">', 1)
+assert 'package="kr.jangvis.callrelay"' in s
+if flavor == 'full':
+    f = open(full, encoding='utf-8').read()
+    body = re.search(r'<application>(.*)</application>', f, re.S).group(1)
+    i = s.rindex('</application>')
+    s = s[:i] + body + s[i:]
+open(out, 'w', encoding='utf-8').write(s)
+PY
 aapt package -f -m \
   -J "$B/gen" \
   -M "$B/AndroidManifest.xml" \

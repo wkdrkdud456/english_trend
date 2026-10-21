@@ -27,22 +27,26 @@ jobs:
       - name: Android SDK 36
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: Unit tests
-        run: ./gradlew --no-daemon testDebugUnitTest
+        run: ./gradlew --no-daemon testCoreDebugUnitTest testFullDebugUnitTest
       - name: Lint
-        run: ./gradlew --no-daemon lintDebug
+        run: ./gradlew --no-daemon lintCoreDebug lintFullDebug
       - name: Assemble debug APK
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleCoreDebug assembleFullDebug
       - name: Verify APK
         run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK" | head -5
-          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | head -3
+          for APK in app/build/outputs/apk/core/debug/app-core-debug.apk app/build/outputs/apk/full/debug/app-full-debug.apk; do
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK" | head -3
+            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | head -1
+            "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml "$APK" | grep -c 'BIND_ACCESSIBILITY_SERVICE\|BIND_NOTIFICATION_LISTENER_SERVICE' || true
+          done
+          # core에는 민감 서비스가 없어야 한다
+          ! "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump xmltree --file AndroidManifest.xml app/build/outputs/apk/core/debug/app-core-debug.apk | grep -q 'BIND_ACCESSIBILITY_SERVICE\|BIND_NOTIFICATION_LISTENER_SERVICE'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: callrelay-debug
           path: |
-            jangvis-callrelay/app/build/outputs/apk/debug/*.apk
+            jangvis-callrelay/app/build/outputs/apk/*/debug/*.apk
             jangvis-callrelay/app/build/reports/
             jangvis-callrelay/app/build/test-results/
           if-no-files-found: warn

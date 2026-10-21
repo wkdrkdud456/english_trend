@@ -29,8 +29,8 @@ JDK 21(Robolectric의 SDK 36 검사에 필요), Android SDK(platform 36)가 있�
 
 ```bash
 cd jangvis-callrelay
-./gradlew testDebugUnitTest lintDebug assembleDebug
-# 결과: app/build/outputs/apk/debug/app-debug.apk
+./gradlew testCoreDebugUnitTest testFullDebugUnitTest lintCoreDebug lintFullDebug assembleCoreDebug assembleFullDebug
+# 결과: app/build/outputs/apk/core/debug/app-core-debug.apk, app/build/outputs/apk/full/debug/app-full-debug.apk
 ```
 
 AGP 8.13.0 / Gradle 8.14.3. 같은 서명으로 계속 업데이트하려면 `keystore.properties`(저장소에 올리지 않음)에
@@ -45,8 +45,9 @@ Google SDK 서버에 접근할 수 없는 환경용. Ubuntu 24.04 패키지와 M
 ```bash
 sudo apt-get install aapt apksigner zipalign dalvik-exchange android-sdk-platform-23 openjdk-21-jdk-headless
 curl -O https://repo.maven.apache.org/maven2/org/robolectric/android-all/16-robolectric-13921718/android-all-16-robolectric-13921718.jar
-COMPILE_JAR=$PWD/android-all-16-robolectric-13921718.jar tools/build-apk.sh
-# 결과: build/jangvis-callrelay.apk (처음 실행 시 build/test-signing.p12 테스트 키 생성)
+COMPILE_JAR=$PWD/android-all-16-robolectric-13921718.jar FLAVOR=core tools/build-apk.sh
+COMPILE_JAR=$PWD/android-all-16-robolectric-13921718.jar FLAVOR=full tools/build-apk.sh
+# 결과: build/jangvis-callrelay-core.apk, build/jangvis-callrelay-full.apk (처음 실행 시 build/test-signing.p12 테스트 키 생성)
 
 # 순수 JVM 단위 검사(Policy, Dynalist 응답 해석·HTTP)
 gradle -p tools/jvm-test test -PandroidJar=$PWD/android-all-16-robolectric-13921718.jar
@@ -56,9 +57,27 @@ gradle -p tools/jvm-test test -PandroidJar=$PWD/android-all-16-robolectric-13921
 - 코드는 API 36 프레임워크 jar로 컴파일하고 dx로 DEX를 만든다. dx는 람다를 변환하지 못하므로 **소스에 람다를 쓰지 않는다.**
 - Robolectric 검사(Queue·UploadJob·ShareActivity)는 Google Maven의 androidx.test가 필요해 A 경로에서만 실행된다.
 
+## 두 가지 판
+
+| 판 | 포함 기능 | 설치 |
+|---|---|---|
+| **core** (`0.1.0-core`) | 공유 수신 → 대기열 → Dynalist 전송 | 파일 관리자·브라우저로 일반 설치 |
+| **full** (`0.1.0-full`) | core + 삼성 완료 알림 감지·공유 자동화 | 아래 참고 |
+
+패키지·서명이 같아 core 위에 full을 덮어 설치하면 설정·대기열이 유지된다.
+
+**full이 'Google Play 프로텍트: 기기 보호를 위해 앱 차단됨'으로 막히는 이유**:
+Play 프로텍트의 강화된 사기 방지는 브라우저·메신저·파일 관리자로 설치하는 앱이 알림 접근
+(`NotificationListenerService`)이나 접근성(`AccessibilityService`)을 선언하면 설치를 막는다.
+full은 자동화에 두 서비스가 꼭 필요하므로 이 방식으로는 설치할 수 없다. 이 앱에서 피할 방법은 없다.
+가능한 경로(실기기에서 확인 필요):
+- PC에서 USB 디버깅으로 한 번 설치: `adb install -r jangvis-callrelay-full.apk`
+  (이 차단은 인터넷 사이드로드 경로 대상이라 adb 설치는 해당하지 않는 것으로 알려져 있다. Samsung '자동 차단'이 켜져 있으면 USB 명령이 막히므로 설치하는 동안만 끈다)
+- 또는 Play 스토어 → 프로필 → Play 프로텍트 → 설정에서 검사를 잠시 끄고 설치한 뒤 다시 켠다(기기 정책에 따라 막힐 수 있음).
+
 ## 설치·설정
 
-1. APK 설치(출처를 알 수 없는 앱 허용). 테스트 서명이 다른 APK로는 덮어쓸 수 없으니 먼저 삭제 후 설치.
+1. core APK 설치(출처를 알 수 없는 앱 허용). 테스트 서명이 다른 APK로는 덮어쓸 수 없으니 먼저 삭제 후 설치.
 2. 앱 실행 → 알림 권한 허용.
 3. Dynalist 웹 → Settings → Developer에서 개인 API 토큰 발급 → 앱에 입력.
 4. 전용 수집 문서 URL(`https://dynalist.io/d/<문서ID>`) 또는 문서 ID 입력 → **설정 저장 · 연결 확인**.
@@ -81,9 +100,9 @@ gradle -p tools/jvm-test test -PandroidJar=$PWD/android-all-16-robolectric-13921
 - 토큰과 녹취는 로그에 쓰지 않는다. 진단 기록에는 상태 단어만 남기고 나머지 단어는 `▢글자수`로 가린다.
   전송 완료 30일 후 휴대폰 사본의 본문을 지운다(ID는 중복 방지용으로 유지). `allowBackup=false`.
 
-## 자동화(완료 알림 → 공유) — 실기기 확인 필요
+## 자동화(완료 알림 → 공유) — full 전용, 실기기 확인 필요
 
-**먼저 수동 공유가 Dynalist에 도착하는지 확인한 뒤** 진행한다.
+**먼저 core로 수동 공유가 Dynalist에 도착하는지 확인한 뒤** full을 설치해 진행한다.
 
 1. **알림 접근 권한 설정 열기**, **접근성 권한 설정 열기**에서 ‘장비스 통화 연결’ 허용.
 2. **삼성 알림 진단** 켜기 → 실제 통화 1건 녹음 → 변환 완료까지 기다린 뒤 진단 기록 확인.

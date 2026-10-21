@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -71,6 +72,11 @@ public class MainActivity extends Activity {
         // 토큰·문서 주소가 자동완성 서비스에 저장되지 않게 한다.
         token.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
         doc.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+
+        if (!automationAvailable(this)) {
+            findViewById(R.id.automation_section).setVisibility(View.GONE);
+            findViewById(R.id.core_notice).setVisibility(View.VISIBLE);
+        }
 
         String d = State.docId(this);
         if (d != null) doc.setText(d);
@@ -147,6 +153,16 @@ public class MainActivity extends Activity {
         }
         SamsungAutomation.createChannels(this);
         UploadJob.kick(this);
+    }
+
+    /** 자동화판(full)인지: 매니페스트에 접근성 서비스가 선언돼 있어야 한다. */
+    static boolean automationAvailable(Context c) {
+        try {
+            c.getPackageManager().getServiceInfo(new ComponentName(c, SamsungAutomation.class), 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
 
     private void click(int id, final Runnable r) {
@@ -319,7 +335,7 @@ public class MainActivity extends Activity {
         sb.append("Dynalist: ").append(State.hasToken(this) ? "토큰 저장됨" : "토큰 없음")
                 .append(" · 문서 ").append(d == null ? "미설정" : (State.docTitle(this) == null ? d : State.docTitle(this)))
                 .append('\n');
-        sb.append("권한: 알림 접근 ").append(SamsungListener.isConnected() ? "켜짐" : "꺼짐")
+        if (automationAvailable(this)) sb.append("권한: 알림 접근 ").append(SamsungListener.isConnected() ? "켜짐" : "꺼짐")
                 .append(" · 접근성 ").append(SamsungAutomation.isEnabled() ? "켜짐" : "꺼짐")
                 .append(" · 자동 전송 ").append(State.autoEnabled(this) ? "켜짐" : "꺼짐").append('\n');
         sb.append("대기열: 대기 ").append(c.get(Queue.PENDING))

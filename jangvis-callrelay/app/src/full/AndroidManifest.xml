@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 자동화판(full)에만 들어가는 서비스. 알림 접근·접근성 서비스를 선언하는 앱은
+     Google Play 프로텍트의 강화된 사기 방지가 브라우저·메신저·파일 관리자 설치를 차단하므로
+     기본판(core)에서는 뺀다. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <service
+            android:name=".SamsungListener"
+            android:exported="true"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".SamsungAutomation"
+            android:exported="true"
+            android:label="@string/automation_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/automation_config" />
+        </service>
+    </application>
+</manifest>

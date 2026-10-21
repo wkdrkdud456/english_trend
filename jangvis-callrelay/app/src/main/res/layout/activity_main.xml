@@ -54,6 +54,20 @@
             android:layout_height="wrap_content"
             android:text="오류 항목 재시도" />
 
+        <TextView
+            android:id="@+id/core_notice"
+            style="@style/Section"
+            android:text="기본판: 수동 공유 → Dynalist 전송만 지원합니다. 완료 알림 자동화는 자동화판(full)에서 제공합니다."
+            android:textStyle="normal"
+            android:visibility="gone" />
+
+        <!-- 자동화판(full)에서만 표시 -->
+        <LinearLayout
+            android:id="@+id/automation_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
         <!-- 2. 자동화 -->
         <TextView
             style="@style/Section"
@@ -119,6 +133,8 @@
             android:fontFamily="monospace"
             android:textIsSelectable="true"
             android:textAppearance="@android:style/TextAppearance.DeviceDefault.Small" />
+
+        </LinearLayout>
 
         <!-- 4. 대기열 -->
         <TextView

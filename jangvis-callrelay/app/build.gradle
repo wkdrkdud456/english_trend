@@ -23,6 +23,20 @@ android {
         versionName '0.1.0'
     }
 
+    // core: 공유 → Dynalist만(알림 접근·접근성 서비스 없음, 일반 설치 가능)
+    // full: core + 삼성 완료 알림 감지·공유 자동화(Play 프로텍트가 사이드로드 설치를 막을 수 있음)
+    flavorDimensions 'edition'
+    productFlavors {
+        core {
+            dimension 'edition'
+            versionNameSuffix '-core'
+        }
+        full {
+            dimension 'edition'
+            versionNameSuffix '-full'
+        }
+    }
+
     signingConfigs {
         if (ks.getProperty('storeFile')) {
             test {
