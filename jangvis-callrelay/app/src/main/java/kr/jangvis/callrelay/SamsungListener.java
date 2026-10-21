@@ -34,7 +34,7 @@ public class SamsungListener extends NotificationListenerService {
 
     /** 알림에서 얻은 판정 정보. 본문은 담지 않는다. */
     static final class Seen {
-        String key, pkg, skeleton, signature;
+        String key, pkg, skeleton, signature, title;
         long when, postTime;
         Policy.NotificationKind kind;
         StatusBarNotification sbn;
@@ -59,6 +59,7 @@ public class SamsungListener extends NotificationListenerService {
         s.when = n.when;
         s.postTime = sbn.getPostTime();
         s.kind = Policy.classify(title, text, ongoing, progress);
+        s.title = title;
         s.skeleton = Policy.skeleton(title) + " / " + Policy.skeleton(text);
         // 같은 알림의 반복 갱신은 같은 서명, 알림 ID가 재사용된 다음 통화는 when·문구가 달라 다른 서명.
         s.signature = Policy.sha256Hex(s.key + "|" + n.when + "|" + title + "|" + text).substring(0, 32);
@@ -82,7 +83,7 @@ public class SamsungListener extends NotificationListenerService {
                     + " ch=" + n.getChannelId()
                     + " cat=" + n.category
                     + " 판정=" + s.kind
-                    + " 열기=" + (n.contentIntent != null)
+                    + " 열기=" + SamsungAutomation.intentKind(n.contentIntent)
                     + " 문구=[" + s.skeleton + "]");
         }
         if (s.kind != Policy.NotificationKind.TRANSCRIPT_DONE) return;
@@ -92,7 +93,7 @@ public class SamsungListener extends NotificationListenerService {
             return;
         }
         if (!State.markSignatureNew(this, s.signature, System.currentTimeMillis())) return; // 반복 이벤트
-        SamsungAutomation.enqueue(this, s.key, s.signature, s.pkg, sbn.getNotification().contentIntent, false);
+        SamsungAutomation.enqueue(this, s.key, s.signature, s.pkg, s.title, sbn.getNotification().contentIntent, false);
     }
 
     /**
@@ -101,6 +102,7 @@ public class SamsungListener extends NotificationListenerService {
      */
     private void discover(StatusBarNotification sbn) {
         if (!State.diagEnabled(this)) return;
+        if (getPackageName().equals(sbn.getPackageName())) return; // 이 앱의 진행·결과 알림은 제외
         Notification n = sbn.getNotification();
         Bundle ex = n.extras;
         CharSequence t = ex == null ? null : ex.getCharSequence(Notification.EXTRA_TITLE);
@@ -162,7 +164,8 @@ public class SamsungListener extends NotificationListenerService {
             return msg;
         }
         State.markSignatureNew(c, best.signature, System.currentTimeMillis());
-        SamsungAutomation.enqueue(c, best.key, best.signature, best.pkg, best.sbn.getNotification().contentIntent, true);
+        SamsungAutomation.enqueue(c, best.key, best.signature, best.pkg, best.title,
+                best.sbn.getNotification().contentIntent, true);
         return "시험 시작: 삼성 화면이 열리고 공유 흐름을 진행합니다. 성공하면 실제 녹취가 Dynalist로 전송됩니다.";
     }
 }

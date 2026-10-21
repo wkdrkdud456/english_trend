@@ -58,6 +58,8 @@ public class SamsungAutomation extends AccessibilityService {
 
     static final class Task {
         String key, signature, pkg;
+        /** 알림 제목(예: '통화 녹음 완료'). 알림창에서 같은 제목의 알림을 찾을 때만 쓰고 저장·기록하지 않는다. */
+        String title;
         PendingIntent intent;
         boolean test;
         long enqueuedAt;
@@ -65,12 +67,14 @@ public class SamsungAutomation extends AccessibilityService {
         Step step;
         long startedAt, stepStartedAt, lastScrollAt;
         int actions, lockRetries;
+        long shadeAt;
+        boolean shadeClicked;
     }
 
     // ---------------------------------------------------------------- 외부 진입점
 
     /** 완료 알림 → 작업 추가. 같은 서명은 한 번만. */
-    static void enqueue(final Context c, final String key, final String sig, final String pkg,
+    static void enqueue(final Context c, final String key, final String sig, final String pkg, final String title,
                         final PendingIntent pi, final boolean test) {
         main.post(new Runnable() {
             @Override
@@ -80,6 +84,7 @@ public class SamsungAutomation extends AccessibilityService {
                 Task t = new Task();
                 t.key = key;
                 t.signature = sig;
+                t.title = title;
                 t.pkg = pkg;
                 t.intent = pi;
                 t.test = test;
@@ -243,7 +248,10 @@ public class SamsungAutomation extends AccessibilityService {
         t.step = Step.OPENING;
         t.stepStartedAt = now;
         t.actions = 0;
+        t.shadeAt = 0;
+        t.shadeClicked = false;
         showProgress(s, "삼성 통화 화면을 여는 중…");
+        if (State.diagEnabled(s)) State.diag(s, "자동화 시작 " + t.pkg + " 열기유형=" + intentKind(t.intent));
         State.setAutomationStatus(s, "자동화 시작" + (t.test ? "(연결 시험)" : "") + " – 삼성 화면을 엽니다");
         try {
             t.intent.send(s, 0, null, null, null, null, launchOptions());
@@ -259,6 +267,17 @@ public class SamsungAutomation extends AccessibilityService {
      * 알림의 PendingIntent로 삼성 화면을 열 때 보내는 쪽(이 앱)의 백그라운드 실행 허용을 명시한다(Android 14+).
      * 실행 가능 여부의 근거는 이 앱이 시스템에 바인딩된 접근성 서비스를 가진다는 점이다. 실기기 미검증.
      */
+    /** PendingIntent 종류(진단용). activity가 아니면 삼성 쪽에서 화면을 다시 여는 중계(트램펄린)일 수 있다. */
+    static String intentKind(PendingIntent pi) {
+        if (pi == null) return "없음";
+        if (Build.VERSION.SDK_INT < 31) return "알 수 없음";
+        if (pi.isActivity()) return "activity";
+        if (pi.isBroadcast()) return "broadcast";
+        if (pi.isForegroundService()) return "foregroundService";
+        if (pi.isService()) return "service";
+        return "기타";
+    }
+
     @SuppressWarnings("deprecation")
     private static Bundle launchOptions() {
         if (Build.VERSION.SDK_INT < 34) return null;
@@ -307,17 +326,14 @@ public class SamsungAutomation extends AccessibilityService {
             return;
         }
         String active = activePackage();
+        if (t.step == Step.OPENING) {
+            tickOpening(t, active, now);
+            return;
+        }
         if (active == null || SYSTEM_UI.equals(active)) return; // 알림창 등: 기다리되 누르지 않음
         boolean ownApp = getPackageName().equals(active);
         boolean samsung = Policy.isSamsungSource(active);
         boolean sheet = Policy.isShareSheet(active);
-        if (t.step == Step.OPENING) {
-            if (samsung) setStep(t, Step.MORE_OR_SHARE);
-            else if (now - t.stepStartedAt > Policy.STEP_TIMEOUT_MS) {
-                abort(this, "삼성 통화 화면이 열리지 않음(앞 화면: " + active + ")", true);
-            }
-            return;
-        }
         boolean allowed = samsung
                 || (sheet && (t.step == Step.TEXT_FILE || t.step == Step.TARGET || t.step == Step.WAIT_IMPORT))
                 || (ownApp && (t.step == Step.TARGET || t.step == Step.WAIT_IMPORT));
@@ -368,6 +384,69 @@ public class SamsungAutomation extends AccessibilityService {
             default:
                 break;
         }
+    }
+
+    /** 알림의 열기 동작 후 이 시간 안에 삼성 화면이 안 뜨면 알림창에서 직접 누른다. */
+    private static final long SHADE_FALLBACK_AFTER_MS = 3_000L;
+    private static final long OPENING_TIMEOUT_MS = 14_000L;
+
+    /**
+     * 통화 화면 열기 단계.
+     * 1) contentIntent.send() 결과로 삼성 화면이 뜨면 다음 단계.
+     * 2) 3초 안에 안 뜨면(삼성 알림이 중계 방식이라 다른 앱이 보낸 요청으로는 화면이 막히는 경우)
+     *    알림창을 내리고, 제목이 정확히 같은 삼성 알림 한 개를 누른다(사람이 알림을 누른 것과 같은 경로).
+     */
+    private void tickOpening(Task t, String active, long now) {
+        if (active != null && Policy.isSamsungSource(active)) {
+            if (State.diagEnabled(this)) {
+                State.diag(this, "통화 화면 열림 " + active + (t.shadeClicked ? " (알림창에서 누름)" : " (열기 동작)"));
+            }
+            setStep(t, Step.MORE_OR_SHARE);
+            return;
+        }
+        long elapsed = now - t.stepStartedAt;
+        if (elapsed > OPENING_TIMEOUT_MS) {
+            abort(this, "삼성 통화 화면이 열리지 않음(앞 화면: " + active + ")", true);
+            return;
+        }
+        if (t.shadeAt == 0 && elapsed > SHADE_FALLBACK_AFTER_MS) {
+            if (t.title == null || t.title.trim().isEmpty()) {
+                abort(this, "열기 동작으로 화면이 열리지 않았고, 알림 제목이 없어 알림창에서 찾을 수 없음", true);
+                return;
+            }
+            t.shadeAt = now;
+            showProgress(this, "알림창에서 삼성 알림을 누르는 중…");
+            performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS);
+            return;
+        }
+        if (t.shadeAt > 0 && !t.shadeClicked && now - t.shadeAt > 800L) {
+            if (clickInShade(t)) {
+                t.shadeClicked = true;
+            } else if (now - t.shadeAt > 5_000L) {
+                abort(this, "알림창에서 '" + t.title + "' 알림을 찾지 못함", true);
+            }
+        }
+    }
+
+    /** 시스템 UI(알림창) 창에서 알림 제목이 정확히 같은 노드의 클릭 가능한 상위 노드를 누른다. 위쪽(최신) 알림부터. */
+    private boolean clickInShade(Task t) {
+        if (t.actions >= Policy.AUTOMATION_MAX_ACTIONS) return false;
+        List<AccessibilityWindowInfo> ws = getWindows();
+        if (ws == null) return false;
+        String[] label = {t.title};
+        for (AccessibilityWindowInfo w : ws) {
+            AccessibilityNodeInfo r = w.getRoot();
+            if (r == null || r.getPackageName() == null || !SYSTEM_UI.equals(r.getPackageName().toString())) continue;
+            AccessibilityNodeInfo hit = findLabel(r, label, 0);
+            if (hit == null) continue;
+            AccessibilityNodeInfo target = hit;
+            int up = 0;
+            while (target != null && !target.isClickable() && up++ < 8) target = target.getParent();
+            if (target == null || !target.isClickable()) continue;
+            t.actions++;
+            if (target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+        }
+        return false;
     }
 
     private static void setStep(Task t, Step s) {
@@ -501,6 +580,11 @@ public class SamsungAutomation extends AccessibilityService {
         current = null;
         main.removeCallbacks(TICK);
         SamsungAutomation s = service;
+        if (s != null && t != null && t.shadeAt > 0 && !t.shadeClicked) {
+            // 이 앱이 내린 알림창은 다시 닫는다
+            if (Build.VERSION.SDK_INT >= 31) s.performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE);
+            else s.performGlobalAction(GLOBAL_ACTION_BACK);
+        }
         if (dumpUi && s != null && State.diagEnabled(s)) s.dumpUi(t);
         State.setAutomationStatus(c, "자동화 중단: " + why + " – 통화 텍스트를 수동으로 공유하세요");
         if (State.diagEnabled(c)) {

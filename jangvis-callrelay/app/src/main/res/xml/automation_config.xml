@@ -8,4 +8,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/automation_description"
     android:notificationTimeout="200"
-    android:packageNames="com.samsung.android.dialer,com.samsung.android.incallui,com.samsung.android.app.telephonyui,com.sec.android.app.voicenote,android,com.android.intentresolver,com.samsung.android.intentresolver,kr.jangvis.callrelay" />
+    android:packageNames="com.samsung.android.dialer,com.samsung.android.incallui,com.android.systemui,com.samsung.android.app.telephonyui,com.sec.android.app.voicenote,android,com.android.intentresolver,com.samsung.android.intentresolver,kr.jangvis.callrelay" />
