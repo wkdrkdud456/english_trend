@@ -267,7 +267,8 @@ public final class Policy {
     public enum NotificationKind { TRANSCRIPT_DONE, RECORDING_DONE, IN_PROGRESS, FAILED, OTHER }
 
     private static final Pattern FAILED = Pattern.compile(
-            "실패|오류|에러|할 수 없|하지 못|못했|중단|취소|fail|error|unable|couldn.?t|can.?t",
+            "실패|오류|에러|할 수 없|하지 못|못했|중단|취소|되지\\s*않|않았|fail|error|unable|couldn.?t|can.?t"
+                    + "|not\\s+(complete|completed|ready|available)|incomplete",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern IN_PROGRESS = Pattern.compile(
             "(변환|처리|진행|분석|저장|녹음|기록)\\s*(하는\\s*)?중|대기\\s*중|converting|transcribing|processing|in progress|\\.\\.\\.|…",
@@ -342,6 +343,11 @@ public final class Policy {
     public static final String[] SHARE_LABELS = {"공유", "공유하기", "Share"};
     public static final String[] TEXT_FILE_LABELS = {"텍스트 파일", "텍스트 파일로 공유", "텍스트 파일 공유", "Text file"};
     public static final String[] TARGET_LABELS = {"장비스 통화 연결"};
+    /**
+     * 공유가 선택창(ResolverActivity)으로 열려 '한 번만/항상'을 묻는 경우의 '한 번만'.
+     * '항상'은 기본 앱 설정을 바꾸므로 절대 누르지 않는다.
+     */
+    public static final String[] JUST_ONCE_LABELS = {"한 번만", "이번만", "Just once"};
 
     /** 공백·대소문자만 무시하고 정확히 같은 라벨인지 비교한다(부분 일치 없음). */
     public static boolean labelMatches(CharSequence label, String[] candidates) {

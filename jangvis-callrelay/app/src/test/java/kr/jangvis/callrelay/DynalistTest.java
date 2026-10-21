@@ -13,6 +13,8 @@ public class DynalistTest {
     @Test
     public void interpretsApiCodeNotJustHttpStatus() {
         assertEquals(Dynalist.Kind.OK, Dynalist.interpret(200, "{\"_code\":\"Ok\"}").kind);
+        // 원본 프로토타입은 "OK"만 성공으로 봐서 실제 응답("Ok")을 모두 실패 처리했다
+        assertEquals(Dynalist.Kind.OK, Dynalist.interpret(200, "{\"_code\":\"OK\"}").kind);
         assertEquals(Dynalist.Kind.AUTH, Dynalist.interpret(200, "{\"_code\":\"InvalidToken\"}").kind);
         assertEquals(Dynalist.Kind.AUTH, Dynalist.interpret(200, "{\"_code\":\"Unauthorized\"}").kind);
         assertEquals(Dynalist.Kind.RATE_LIMITED, Dynalist.interpret(200, "{\"_code\":\"TooManyRequests\"}").kind);
@@ -61,6 +63,8 @@ public class DynalistTest {
         assertNull(Dynalist.newNodeId(new JSONObject("{\"_code\":\"Ok\"}")));
         assertNull(Dynalist.newNodeId(new JSONObject("{\"_code\":\"Ok\",\"new_node_ids\":[]}")));
         assertNull(Dynalist.newNodeId(null));
+        assertEquals("n1", Dynalist.newNodeId(new JSONObject("{\"_code\":\"Ok\",\"results\":[true],\"new_node_ids\":[\"n1\"]}")));
+        assertNull(Dynalist.newNodeId(new JSONObject("{\"_code\":\"Ok\",\"results\":[false],\"new_node_ids\":[\"n1\"]}")));
     }
 
     @Test

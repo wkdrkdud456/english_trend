@@ -160,6 +160,15 @@ public class PolicyTest {
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify("통화 녹음 완료", "텍스트로 변환할 수 있습니다", false, false));
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify("부재중 전화", "홍길동", false, false));
         assertEquals(Policy.NotificationKind.OTHER, Policy.classify(null, null, false, false));
+        // 원본 프로토타입 검사 사례
+        assertEquals(Policy.NotificationKind.TRANSCRIPT_DONE, Policy.classify("통화", "텍스트 변환 완료", false, false));
+        assertEquals(Policy.NotificationKind.TRANSCRIPT_DONE, Policy.classify("Call", "Transcription complete", false, false));
+        assertEquals(Policy.NotificationKind.FAILED, Policy.classify("통화", "텍스트 변환이 완료되지 않았습니다", false, false));
+        assertEquals(Policy.NotificationKind.IN_PROGRESS, Policy.classify("통화", "텍스트 변환 중", false, false));
+        assertEquals(Policy.NotificationKind.FAILED, Policy.classify("Call", "Transcription incomplete", false, false));
+        assertEquals(Policy.NotificationKind.FAILED, Policy.classify("Call", "Transcript not ready", false, false));
+        // 원본은 이 문구를 '완료'로 오판했다(변환 중 + 녹음 완료)
+        assertEquals(Policy.NotificationKind.IN_PROGRESS, Policy.classify("녹음 완료", "텍스트 변환 중", false, false));
     }
 
     @Test
@@ -181,6 +190,8 @@ public class PolicyTest {
         assertFalse(Policy.labelMatches("녹음 파일", Policy.TEXT_FILE_LABELS));
         assertFalse(Policy.labelMatches("", Policy.SHARE_LABELS));
         assertFalse(Policy.labelMatches(null, Policy.SHARE_LABELS));
+        assertTrue(Policy.labelMatches("한 번만", Policy.JUST_ONCE_LABELS));
+        assertFalse("'항상'은 누르지 않음", Policy.labelMatches("항상", Policy.JUST_ONCE_LABELS));
     }
 
     @Test

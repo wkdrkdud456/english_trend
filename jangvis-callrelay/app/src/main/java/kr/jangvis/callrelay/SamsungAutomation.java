@@ -357,7 +357,13 @@ public class SamsungAutomation extends AccessibilityService {
                 }
                 break;
             case WAIT_IMPORT:
-                if (now - t.stepStartedAt > IMPORT_TIMEOUT_MS) abort(this, "공유 후 가져오기 결과가 오지 않음", false);
+                if (sheet && now - t.lastScrollAt > 1_200L && t.actions < Policy.AUTOMATION_MAX_ACTIONS
+                        && clickLabel(t, Policy.JUST_ONCE_LABELS, true)) {
+                    // 선택창이 '한 번만/항상'을 물으면 '한 번만'만 누른다(공유 화면 후보 패키지 안에서만)
+                    t.lastScrollAt = now;
+                } else if (now - t.stepStartedAt > IMPORT_TIMEOUT_MS) {
+                    abort(this, "공유 후 가져오기 결과가 오지 않음", false);
+                }
                 break;
             default:
                 break;

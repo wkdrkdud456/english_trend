@@ -72,6 +72,8 @@ public final class Dynalist {
     /** _code 값을 분류한다. 공식 문서의 코드 + 알려지지 않은 코드는 INVALID로. */
     public static Kind classifyCode(String code) {
         if (code == null) return Kind.INVALID;
+        // 공식 응답은 "Ok". 표기 차이("OK")로 성공을 실패로 오인하지 않도록 대소문자만 무시한다.
+        if (code.equalsIgnoreCase("ok")) return Kind.OK;
         switch (code) {
             case "Ok":
                 return Kind.OK;
@@ -243,9 +245,14 @@ public final class Dynalist {
         return post("doc/edit", insertBody(token, fileId, parentId, content, note));
     }
 
-    /** doc/edit 응답의 생성 노드 ID(new_node_ids[0]). 없으면 null. */
+    /**
+     * doc/edit 응답의 생성 노드 ID(new_node_ids[0]). 없거나, results 배열이 있는데 성공(true)이 아니면 null
+     * → 호출자는 '서버 대조 필요'로 두고 식별자로 확인한다.
+     */
     public static String newNodeId(JSONObject json) {
         if (json == null) return null;
+        JSONArray results = json.optJSONArray("results");
+        if (results != null && (results.length() != 1 || !results.optBoolean(0, false))) return null;
         JSONArray ids = json.optJSONArray("new_node_ids");
         if (ids == null || ids.length() != 1) return null;
         String id = ids.optString(0, null);
