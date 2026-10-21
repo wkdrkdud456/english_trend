@@ -136,7 +136,7 @@ public final class Policy {
         String s = raw.toString();
         if (s.indexOf('\u0000') >= 0) return Decoded.fail("텍스트 파일이 아닙니다(바이너리 데이터 포함).");
         s = s.replace("\r\n", "\n").replace('\r', '\n');
-        if (!s.isEmpty() && s.charAt(0) == '﻿') s = s.substring(1);
+        if (!s.isEmpty() && s.charAt(0) == '\uFEFF') s = s.substring(1);
         s = stripTrailing(s);
         // 앞쪽 빈 줄만 제거(들여쓰기는 보존)
         int start = 0;
