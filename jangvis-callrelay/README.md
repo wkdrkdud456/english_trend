@@ -25,7 +25,7 @@
 
 ### A. 표준 Gradle (Android Studio 또는 명령줄) — 권장
 
-JDK 17 이상, Android SDK(platform 36)가 있는 PC에서:
+JDK 21(Robolectric의 SDK 36 검사에 필요), Android SDK(platform 36)가 있는 PC에서:
 
 ```bash
 cd jangvis-callrelay
