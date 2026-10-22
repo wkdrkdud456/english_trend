@@ -783,7 +783,7 @@ function petBonus(e) {
 // 전설 몬스터 — 낮은 확률로 뜨는 "오늘 운 좋네" 순간
 function legendRate() {
     return (0.035 + G.cityIdx * 0.012 + (G.charm ? 0.05 : 0) + (G.unlock && G.unlock.lucky ? 0.07 : 0))
-           * wxNow().legend * rv('legend') * dishBuff('legend') * (isEcho() ? 2 : 1);
+           * wxNow().legend * rv('legend') * dishBuff('legend') * (setOn('dream') ? 1.8 : 1) * (isEcho() ? 2 : 1);
 }
 // 등급마다 색이 다르다. 숫자가 아니라 "색"으로 바로 알아보게.
 const TIERS = [null,
@@ -827,7 +827,7 @@ function catchChance(e) {
     const T2 = tierOf(e.tier != null ? e.tier : e.legend);
     if (T2) c *= T2.cat;
     if (G.charm) c += 0.12;
-    c += wxNow().cat + rv('cat', 0) + dishBuff('cat');
+    c += wxNow().cat + rv('cat', 0) + dishBuff('cat') + (setOn('dream') ? 0.15 : 0);
     return Math.max(0.05, Math.min(0.95, c));
 }
 function tryCatch() {
@@ -856,6 +856,7 @@ function tryCatch() {
             if (party().length < PARTY_MAX) party().push(np.kind);
             blog('🪄 ' + np.n + ' 을(를) 잡았다!');
         }
+        questTick('catch', 1);
         B.caught = true; B.result = 'catch'; B.phase = 'end'; B.busy = 1.1;
         save();
     } else {
@@ -1168,11 +1169,11 @@ const UPGRADES = [
 ];
 function upLv(id) { return (G.up && G.up[id]) || 0; }
 function upCost(u) { return Math.round(u.cost[upLv(u.id)] * rv('price')); }
-function pickRadius() { return PICK_R[upLv('magnet')] * (1 + gearVal('shoes') * 0.8) * rv('pick'); }
-function moveSpeed()  { return SPEED[upLv('ride')] * (1 + gearVal('shoes') * 0.6) * rv('speed'); }
+function pickRadius() { return PICK_R[upLv('magnet')] * (1 + gearVal('shoes') * 0.8) * rv('pick') * (setOn('road') ? 1.35 : 1); }
+function moveSpeed()  { return SPEED[upLv('ride')] * (1 + gearVal('shoes') * 0.6) * rv('speed') * (setOn('road') ? 1.18 : 1); }
 function pickCount()  { return 1 + upLv('cart'); }
-function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.26) / wxNow().cust * rv('period'); }   // 알바생이 손님도 빨리 받고, 날씨와 도시 규칙도 탄다
-function shopMul()    { return SHOP_MUL[upLv('shop')] * rv('sell'); }
+function shopPeriod() { return SHOP_T[upLv('shop')] / (1 + upLv('part') * 0.26) / wxNow().cust * rv('period') * (setOn('bake') ? 0.85 : 1); }   // 알바생이 손님도 빨리 받고, 날씨와 도시 규칙도 탄다
+function shopMul()    { return SHOP_MUL[upLv('shop')] * rv('sell') * (setOn('bake') ? 1.25 : 1); }
 
 // ───────── 스킬북 (기술 강화) ─────────
 const SK_MAX = 5;                           // 기술 만렙은 5
@@ -1442,7 +1443,7 @@ let G = null, scene = 'title', running = false, lastT = 0, gameT = 0;
 
 function maxHp() { return 60 + G.lv * 20; }
 function maxMp() { return 22 + G.lv * 7; }
-function atkOf() { return (11 + G.lv * 4.4) * (1 + petBonus('atk')) * (1 + (G.ringLv || 0) * 0.08) * (1 + gearVal('ring')) * (1 + dishBuff('atk')); }
+function atkOf() { return (11 + G.lv * 4.4) * (1 + petBonus('atk')) * (1 + (G.ringLv || 0) * 0.08) * (1 + gearVal('ring')) * (1 + dishBuff('atk')) * (setOn('fight') ? 1.1 : 1); }
 function defOf() { return (5 + G.lv * 2.4) * (1 + gearVal('apron')); }
 function expNeed() { return Math.round(20 * Math.pow(G.lv, 1.4)); }
 function city() { return CITIES[G.cityIdx]; }
@@ -1459,6 +1460,7 @@ function newGame() {
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
         wxK: 'clear', wxT: 200, secret: {}, echo: { on:false, boss:{} }, buff: null,
+        quests: null, questDone: 0,
     };
 }
 
@@ -1480,6 +1482,80 @@ const THEME = {
     sydney:    { tree:'palm',    enc:'bush',  ground:'sand',  pave:'stone' },
     seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
+
+// ───────── 📜 의뢰 게시판 ─────────
+// 할 게 없을 때 "오늘 뭐 하지"를 정해준다. 세 장이 늘 걸려 있고, 하나 끝내면
+// 그 자리에 새로 붙는다.
+const QUEST_T = [
+    { id:'kill',   i:'⚔️', mk: () => ({ need: 8 + ((Math.random() * 8) | 0) }),
+      t: q => '몬스터 ' + q.need + '마리 잡기', pr: 1.0 },
+    { id:'legend', i:'✨', mk: () => ({ need: 1 + ((Math.random() * 2) | 0) }),
+      t: q => '전설 등급 ' + q.need + '마리 잡기', pr: 2.2 },
+    { id:'sell',   i:'🥐', mk: () => ({ need: 10 + ((Math.random() * 12) | 0) }),
+      t: q => '빵 ' + q.need + '개 팔기', pr: 1.1 },
+    { id:'mat',    i:'🌾', mk: () => ({ need: 25 + ((Math.random() * 25) | 0) }),
+      t: q => '재료 ' + q.need + '개 줍기', pr: 0.9 },
+    { id:'catch',  i:'🪄', mk: () => ({ need: 1 + ((Math.random() * 2) | 0) }),
+      t: q => '몬스터 ' + q.need + '마리 포획', pr: 2.0 },
+    { id:'wx',     i:'🌙', mk: () => { const k = ['night','rain','fog'][(Math.random() * 3) | 0];
+          return { need: 3 + ((Math.random() * 4) | 0), wx: k }; },
+      t: q => WX[q.wx].i + ' ' + WX[q.wx].n + '일 때 ' + q.need + '번 싸우기', pr: 1.8 },
+    { id:'boss',   i:'👑', mk: () => ({ need: 1 }),
+      t: q => '이 도시의 보스 쓰러뜨리기', pr: 3.0 },
+];
+function questGold() { return Math.round((city().mobs[0].gold || 20) * 26 * (1 + G.cityIdx * 0.25)); }
+function newQuest(avoid) {
+    let pool = QUEST_T.filter(t => t.id !== 'catch' || (G.unlock && G.unlock.catch));
+    pool = pool.filter(t => t.id !== 'boss' || !G.boss[city().id]);
+    const slim = pool.filter(t => (avoid || []).indexOf(t.id) < 0);
+    if (slim.length) pool = slim;
+    const t = pool[(Math.random() * pool.length) | 0];
+    const q = Object.assign({ id: t.id, got: 0, city: city().id }, t.mk());
+    q.gold = Math.round(questGold() * t.pr * (0.85 + Math.random() * 0.4));
+    return q;
+}
+function questList() {
+    if (!G.quests) G.quests = [];
+    // 다른 도시에서 받은 의뢰는 그 도시에서만 보인다
+    G.quests = G.quests.filter(q => q.city === city().id);
+    while (G.quests.length < 3) G.quests.push(newQuest(G.quests.map(q => q.id)));
+    return G.quests;
+}
+function questText(q) { return QUEST_T.find(t => t.id === q.id).t(q); }
+function questIcon(q) { return QUEST_T.find(t => t.id === q.id).i; }
+// 진행 보고 — 조건이 맞는 의뢰만 올린다
+function questTick(kind, n, extra) {
+    if (!G.quests) return;
+    let done = false;
+    for (const q of G.quests) {
+        if (q.id !== kind || q.got >= q.need || q.city !== city().id) continue;
+        if (kind === 'wx' && G.wxK !== q.wx) continue;
+        q.got = Math.min(q.need, q.got + (n || 1));
+        if (q.got >= q.need) { done = true; toast('📜 의뢰 완료! — ' + questText(q) + ' (가게에서 받아요)'); S.levelup(); }
+    }
+    if (done) save();
+}
+function questClaim(i) {
+    const q = (G.quests || [])[i];
+    if (!q || q.got < q.need) { S.deny(); return; }
+    G.gold += q.gold;
+    const mats = city().mats, got = {};
+    const n = 4 + ((Math.random() * 4) | 0);
+    for (let k = 0; k < n; k++) { const m = mats[(Math.random() * mats.length) | 0];
+        G.mats[m.n] = (G.mats[m.n] || 0) + 1; got[m.n] = (got[m.n] || 0) + 1; }
+    G.quests.splice(i, 1); G.quests.push(newQuest(G.quests.map(q => q.id)));
+    G.questDone = (G.questDone || 0) + 1;
+    S.coin(); syncHud(); save();
+    msg('📜', '의뢰 완료!', questText(q) + '<br><br><b style="color:#c04a60">💰 ' + q.gold.toLocaleString() + '원</b><br>🎁 ' +
+        Object.entries(got).map(([k, v]) => matIcon(k) + k + ' ×' + v).join(' · ') +
+        '<br><br><span style="opacity:.7">지금까지 끝낸 의뢰 ' + G.questDone + '건</span>');
+}
+function questReroll(i) {
+    const cost = Math.round(questGold() * 0.4);
+    if (G.gold < cost) { S.deny(); toast('💰 ' + (cost - G.gold).toLocaleString() + '원 모자라요'); return; }
+    G.gold -= cost; G.quests[i] = newQuest(G.quests.filter((_, j) => j !== i).map(q => q.id));
+    S.pick(); syncHud(); save(); openShop('quest');
+}
 
 // ───────── 🔨 조합대 ─────────
 // 후반엔 재료도 장비도 펫도 남아돈다. 남는 걸 전부 다시 쓰게 만든다.
@@ -1765,6 +1841,22 @@ const SLOTS = [
     { id:'shoes', n:'신발',   i:'👟', d:'이동 속도 · 줍는 범위' },
     { id:'ring',  n:'반지',   i:'💍', d:'공격력' },
 ];
+// 장비마다 계열이 있다. 셋을 같은 계열로 맞추면 세트 효과가 붙는다.
+// 좋은 걸 줍기만 하던 걸 "고르는" 일로 바꾼다.
+const GEAR_SET = {
+    bake:  { i:'🥐', n:'빵집', d:'빵값 +25% · 판매 주기 -15%' },
+    road:  { i:'🧳', n:'여행', d:'이동 속도 +18% · 자석 +35%' },
+    fight: { i:'⚔️', n:'투기', d:'치명타 +12% · 공격력 +10%' },
+    home:  { i:'🏠', n:'가정', d:'받는 피해 -14% · 매 턴 HP 4% 회복' },
+    dream: { i:'🌙', n:'기억', d:'전설 등급 1.8배 · 포획 +15% · 경험치 +20%' },
+};
+const SET_KEYS = Object.keys(GEAR_SET);
+function gearSet() {                       // 세 칸이 전부 같은 계열일 때만
+    const g = G.gear || {};
+    const a = g.apron && g.apron.s, b = g.shoes && g.shoes.s, c = g.ring && g.ring.s;
+    return (a && a === b && b === c) ? a : null;
+}
+function setOn(k) { return gearSet() === k; }
 const GEAR_NAME = {
     apron: ['무명 앞치마', '밀가루 앞치마', '가죽 앞치마', '명장의 앞치마', '전설의 앞치마'],
     shoes: ['낡은 운동화', '편한 운동화', '달리기용 신발', '바람의 신발', '전설의 신발'],
@@ -1777,7 +1869,8 @@ function gearRoll(slot, cityIdx, tier) {
     const t = Math.max(0, Math.min(4, (tier | 0) + ((Math.random() * 2) | 0)));
     const base = { apron: 6, shoes: 5, ring: 5 }[slot];
     const v = +(base + cityIdx * 1.3 + t * 5.5 + Math.random() * 3).toFixed(1);
-    return { slot, t, v, n: GEAR_NAME[slot][t], city: cityIdx };
+    const st = SET_KEYS[(Math.random() * SET_KEYS.length) | 0];
+    return { slot, t, v, s: st, n: GEAR_SET[st].i + GEAR_NAME[slot][t], city: cityIdx };
 }
 function gearVal(slot) {
     const g = G.gear && G.gear[slot];
@@ -1792,7 +1885,10 @@ function gearDrop(e) {
     const g = gearRoll(slot, G.cityIdx, (e.boss ? 2 : (e.tier | 0)) + (isEcho() ? 2 : 0));
     if (!G.gear) G.gear = {};
     const cur = G.gear[slot];
-    if (gearPower(g) > gearPower(cur)) {
+    // 세트를 맞출 수 있으면 수치가 조금 낮아도 끼운다 (세트 효과가 더 크다)
+    const other = SLOTS.map(x => x.id).filter(x => x !== slot).map(x => G.gear[x] && G.gear[x].s);
+    const fits = other.length === 2 && other[0] && other[0] === other[1] && other[0] === g.s;
+    if (gearPower(g) * (fits ? 1.35 : 1) > gearPower(cur)) {
         G.gear[slot] = g;
         const back = cur ? gearSell(cur) : 0;
         if (back) G.gold += back;
@@ -2651,6 +2747,7 @@ function updateWorld(dt) {
             }
             const got = pickCount();
             G.mats[n.mat.n] = (G.mats[n.mat.n] || 0) + got;
+            questTick('mat', got);
             nodes.splice(i, 1);
             S.pick();
             pop(n.x, n.y, n.mat.i + (got > 1 ? ' ×' + got : ''), n.mat.c);
@@ -3874,7 +3971,7 @@ function dmgCalc(a, pow, d, critBonus) {
     let v = a * pow * (0.9 + Math.random() * 0.2) - d * 0.35;
     v = Math.max(1, v);
     const cr = hasAnimal('crit');
-    const isCrit = Math.random() < 0.06 + (critBonus || 0) + (cr ? cr.val : 0) + petBonus('crit') + rv('crit', 0);
+    const isCrit = Math.random() < 0.06 + (critBonus || 0) + (cr ? cr.val : 0) + petBonus('crit') + rv('crit', 0) + (setOn('fight') ? 0.12 : 0);
     if (isCrit) v *= 1.85;
     return { d: Math.max(1, Math.round(v)), crit: isCrit };
 }
@@ -3976,7 +4073,7 @@ function enemyTurn() {
     const gd = hasAnimal('guard');
     if (gd) d *= (1 - gd.val);
     if (petBonus('def')) d *= (1 - petBonus('def'));
-    d *= rv('takeDmg') * (1 - dishBuff('def'));
+    d *= rv('takeDmg') * (1 - dishBuff('def')) * (setOn('home') ? 0.86 : 1);
     d = Math.max(1, Math.round(d));
     G.hp = Math.max(0, G.hp - d);
     B.hurtP = 0.45; B.shake = 0.3;
@@ -3995,6 +4092,7 @@ function turnEnd() {
     if (mn && G.mp < maxMp()) { G.mp = Math.min(maxMp(), G.mp + mn.val); }
     if (rv('mp', 0) && G.mp < maxMp()) G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * rv('mp', 0)));
     if (dishBuff('mp') && G.mp < maxMp()) G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * dishBuff('mp')));
+    if (setOn('home') && G.hp > 0 && G.hp < maxHp()) G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * 0.04));
     if (petBonus('heal') && G.hp > 0) G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * petBonus('heal')));
     if (petBonus('mana')) G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * petBonus('mana')));
     syncHud();
@@ -4006,7 +4104,10 @@ function winBattle() {
     G.hp = Math.min(maxHp(), G.hp + Math.ceil(maxHp() * 0.09));
     G.mp = Math.min(maxMp(), G.mp + Math.ceil(maxMp() * 0.06));
     G.gold += Math.round(e.gold * (1 + petBonus('gold')) * dishBuff('gold'));
-    G.exp += Math.round(e.exp * dishBuff('exp')); G.kills++;
+    G.exp += Math.round(e.exp * dishBuff('exp') * (setOn('dream') ? 1.2 : 1)); G.kills++;
+    questTick('kill', 1); questTick('wx', 1);
+    if (e.tier) questTick('legend', 1);
+    if (e.boss) questTick('boss', 1);
     if (G.buff && G.buff.left > 0) {                 // 🍱 요리 효과는 전투 수로 닳는다
         G.buff.left--;
         if (G.buff.left <= 0) { const dd = DISHES.find(x => x.id === G.buff.id); G.buff = null;
@@ -4499,6 +4600,7 @@ function sellOnce(px2, py2) {
     for (const c of CITIES) for (const m of c.shop.menu) if (m.n === k) { price = m.price; icon = m.i; }
     price = Math.round(price * shopMul() * wxNow().gold);
     G.gold += price;
+    questTick('sell', 1);
     S.coin();
     pop(px2, py2 - 8, '+' + price, '#ffd43b');
     toast(icon + ' ' + jo(k, '이', '가') + ' 팔렸어요! +' + price.toLocaleString() + '원');
@@ -4531,10 +4633,10 @@ function openShop(tab) {
         toast('🛋️ 가게에서 한숨 돌렸어요! 체력·기력 전부 회복');
     }
     if (tab) shopTab = tab;
-    const TABS = [['cook','🍳 요리'], ['craft','🔨 조합대'], ['up','⚙️ 강화'], ['book','📕 스킬북'], ['item','🛒 아이템']];
-    let h = '<div style="display:flex;gap:6px;margin-bottom:12px">' + TABS.map(([id, label]) =>
-        '<div onclick="openShop(\'' + id + '\')" style="flex:1;text-align:center;padding:9px 2px;border-radius:12px;' +
-        'font-size:.78em;font-weight:900;cursor:pointer;border:2px solid ' +
+    const TABS = [['cook','🍳 요리'], ['quest','📜 의뢰'], ['craft','🔨 조합'], ['up','⚙️ 강화'], ['book','📕 기술'], ['item','🛒 상점']];
+    let h = '<div style="display:flex;gap:4px;margin-bottom:12px">' + TABS.map(([id, label]) =>
+        '<div onclick="openShop(\'' + id + '\')" style="flex:1;text-align:center;padding:9px 1px;border-radius:11px;' +
+        'font-size:.7em;font-weight:900;cursor:pointer;white-space:nowrap;border:2px solid ' +
         (shopTab === id ? '#e8597a;background:#ffe3ea;color:#c04a60' : 'rgba(200,140,120,.3);background:#fffdf8;color:#a08880') +
         '">' + label + '</div>').join('') + '</div>';
 
@@ -4561,6 +4663,23 @@ function openShop(tab) {
             h += rowHtml(m.i, m.n + (G.stock[m.n] ? ' <span style="opacity:.6;font-size:.8em">진열 ' + G.stock[m.n] + '</span>' : ''),
                          need, Math.round(m.price * shopMul()) + '원', 'cook(' + i + ')', !can);
         });
+    } else if (shopTab === 'quest') {
+        const qs = questList(), rr2 = Math.round(questGold() * 0.4);
+        h += '<div class="rd" style="margin:2px 0 10px;opacity:.78;line-height:1.65">📜 세 장이 늘 걸려 있어요. 하나 끝내면 그 자리에 새로 붙어요.<br>' +
+             '<span style="opacity:.75">지금까지 끝낸 의뢰 <b>' + (G.questDone || 0) + '</b>건</span></div>';
+        qs.forEach((q, i) => {
+            const done = q.got >= q.need;
+            const bar2 = '<div style="height:6px;border-radius:3px;background:rgba(200,140,120,.25);margin-top:5px;overflow:hidden">' +
+                '<div style="height:100%;width:' + Math.round(q.got / q.need * 100) + '%;background:linear-gradient(90deg,' +
+                (done ? '#8ce99a,#51cf66' : '#ffb340,#e8597a') + ')"></div></div>';
+            h += rowHtml(questIcon(q), questText(q) + (done ? ' <span style="color:#2f9e44;font-size:.8em">완료!</span>' : ''),
+                '💰 ' + q.gold.toLocaleString() + '원 + 재료' + bar2 +
+                '<div style="font-size:.7em;opacity:.65;margin-top:3px">' + q.got + ' / ' + q.need + '</div>',
+                done ? '받기' : '교체', done ? 'questClaim(' + i + ')' : 'questReroll(' + i + ')',
+                !done && G.gold < rr2);
+        });
+        h += '<div class="rd" style="opacity:.6;padding:4px 2px;font-size:.84em">아직 못 끝낸 의뢰는 ' +
+             rr2.toLocaleString() + '원에 다른 걸로 바꿀 수 있어요. 도시를 옮기면 새 의뢰가 붙어요.</div>';
     } else if (shopTab === 'craft') {
         const b = G.buff;
         h += '<div class="rd" style="margin:2px 0 10px;opacity:.78;line-height:1.65">🔨 <b>서로 다른 도시</b>의 재료를 섞어야 좋은 게 나와요.<br>' +
@@ -4759,14 +4878,23 @@ function openMenu() {
                  cc.icon + ' ' + (got ? ECHO_WORD[cc.id] : '????????') + '</div>';
         });
     }
-    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧤 장비</div>';
+    const st = gearSet();
+    h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🧤 장비' +
+         (st ? ' <span style="color:#c04a60">· ' + GEAR_SET[st].i + ' ' + GEAR_SET[st].n + ' 세트 완성!</span>' : '') + '</div>';
     SLOTS.forEach(sl => {
         const g = (G.gear || {})[sl.id];
-        h += rowHtml(sl.i, sl.n + (g ? ' <span style="opacity:.6;font-size:.8em">' + g.n + '</span>' : ''),
-            g ? sl.d + ' <b style="color:#c04a60">+' + g.v + '%</b>' : '<span style="opacity:.6">아직 없어요 — 전투에서 가끔 떨어져요</span>',
+        h += rowHtml(sl.i, sl.n + (g ? ' <span style="opacity:.6;font-size:.8em">' + g.n +
+                (g.eng ? ' +' + g.eng : '') + '</span>' : ''),
+            g ? (GEAR_SET[g.s] ? GEAR_SET[g.s].i + ' ' + GEAR_SET[g.s].n + ' 계열 · ' : '') + sl.d +
+                ' <b style="color:#c04a60">+' + g.v + '%</b>'
+              : '<span style="opacity:.6">아직 없어요 — 전투에서 가끔 떨어져요</span>',
             g ? '+' + g.v + '%' : '—');
     });
-    h += '<div class="rd" style="opacity:.6;padding:4px 2px;font-size:.84em">더 좋은 게 나오면 알아서 갈아입고, 밀린 건 팔아서 돈으로 바꿔요.</div>';
+    if (st) h += '<div class="rd" style="background:rgba(232,89,122,.12);border-radius:10px;padding:8px 10px;font-size:.9em">' +
+                 GEAR_SET[st].i + ' <b>' + GEAR_SET[st].n + ' 세트</b> — ' + GEAR_SET[st].d + '</div>';
+    else h += '<div class="rd" style="opacity:.65;padding:4px 2px;font-size:.84em">세 칸을 <b>같은 계열</b>로 맞추면 세트 효과가 붙어요 — ' +
+              SET_KEYS.map(k => GEAR_SET[k].i + GEAR_SET[k].n).join(' · ') + '</div>';
+    h += '<div class="rd" style="opacity:.6;padding:4px 2px;font-size:.84em">더 좋은 게 나오면 알아서 갈아입어요. 세트가 맞으면 조금 낮아도 끼워요.</div>';
     h += '<div class="rd" style="margin:14px 0 6px;font-weight:900;opacity:.9">🏟️ 투기장</div>';
     h += arenaOpen()
         ? rowHtml('🏟️', '투기장 도전 <span style="opacity:.6;font-size:.8em">최고 ' + (G.arena.best || 0) + '층</span>',
