@@ -1381,6 +1381,11 @@ seoul: [
 
 let TK = null;   // 대화 중 상태
 function startTalk(npc) {
+    if (gate().k === 'npc') {                  // ☔ 런던 — 만난 사람을 센다
+        if (!G.met) G.met = {};
+        const key = city().id + ':' + npc.n;
+        if (!G.met[key]) { G.met[key] = true; gateBump('npc', 1); }
+    }
     TK = { npc, i: 0, ch: 0, t: 0, done: false };
     document.getElementById('acts').style.display = 'none';
     S.open();
@@ -1460,7 +1465,7 @@ function newGame() {
         animals: [], hearts: {}, boss: {}, picked: {},
         shopAt: 0, px: 0, py: 0, steps: 0, playT: 0, kills: 0,
         wxK: 'clear', wxT: 200, secret: {}, echo: { on:false, boss:{} }, buff: null,
-        quests: null, questDone: 0,
+        quests: null, questDone: 0, gate: {},
     };
 }
 
@@ -1482,6 +1487,69 @@ const THEME = {
     sydney:    { tree:'palm',    enc:'bush',  ground:'sand',  pave:'stone' },
     seoul:     { tree:'sakura',  enc:'grass', ground:'grass', pave:'asphalt' },
 };
+
+// ───────── 보스가 나서는 조건 ─────────
+// 열 도시가 전부 "하트 3개"면 결국 같은 일을 열 번 한다.
+// 도시마다 요구하는 걸 바꾸면 "여길 어떻게 끝내지"가 매번 달라진다.
+const GATE = {
+    paris:     { i:'💗', n:'편지 조각',  need:3,  k:'heart',
+                 d:'숨겨진 💗 조각 세 개를 찾아요', h:'사람이 잘 안 가는 구석을 뒤져보세요' },
+    kyoto:     { i:'🍣', n:'장사',       need:15, k:'sell',
+                 d:'이 도시에서 음식을 15개 팔아요', h:'재료를 모아 굽고 진열대에 올려두면 손님이 사 갑니다' },
+    cairo:     { i:'🌙', n:'밤 사냥',    need:8,  k:'dark',
+                 d:'어두울 때(밤·비·안개) 8번 싸워요', h:'해가 떠 있으면 걸을수록 체력이 닳아요. 어두워지길 기다리세요' },
+    roma:      { i:'⚔️', n:'연승',       need:5,  k:'streak',
+                 d:'한 번도 안 지고 5연승', h:'지거나 도망치면 0부터. 체력을 꽉 채우고 들어가세요' },
+    ny:        { i:'💰', n:'자본',       need:120000, k:'gold',
+                 d:'12만 원을 모아요 (쓰면 깎여요)', h:'비싼 도시지만 빵도 1.8배로 팔려요. 참고 쌓으세요' },
+    iceland:   { i:'🔥', n:'모닥불',     need:4,  k:'fire',
+                 d:'흩어진 모닥불 네 곳에 불을 붙여요', h:'걸음이 느린 도시예요. 미니맵을 보고 멀리까지 다녀오세요' },
+    santorini: { i:'📜', n:'의뢰',       need:4,  k:'quest',
+                 d:'이 도시의 게시판 의뢰 4건을 끝내요', h:'가게 📜 의뢰 탭에서 받아요. 안 맞으면 돈 내고 바꿀 수 있어요' },
+    london:    { i:'💬', n:'수색',       need:5,  k:'npc',
+                 d:'안개 속 사람 다섯 명을 전부 만나요', h:'미니맵이 가려진 도시예요. 걸어다닌 자리만 보입니다' },
+    sydney:    { i:'✨', n:'전설 사냥',  need:2,  k:'legend',
+                 d:'전설 등급 몬스터를 2마리 잡아요', h:'밤이나 안개일 때 전설이 잘 나와요. 🧁 행운의 컵케이크도 쓸 만해요' },
+    seoul:     { i:'🏠', n:'귀향',       need:3,  k:'final',
+                 d:'💗 조각 3개 + 음식 20개 판매', h:'마지막 도시예요. 여태 한 걸 전부 한 번씩' },
+};
+function gate() { return GATE[city().id] || GATE.paris; }
+function gateRaw() { return (G.gate && G.gate[city().id]) || 0; }
+function gateNow() {
+    const g = gate();
+    if (g.k === 'heart') return cityHearts(city());
+    if (g.k === 'gold') return Math.min(g.need, G.gold);
+    if (g.k === 'final') return cityHearts(city());
+    return Math.min(g.need, gateRaw());
+}
+function gateOk() {
+    const g = gate();
+    if (g.k === 'final') return cityHearts(city()) >= 3 && gateRaw() >= 20;
+    return gateNow() >= g.need;
+}
+function gateLabel() {
+    const g = gate();
+    if (g.k === 'final') return cityHearts(city()) + '/3 · ' + Math.min(20, gateRaw()) + '/20';
+    if (g.k === 'gold') return Math.round(gateNow() / 1000) + 'k/' + Math.round(g.need / 1000) + 'k';
+    return gateNow() + '/' + g.need;
+}
+function gateBump(kind, n) {
+    const g = gate();
+    const mine = (g.k === kind) || (g.k === 'final' && kind === 'sell');
+    if (!mine) return;
+    if (!G.gate) G.gate = {};
+    const id = city().id, was = G.gate[id] || 0;
+    const cap = g.k === 'final' ? 20 : g.need;
+    if (was >= cap) return;
+    G.gate[id] = Math.min(cap, was + (n || 1));
+    if (G.gate[id] >= cap && !gateOkToastT) {
+        gateOkToastT = 1;
+        setTimeout(() => { gateOkToastT = 0; }, 2500);
+        if (gateOk()) { S.levelup(); toast(g.i + ' 조건 달성! 랜드마크에서 보스에게 도전할 수 있어요'); }
+    }
+}
+let gateOkToastT = 0;
+function gateReset() { if (G.gate) G.gate[city().id] = 0; }
 
 // ───────── 📜 의뢰 게시판 ─────────
 // 할 게 없을 때 "오늘 뭐 하지"를 정해준다. 세 장이 늘 걸려 있고, 하나 끝내면
@@ -1545,6 +1613,7 @@ function questClaim(i) {
         G.mats[m.n] = (G.mats[m.n] || 0) + 1; got[m.n] = (got[m.n] || 0) + 1; }
     G.quests.splice(i, 1); G.quests.push(newQuest(G.quests.map(q => q.id)));
     G.questDone = (G.questDone || 0) + 1;
+    gateBump('quest', 1);
     S.coin(); syncHud(); save();
     msg('📜', '의뢰 완료!', questText(q) + '<br><br><b style="color:#c04a60">💰 ' + q.gold.toLocaleString() + '원</b><br>🎁 ' +
         Object.entries(got).map(([k, v]) => matIcon(k) + k + ' ×' + v).join(' · ') +
@@ -1649,22 +1718,22 @@ function fusePets(ka, kb) {
 const RULE = {
     paris: { i:'🥐', n:'아침 장사', d:'빵이 한 번에 두 개씩 팔려요. 대신 재료가 잘 안 떨어져요',
              twin:true, node:0.7 },
-    kyoto: { i:'🎋', n:'대나무숲의 기운', d:'매 턴 기력이 8% 차요. 대신 몬스터 방어가 단단해요',
-             mp:0.08, mobDef:1.35 },
+    kyoto: { i:'🎋', n:'대나무숲의 기운', d:'장사의 도시. 재료가 넉넉하고 몬스터가 덜 나와요',
+             mp:0.08, mobDef:1.35, node:1.6, enc:0.7 },
     cairo: { i:'🌞', n:'사막의 낮', d:'밝을 땐 걸을수록 체력이 닳고, 어두워지면 재료가 두 배',
              sunDrain:true },
-    roma:  { i:'🏟️', n:'투기장의 도시', d:'치명타 확률 두 배. 대신 받는 피해도 +25%',
-             crit:0.1, takeDmg:1.25 },
+    roma:  { i:'🏟️', n:'투기장의 도시', d:'땅에 떨어진 재료가 없어요. 몬스터가 들고 있습니다',
+             crit:0.1, takeDmg:1.25, node:0.25, enc:1.5, mobMat:3 },
     ny:    { i:'💸', n:'비싼 도시', d:'뭐든 1.6배 비싸요. 대신 빵도 1.8배로 팔려요',
              price:1.6, sell:1.8 },
-    iceland:{ i:'🧊', n:'혹한', d:'걸음이 느려져요. 대신 재료가 눈 위로 미끄러져 와요 (자석 +70%)',
-             speed:0.72, pick:1.7 },
+    iceland:{ i:'🧊', n:'혹한', d:'걸음이 느려요. 대신 자석 +70%, 몬스터는 드물어요',
+             speed:0.72, pick:1.7, enc:0.65 },
     santorini:{ i:'🪜', n:'계단의 도시', d:'몬스터가 잘 안 나와요. 대신 재료가 두 배, 빵값 1.4배',
              enc:0.45, node:2, sell:1.4 },
-    london:{ i:'🌫️', n:'짙은 안개', d:'미니맵이 안 보여요. 대신 포획 +20%, 전설 1.6배',
-             fogMap:true, cat:0.2, legend:1.6 },
-    sydney:{ i:'🌊', n:'밀물', d:'가끔 파도가 밀려와 몸이 밀려요. 대신 전투 보상 돈 두 배',
-             wave:true, gold:2 },
+    london:{ i:'🌫️', n:'짙은 안개', d:'미니맵이 안 보여요. 포획 +20%, 전설 1.6배, 몬스터는 드물어요',
+             fogMap:true, cat:0.2, legend:1.6, enc:0.6 },
+    sydney:{ i:'🌊', n:'밀물', d:'가끔 파도가 밀려와 몸이 밀려요. 전설이 잦고, 전투 돈 두 배',
+             wave:true, gold:2, legend:1.5 },
     seoul: { i:'🚇', n:'퇴근 시간', d:'손님이 두 배로 몰려요. 대신 몬스터가 사나워요 (+22%)',
              period:0.5, mobAtk:1.22 },
 };
@@ -2396,6 +2465,43 @@ function buildHearts(c) {
     }
 }
 
+let fires = [];
+function buildFires(c) {
+    fires = [];
+    if (gate().k !== 'fire' || isEcho()) return;
+    const rnd = mulberry32(c.seed + 7777);
+    let guard = 0;
+    const far = [[6, 9], [MW - 8, 10], [8, MH - 10], [MW - 9, MH - 11]];   // 네 귀퉁이로 멀찍이
+    while (fires.length < 4 && guard++ < 900) {
+        const base = far[fires.length];
+        const tx = Math.max(2, Math.min(MW - 3, base[0] + ((rnd() * 9) | 0) - 4));
+        const ty = Math.max(8, Math.min(MH - 9, base[1] + ((rnd() * 9) | 0) - 4));
+        if (!WALKABLE[tileAt(tx, ty)]) continue;
+        const key = c.id + 'f' + fires.length;
+        fires.push({ x: tx * TS + TS / 2, y: ty * TS + TS / 2, key, lit: !!(G.fire && G.fire[key]) });
+    }
+}
+function drawFire(f) {
+    const X = Math.round(f.x), Y = Math.round(f.y);
+    R(X - 6, Y + 2, 12, 2, 'rgba(0,0,0,.22)');
+    R(X - 6, Y, 12, 3, '#6b4a2c'); R(X - 4, Y - 2, 8, 3, '#8a6038');
+    if (!f.lit) {
+        R(X - 2, Y - 5, 4, 3, '#4a4a52');
+        const w = gameT * 2 + f.x;
+        for (let i = 0; i < 4; i++) {
+            const a = w + i * 1.6;
+            if (((w + i) | 0) % 3) R(X + Math.cos(a) * 8, Y - 6 + Math.sin(a) * 5, 1, 1, '#ffd43b');
+        }
+        return;
+    }
+    const t = gameT * 7 + f.x;
+    const h2 = 7 + ((Math.sin(t) * 2) | 0);
+    R(X - 3, Y - h2, 6, h2, '#ff8a3d');
+    R(X - 2, Y - h2 + 1, 4, h2 - 1, '#ffd43b');
+    R(X - 1, Y - h2 - 2, 2, 3, '#fff3a8');
+    if (((t) | 0) % 3) R(X + 3, Y - h2 - 3, 1, 1, '#ffb000');
+}
+
 let npcs = [];
 function placeNpcs(c) {
     npcs = [];
@@ -2432,6 +2538,7 @@ function enterCity(idx, keepPos) {
     custs = []; petPs = [null, null, null]; staff = [];
     nodes = []; spawnNodes(c, nodeCap());
     buildHearts(c);
+    buildFires(c);
     if (!keepPos) { G.px = MAP.start.x * TS + TS / 2; G.py = MAP.start.y * TS + TS / 2; }
     P.x = G.px; P.y = G.py; P.vx = P.vy = 0;
     document.getElementById('hCity').textContent = (isEcho() ? '🌙 ' : '') + c.icon + ' ' + c.name;
@@ -2779,10 +2886,27 @@ function updateWorld(dt) {
                 '<b style="color:#c04a60">' + line + '</b><br><br>' +
                 (photo ? '적어두기만 했던 줄 하나를 <b>진짜로 해본</b> 사진이다.'
                        : '동훈이가 수첩 뒷장에 적어둔 <b>하고 싶은 것</b> 목록이다.') + '<br><br>' +
-                (cg >= 3
-                  ? '🎉 <b>' + city().name + '의 조각을 전부 찾았어요!</b><br>이제 랜드마크에서 보스에게 도전할 수 있어요.'
-                  : '<b>' + city().name + '</b> 조각 ' + cg + ' / 3 — 세 개를 다 찾으면 보스에게 도전할 수 있어요.'));
+                (gate().k === 'heart' || gate().k === 'final'
+                  ? (cg >= 3 ? '🎉 <b>' + city().name + '의 조각을 전부 찾았어요!</b>'
+                             : '<b>' + city().name + '</b> 조각 ' + cg + ' / 3')
+                  : '<b>' + city().name + '</b> 조각 ' + cg + ' / 3 <span style="opacity:.7">(엔딩에 필요해요)</span><br>' +
+                    '<span style="opacity:.7">이 도시의 보스는 ' + gate().i + ' <b>' + gate().d + '</b> 로 열려요 — 지금 ' + gateLabel() + '</span>'));
             checkEnding();
+        }
+    }
+
+    // 🔥 모닥불 — 닿으면 불이 붙는다
+    for (const f of fires) {
+        if (f.lit) continue;
+        if (Math.hypot(f.x - P.x, f.y - P.y) < 13) {
+            f.lit = true;
+            if (!G.fire) G.fire = {};
+            G.fire[f.key] = true;
+            S.levelup(); pop(f.x, f.y - 8, '🔥', '#ffb000');
+            gateBump('fire', 1);
+            const n2 = fires.filter(q => q.lit).length;
+            toast('🔥 모닥불에 불을 붙였어요 (' + n2 + '/4)');
+            save();
         }
     }
 
@@ -2800,8 +2924,8 @@ function updateWorld(dt) {
     }
     if (nearNpc) nx = { kind:'npc', i: nearNpc.merchant ? '🏺' : '💬', t:nearNpc.n, npc:nearNpc };
     else if (dl < 31 && !G.boss[city().id]) {
-        const got = cityHearts(city());
-        nx = { kind:'boss', i: got >= 3 ? '⚔️' : '🔒', t: got >= 3 ? '도전!' : got + '/3' };
+        const ok = isEcho() ? cityHearts(city()) >= 3 : gateOk();
+        nx = { kind:'boss', i: ok ? '⚔️' : gate().i, t: ok ? '도전!' : (isEcho() ? cityHearts(city()) + '/3' : gateLabel()) };
     }
     else if (sxp && !secretDone() && Math.hypot(sxp.x - P.x, sxp.y - P.y) < 15)
         nx = { kind:'secret', i: secretOf().em, t:'?????' };
@@ -2830,13 +2954,19 @@ function doInteract() {
     else if (interact.kind === 'port') openPort();
     else if (interact.kind === 'secret') openSecret();
     else if (interact.kind === 'boss') {
-        const c = city();
-        const got = cityHearts(c);
-        if (got < 3) {
+        const c = city(), g = gate();
+        const ok = isEcho() ? cityHearts(c) >= 3 : gateOk();
+        if (!ok) {
             S.deny();
-            msg('💗', '편지 조각을 먼저 찾아요', '이 도시에 숨겨진 편지 조각 <b>' + got + ' / 3</b><br><br>' +
-                '동훈이가 숨겨둔 조각을 전부 찾아야<br><b>' + c.boss.wife + ' & ' + c.boss.n + '</b> 커플이 상대해 줍니다.<br><br>' +
-                '<span style="opacity:.7">💗 는 사람들이 잘 안 가는 구석에 있어요.<br>미니맵을 보면서 안 가본 곳을 찾아보세요.</span>');
+            if (isEcho()) {
+                msg('🌙', '기억 조각을 먼저 모아요', '이 도시의 기억 조각 <b>' + cityHearts(c) + ' / 3</b>');
+                return;
+            }
+            msg(g.i, c.name + ' — ' + g.n, '<b>' + g.d + '</b><br><br>' +
+                '<div style="background:rgba(232,89,122,.1);border-radius:10px;padding:9px 11px;font-size:1.05em">' +
+                '지금 <b style="color:#c04a60">' + gateLabel() + '</b></div><br>' +
+                '여길 끝내야 <b>' + c.boss.wife + ' & ' + c.boss.n + '</b> 커플이 상대해 줍니다.<br><br>' +
+                '<span style="opacity:.7">' + g.h + '</span>');
             return;
         }
         if (isEcho()) {
@@ -2849,7 +2979,7 @@ function doInteract() {
             return;
         }
         ask('⚔️', c.boss.wife + ' & ' + c.boss.n,
-            '편지 조각 3/3 — 준비됐어요!<br><br><b>보스전은 도망칠 수 없어요.</b><br>체력과 기력을 꽉 채우고 가세요.',
+            g.i + ' ' + g.n + ' 완료 — 준비됐어요!<br><br><b>보스전은 도망칠 수 없어요.</b><br>체력과 기력을 꽉 채우고 가세요.',
             '도전한다!', () => startBattle(c.boss));
     }
 }
@@ -3358,6 +3488,7 @@ function drawWorld() {
     });
     for (const n of nodes) items.push({ y: n.y + 4, f: () => drawNode(n) });
     for (const h of hearts) if (!h.got) items.push({ y: h.y + 4, f: () => drawHeart(h) });
+    for (const f of fires) items.push({ y: f.y + 3, f: () => drawFire(f) });
     { const sp2 = secretPos(); if (sp2 && !secretDone()) items.push({ y: sp2.y + 3, f: drawSecret }); }
     if (!G.boss[c.id]) {
         const bx = (MW / 2) * TS, by = 3 * TS + 17;
@@ -3445,6 +3576,14 @@ function drawMiniMap() {
         ctx.fillStyle = t === T.WALL ? p.w2 : t === T.WATER ? p.a1 : t === T.TREE ? p.tr1
                       : t === T.GRASS ? p.t1 : t === T.ROAD ? p.p1 : '#ffd43b';
         ctx.fillRect(X + tx * sc, Y + ty * sc, sc, sc);
+    }
+    for (const f of fires) {              // 🔥 모닥불은 미니맵에 찍어준다. 안 그러면 못 찾는다
+        ctx.fillStyle = f.lit ? '#ff8a3d' : '#ffe066';
+        ctx.fillRect(X + (f.x / TS) * sc - 2, Y + (f.y / TS) * sc - 2, 4.5, 4.5);
+        if (!f.lit && ((gameT * 2) | 0) % 2) {
+            ctx.fillStyle = '#fff6cf';
+            ctx.fillRect(X + (f.x / TS) * sc - 3.5, Y + (f.y / TS) * sc - 3.5, 7, 7);
+        }
     }
     ctx.fillStyle = '#ff5c7a';
     ctx.fillRect(X + (P.x / TS) * sc - 2, Y + (P.y / TS) * sc - 2, 4.5, 4.5);
@@ -4060,7 +4199,10 @@ function useItem(it) {
 
 function tryRun() {
     if (B.e.boss) { S.deny(); blog('보스전에서는 도망칠 수 없어요!'); return; }
-    if (Math.random() < 0.72) { blog('무사히 도망쳤다!'); B.result = 'run'; B.phase = 'end'; B.busy = 0.8; }
+    if (Math.random() < 0.72) {
+        blog('무사히 도망쳤다!'); B.result = 'run'; B.phase = 'end'; B.busy = 0.8;
+        if (gate().k === 'streak' && gateRaw() > 0) { gateReset(); toast('⚔️ 연승이 끊겼어요'); }
+    }
     else { blog('도망치지 못했다!'); B.phase = 'anim'; B.busy = 0.5; B.menu = 'root'; }
 }
 
@@ -4106,6 +4248,14 @@ function winBattle() {
     G.gold += Math.round(e.gold * (1 + petBonus('gold')) * dishBuff('gold'));
     G.exp += Math.round(e.exp * dishBuff('exp') * (setOn('dream') ? 1.2 : 1)); G.kills++;
     questTick('kill', 1); questTick('wx', 1);
+    if (!e.boss) {
+        if (cairoDark()) gateBump('dark', 1);
+        if (e.tier) gateBump('legend', 1);
+        if (!G.gate) G.gate = {};
+        if (gate().k === 'streak') { G.gate[c.id] = Math.min(5, (G.gate[c.id] || 0) + 1);
+            if (G.gate[c.id] >= 5) { S.levelup(); toast('⚔️ 5연승! 랜드마크에서 도전할 수 있어요'); }
+            else toast('⚔️ ' + G.gate[c.id] + '연승'); }
+    }
     if (e.tier) questTick('legend', 1);
     if (e.boss) questTick('boss', 1);
     if (G.buff && G.buff.left > 0) {                 // 🍱 요리 효과는 전투 수로 닳는다
@@ -4114,7 +4264,8 @@ function winBattle() {
             setTimeout(() => toast((dd ? dd.i + ' ' + dd.n : '요리') + ' 효과가 끝났어요'), 1200); }
     }
     const drops = [];
-    const n = (e.boss ? 5 : 1 + (Math.random() < 0.4 ? 1 : 0)) + (Math.random() < petBonus('mat') ? 2 : 0);
+    const n = (e.boss ? 5 : 1 + (Math.random() < 0.4 ? 1 : 0)) + (Math.random() < petBonus('mat') ? 2 : 0)
+              + (e.boss ? 0 : rv('mobMat', 0));
     for (let i = 0; i < n; i++) {
         const m = c.mats[Math.floor(Math.random() * c.mats.length)];
         G.mats[m.n] = (G.mats[m.n] || 0) + 1;
@@ -4247,7 +4398,9 @@ function updateBattle(dt) {
             }
             if (B.e.hp <= 0) { B.result = 'win'; B.phase = 'end'; B.busy = 0.6; blog(jo(B.e.n, '을', '를') + ' 쓰러뜨렸다!'); return; }
             enemyTurn();
-            if (G.hp <= 0) { B.result = 'lose'; B.phase = 'end'; B.busy = 1.0; blog('동훈이가 쓰러졌다...'); return; }
+            if (G.hp <= 0) { B.result = 'lose'; B.phase = 'end'; B.busy = 1.0; blog('동훈이가 쓰러졌다...');
+                if (gate().k === 'streak' && gateRaw() > 0) gateReset();
+                return; }
             turnEnd();
             B.phase = 'menu';
         }
@@ -4601,6 +4754,7 @@ function sellOnce(px2, py2) {
     price = Math.round(price * shopMul() * wxNow().gold);
     G.gold += price;
     questTick('sell', 1);
+    gateBump('sell', 1);
     S.coin();
     pop(px2, py2 - 8, '+' + price, '#ffd43b');
     toast(icon + ' ' + jo(k, '이', '가') + ' 팔렸어요! +' + price.toLocaleString() + '원');
@@ -4968,7 +5122,8 @@ function openPort() {
     let h = '';
     if (!done) {
         h += '<div class="rd" style="opacity:.8;padding:4px 2px;line-height:1.7">✈️ 이 도시의 <b>라이벌 커플</b>을 이겨야 다음 도시 티켓을 팔아요.<br>' +
-             c.icon + ' <b>' + c.name + '</b>의 랜드마크에서 <b>' + c.boss.wife + ' & ' + c.boss.n + '</b> 커플이 기다리고 있어요!</div>';
+             c.icon + ' <b>' + c.name + '</b> — ' + gate().i + ' <b>' + gate().n + '</b> ' + gateLabel() +
+             '<br><span style="opacity:.75">' + gate().d + '</span></div>';
     }
     if (isEcho()) {
         h = '<div class="rd" style="opacity:.8;padding:4px 2px;line-height:1.7">🌙 <b>돌아가는 길</b> — 왔던 길을 거꾸로 되짚어 갑니다.<br>' +
@@ -5014,7 +5169,9 @@ function fly(i) {
     msg(CITIES[i].icon, (isEcho() ? '🌙 기억 속의 ' : '') + CITIES[i].name + ' 도착!',
         (isEcho() ? '길도 건물도 그대로인데, 색이 전부 다르다.<br>여기 있던 것들이 전부 그림자로 서 있다.'
                   : '새로운 재료와 몬스터가 기다리고 있어요.<br>가게도 새로 열었습니다!') +
-        (rl ? '<br><br><div style="background:rgba(232,89,122,.1);border-radius:10px;padding:8px 10px;line-height:1.6">' + rl + '</div>' : ''));
+        (rl ? '<br><br><div style="background:rgba(232,89,122,.1);border-radius:10px;padding:8px 10px;line-height:1.6">' + rl + '</div>' : '') +
+        (isEcho() ? '' : '<div style="background:rgba(77,171,247,.12);border-radius:10px;padding:8px 10px;line-height:1.6;margin-top:7px">' +
+            gate().i + ' <b>보스 조건 — ' + gate().n + '</b><br>' + gate().d + '</div>'));
 }
 
 
