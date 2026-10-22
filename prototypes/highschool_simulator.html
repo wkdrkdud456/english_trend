@@ -1,10 +1,10 @@
-<title>고교선택 시뮬레이터</title>
+<title>김포 고교선택 시뮬레이터</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
 <style>
-/* Layout: 한 줄 입력 패널 → 후보 학교 비교 카드 → 학교별 편제표 상세. 편제표 위 형광펜 = 내 진로 권장과목 */
+/* Layout: 입력 패널 → 후보 학교 비교 카드 → 학교별 편제표 상세. 편제표 위 형광펜 = 내 진로 권장과목 */
 :root {
   --paper: #F2F4F7;
   --surface: #FFFFFF;
@@ -18,7 +18,7 @@
   --warn-soft: #FBEADC;
   --ok: #1D7A4E;
   --g1: #173F80; --g2: #3569BA; --g3: #7C9FD6; --g4: #B8CBEA; --g5: #DCE4F1;
-  --k-kor: #9C3D54; --k-math: #1E57B0; --k-eng: #1D7A4E; --k-soc: #8A5A12; --k-sci: #5B3FA0;
+  --k-kor: #9C3D54; --k-math: #1E57B0; --k-eng: #1D7A4E; --k-soc: #8A5A12; --k-sci: #5B3FA0; --k-info: #3F6E78;
   --f-display: "Gowun Batang", "Nanum Myeongjo", serif;
   --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -29,7 +29,7 @@
     --accent: #7FA8EC; --accent-soft: #1F2C44; --mark: rgba(255, 214, 10, .32);
     --warn: #F0A26A; --warn-soft: #3A2718; --ok: #6BCB97;
     --g1: #A9C4F5; --g2: #7299DB; --g3: #4A6FAE; --g4: #33507F; --g5: #253753;
-    --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE;
+    --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE; --k-info: #7FC4CF;
     color-scheme: dark;
   }
 }
@@ -38,7 +38,7 @@
   --accent: #7FA8EC; --accent-soft: #1F2C44; --mark: rgba(255, 214, 10, .32);
   --warn: #F0A26A; --warn-soft: #3A2718; --ok: #6BCB97;
   --g1: #A9C4F5; --g2: #7299DB; --g3: #4A6FAE; --g4: #33507F; --g5: #253753;
-  --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE;
+  --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE; --k-info: #7FC4CF;
   color-scheme: dark;
 }
 
@@ -56,6 +56,7 @@ h1 { font-size: clamp(26px, 4vw, 34px); }
 h2 { font-size: 21px; }
 h3 { font-size: 17px; }
 p { margin: 0; }
+a { color: var(--accent); }
 .num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .label { font-size: 12px; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
@@ -63,11 +64,10 @@ p { margin: 0; }
 header { display: grid; gap: 8px; }
 .badge {
   justify-self: start; font-size: 12px; font-weight: 500; letter-spacing: .03em;
-  padding: 3px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn);
+  padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
 }
-header p { max-width: 62ch; color: var(--muted); }
+header p { max-width: 64ch; color: var(--muted); }
 
-/* 입력 패널 */
 .panel {
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
   padding: 20px; display: grid; gap: 20px;
@@ -85,26 +85,24 @@ header p { max-width: 62ch; color: var(--muted); }
 .chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 500; }
 .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chip span:hover { border-color: var(--accent); }
+.areas { display: grid; gap: 10px; }
+.area-row { display: grid; grid-template-columns: 7.5em 1fr; gap: 10px; align-items: start; }
+.area-row .label { padding-top: 8px; }
+@media (max-width: 520px) { .area-row { grid-template-columns: 1fr; gap: 4px; } .area-row .label { padding-top: 0; } }
 .range-row { display: flex; align-items: center; gap: 12px; }
 .range-row input { flex: 1; min-width: 0; accent-color: var(--accent); }
 .range-val { font-family: var(--f-num); font-size: 18px; min-width: 6.5ch; text-align: right; }
 select {
   font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
-  background: var(--surface); color: var(--ink);
+  background: var(--surface); color: var(--ink); max-width: 100%;
 }
 select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .hint { font-size: 13px; color: var(--muted); }
 .hint.warn { color: var(--warn); }
 
-/* 요약 */
-.summary {
-  padding: 14px 18px; border-radius: 10px; background: var(--accent-soft);
-  font-size: 15px; line-height: 1.7;
-}
-.summary b { font-weight: 700; }
+.summary { padding: 14px 18px; border-radius: 10px; background: var(--accent-soft); font-size: 15px; line-height: 1.7; }
 
-/* 비교 카드 */
-.cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
 .card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
   padding: 18px; display: grid; gap: 16px; align-content: start; min-width: 0;
@@ -112,11 +110,12 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .card-head { display: grid; gap: 2px; }
 .card-head .meta { font-size: 13px; color: var(--muted); }
 .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.stat { display: grid; gap: 2px; }
-.stat .big { font-family: var(--f-num); font-size: 26px; line-height: 1.2; }
-.stat .big small { font-family: var(--f-body); font-size: 14px; margin-left: 2px; }
-.gradebar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; }
-.gradebar div { display: flex; align-items: center; justify-content: center; font-family: var(--f-num); font-size: 11px; min-width: 0; overflow: hidden; }
+.stat { display: grid; gap: 2px; align-content: start; }
+.stat .big { font-family: var(--f-num); font-size: 24px; line-height: 1.2; }
+.stat .big small { font-family: var(--f-body); font-size: 13px; margin-left: 2px; }
+.stat .sub { font-size: 12.5px; color: var(--muted); }
+.bar { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: var(--g5); }
+.bar div { display: flex; align-items: center; justify-content: center; font-family: var(--f-num); font-size: 11px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .fit { display: grid; gap: 6px; }
@@ -126,10 +125,13 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .note { font-size: 13.5px; line-height: 1.6; padding-top: 12px; border-top: 1px dashed var(--line); }
 .note .miss { color: var(--warn); }
 .note .good { color: var(--ok); }
+.lvl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.lvl select { padding: 4px 8px; font-size: 13px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--g5); color: var(--muted); white-space: nowrap; }
+.tag.set { background: var(--accent-soft); color: var(--accent); }
 
-/* 상세 */
 .detail { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); overflow-x: auto; }
 .tabs button {
   font: inherit; font-weight: 500; background: none; border: 0; color: var(--muted);
   padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
@@ -139,39 +141,36 @@ select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .detail-body { padding: 20px; display: grid; gap: 24px; }
 .detail-grid { display: grid; gap: 24px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
 @media (max-width: 760px) { .detail-grid { grid-template-columns: minmax(0, 1fr); } }
-
-.pyeonje { display: grid; gap: 14px; }
+.pyeonje { display: grid; gap: 14px; align-content: start; }
 .pyeonje-table { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
 th { font-weight: 500; background: var(--paper); white-space: nowrap; }
 td.kyo { white-space: nowrap; font-weight: 500; }
-.subj { display: inline-block; margin: 2px 6px 2px 0; padding: 0 2px; }
+td .muted { white-space: nowrap; }
+.subj { display: inline-block; margin: 2px 8px 2px 0; padding: 0 2px; }
 .subj.key { background: linear-gradient(transparent 38%, var(--mark) 38%, var(--mark) 92%, transparent 92%); font-weight: 700; }
-.subj .tag { font-size: 10.5px; color: var(--muted); margin-left: 2px; }
+.subj .t { font-size: 10.5px; color: var(--muted); margin-left: 2px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-.common { font-size: 13.5px; color: var(--muted); }
-
-.dist { display: grid; gap: 14px; align-content: start; }
-.dist-row { display: grid; gap: 4px; }
-.dist-row .top { display: flex; justify-content: space-between; font-size: 14px; }
-.abar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; }
-.abar div { font-family: var(--f-num); font-size: 10.5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.side { display: grid; gap: 18px; align-content: start; }
+.side section { display: grid; gap: 8px; }
 .missing-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .missing-list span { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+.callout { font-size: 13.5px; padding: 10px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--ink); }
+.src { font-size: 12.5px; color: var(--muted); }
 
-.method { display: grid; gap: 10px; font-size: 14px; color: var(--muted); max-width: 75ch; }
+.method { display: grid; gap: 10px; font-size: 14px; color: var(--muted); max-width: 78ch; }
 .method h3 { color: var(--ink); }
-.method ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.method ol, .method ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
 <div class="wrap">
   <header>
-    <span class="badge">프로토타입 · 학교와 수치는 모두 예시(가상) 데이터</span>
-    <h1>고교선택 시뮬레이터</h1>
-    <p>희망 진로와 중학교 성적을 넣고 후보 고등학교를 고르면, 학교별 예상 내신 등급과 진로 권장과목 개설 현황을 나란히 보여줍니다. 2025학년도부터 적용된 고교학점제·5등급 상대평가 기준입니다.</p>
+    <span class="badge">김포 일반고 15곳 · 학교알리미 공시자료 기반</span>
+    <h1>김포 고교선택 시뮬레이터</h1>
+    <p>희망 진로와 중학교 성적을 넣고 후보 고등학교를 고르세요. 학교마다 2·3학년에 어떤 선택과목을 여는지, 진로 권장과목을 교내에서 들을 수 있는지, 졸업생이 어디로 진학했는지를 나란히 비교합니다.</p>
   </header>
 
   <form class="panel" id="form" autocomplete="off">
@@ -182,23 +181,23 @@ td.kyo { white-space: nowrap; font-weight: 500; }
     <div class="field">
       <label class="label" for="pct">중학교 내 성적 (전교 상위 %)</label>
       <div class="range-row">
-        <input type="range" id="pct" min="1" max="60" step="1" value="7">
-        <span class="range-val" id="pctVal">상위 7%</span>
+        <input type="range" id="pct" min="1" max="60" step="1" value="10">
+        <span class="range-val" id="pctVal">상위 10%</span>
       </div>
       <span class="hint">주요과목 성취도 기준으로 대략적인 위치를 넣어 주세요.</span>
     </div>
     <div class="field">
       <label class="label" for="level">출신 중학교 학업 수준</label>
       <select id="level">
-        <option value="0">평균적인 중학교</option>
-        <option value="0.3" selected>학업 수준이 높은 중학교</option>
-        <option value="0.55">최상위권 중학교</option>
+        <option value="-0.2">평균보다 낮은 편</option>
+        <option value="0" selected>평균적인 중학교</option>
+        <option value="0.25">학업 수준이 높은 중학교</option>
       </select>
       <span class="hint">같은 상위 %라도 중학교 수준에 따라 고교에서의 위치가 달라집니다.</span>
     </div>
     <div class="field wide">
       <span class="label">후보 고등학교 (최대 3곳)</span>
-      <div class="chips" id="schools"></div>
+      <div class="areas" id="schools"></div>
       <span class="hint" id="schoolHint">비교할 학교를 1~3곳 고르세요.</span>
     </div>
   </form>
@@ -210,7 +209,7 @@ td.kyo { white-space: nowrap; font-weight: 500; }
   </section>
 
   <section style="display:grid; gap:14px">
-    <h2>학교별 편제표와 성취도 분포</h2>
+    <h2>학교별 편제표</h2>
     <div class="detail">
       <div class="tabs" role="tablist" id="tabs"></div>
       <div class="detail-body" id="detail"></div>
@@ -218,48 +217,47 @@ td.kyo { white-space: nowrap; font-weight: 500; }
   </section>
 
   <section class="method">
-    <h3>예상 등급은 이렇게 계산했어요</h3>
+    <h3>데이터 출처와 한계</h3>
+    <ul>
+      <li><b>편제표</b>: 각 학교가 학교알리미에 공시한 「2026학년도 학교교육과정 편성·운영·평가 계획」(2026년 4월 공시) 속 <b>2026학년도 입학생</b> 편제표입니다. 2027학년도 입학생 편제표는 내년 봄에 공시되므로, 그 전까지는 가장 가까운 기준이에요. 학교 사정에 따라 실제 개설 과목은 달라질 수 있습니다.</li>
+      <li><b>학생 수</b>: 「학년별·학급별 학생수」(2026년 5월 공시).</li>
+      <li><b>졸업생 진로</b>: 「졸업생의 진로 현황」(2025년 11월 공시, 2025년 2월 졸업생). 운유고·김포호수고·신양고는 아직 졸업생이 없어요.</li>
+      <li><b>교과별 성취도 분포</b>: 학교알리미에서 보안문자를 입력해야 조회할 수 있어 자동으로 넣지 못했어요. 그래서 각 학교의 학업 수준은 카드에서 직접 고르도록 했고, 처음에는 모두 ‘보통’입니다.</li>
+    </ul>
+    <h3>예상 등급 계산 방법</h3>
     <ol>
-      <li>중학교 전교 상위 %와 출신 중학교 수준으로 학생의 전국 기준 위치를 추정합니다.</li>
-      <li>학교마다 신입생 학업 수준(평균·편차)을 두고, 그 학교 안에서 학생이 어디쯤일지 계산합니다.</li>
-      <li>교내 위치를 5등급 상대평가 구간(1등급 상위 10%, 2등급 34%, 3등급 66%, 4등급 90%, 5등급 나머지)에 대입합니다. 고교 적응 같은 변수를 감안해 하나의 등급이 아니라 등급별 가능성으로 보여줍니다.</li>
+      <li>중학교 전교 상위 %와 출신 중학교 수준으로 학생의 위치를 추정합니다.</li>
+      <li>카드에서 고른 학교 학업 수준을 기준으로, 그 학교 안에서 학생이 어디쯤일지 계산합니다.</li>
+      <li>교내 위치를 5등급 상대평가 구간(1등급 상위 10%, 2등급 34%, 3등급 66%, 4등급 90%, 5등급 나머지)에 대입해 등급별 가능성으로 보여줍니다.</li>
     </ol>
-    <p>실제 서비스에서는 학교알리미 공시자료(교육과정 편성표, 교과별 성취도 분포)와 대학별 권장과목 발표 자료로 예시 데이터를 바꿔 넣으면 됩니다. 예측치는 상담용 참고 자료이며 실제 결과를 보장하지 않습니다.</p>
+    <p>예측치는 상담용 참고 자료이며 실제 결과를 보장하지 않습니다. 진로별 권장과목은 상담용 예시이고, 대학별 권장과목 발표 기준으로 바꿔 쓰면 됩니다.</p>
   </section>
 </div>
 
 <script>
-// ---------- 예시 데이터 (가상) ----------
+const SCHOOLS = [{"id": "8bfc7645", "name": "고촌고", "area": "고촌", "addr": "고촌읍 태리로47번길 20", "fond": "공립", "opened": 2020, "students": {"g1": 334, "g2": 329, "g3": 336, "classes1": 10}, "grad": {"grads": 316, "jc": 25.3, "univ": 50.9, "abroad": 0.0, "advance": 76.3, "job": 0.0, "etc": 23.7, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "한국지리 탐구", "사회와 문화", "윤리와 사상", "생명과학", "지구과학", "세계사", "물리학", "화학", "동아시아 역사 기행", "세계시민과 지리", "현대사회와 윤리", "세포와 물질대사", "지구시스템과학", "역학과 에너지", "물질과 에너지", "법과 사회", "정치", "인공지능 기초", "데이터 과학", "기하"], "g3": ["독서와 작문", "주제 탐구 독서", "확률과 통계", "수학과제 탐구", "영어 독해와 작문", "심화 영어", "세계 문화와 영어", "문학과 영상", "미적분II", "경제 수학", "매체 의사소통", "미디어 영어", "역사로 탐구하는 현대 세계", "과학의 역사와 문화", "도시의 미래 탐구", "화학 반응의 세계", "윤리문제 탐구", "전자기와 양자", "행성우주과학", "생물의 유전", "여행지리", "경제", "기후변화와 지속가능한 세계", "기후변화와 환경생태", "인문학과 윤리", "사회문제 탐구", "소프트웨어와 생활"], "note": ""}, {"id": "c0c32f1e", "name": "김포고", "area": "원도심", "addr": "봉화로 37-15", "fond": "공립", "opened": 1955, "students": {"g1": 312, "g2": 310, "g3": 321, "classes1": 10}, "grad": {"grads": 359, "jc": 3.9, "univ": 51.0, "abroad": 0.0, "advance": 54.9, "job": 0.0, "etc": 45.1, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "주제 탐구 독서", "문학과 영상", "영어I", "영어II", "영어 독해와 작문", "영어 발표와 토론", "대수", "세계시민과 지리", "미적분I", "세계사", "기하", "정치", "한국지리 탐구", "현대사회와 윤리", "금융과 경제생활", "경제", "동아시아 역사 기행", "물리학", "법과 사회", "화학", "윤리와 사상", "생명과학", "지구과학", "인공지능 기초", "역학과 에너지", "물질과 에너지", "세포와 물질대사", "지구시스템과학", "융합과학 탐구", "데이터 과학"], "g3": ["독서와 작문", "독서 토론과 글쓰기", "언어생활 탐구", "심화 영어 독해와 작문", "심화 영어", "미디어 영어", "세계 문화와 영어", "경제 수학", "확률과 통계", "수학과 문화", "미적분II", "여행지리", "도시의 미래 탐구", "역사로 탐구하는 현대 세계", "사회문제 탐구", "사회와 문화", "윤리문제 탐구", "인문학과 윤리", "전자기와 양자", "기후변화와 지속가능한 세계", "화학 반응의 세계", "생물의 유전", "행성우주과학", "과학의 역사와 문화", "기후변화와 환경생태", "소프트웨어와 생활"], "note": ""}, {"id": "4e3f8e8d", "name": "김포제일고", "area": "한강신도시", "addr": "김포한강11로 242", "fond": "공립", "opened": 1936, "students": {"g1": 389, "g2": 385, "g3": 399, "classes1": 12}, "grad": {"grads": 407, "jc": 21.9, "univ": 52.3, "abroad": 0.0, "advance": 74.4, "job": 1.5, "etc": 24.1, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "주제 탐구 독서", "독서 토론과 글쓰기", "인공지능 수학", "기하", "세계 문화와 영어", "영미 문학 읽기", "세계시민과 지리", "도시의 미래 탐구", "역사로 탐구하는 현대 세계", "세계사", "법과 사회", "정치", "금융과 경제생활", "사회문제 탐구", "윤리와 사상", "현대사회와 윤리", "물리학", "기후변화와 지속가능한 세계", "데이터 과학", "화학", "역학과 에너지", "생명과학", "물질과 에너지", "지구과학", "세포와 물질대사", "지구시스템과학", "인공지능 기초", "소프트웨어와 생활"], "g3": ["독서와 작문", "확률과 통계", "미적분II", "영어 독해와 작문", "한국지리 탐구", "여행지리", "문학과 영상", "동아시아 역사 기행", "수학과 문화", "사회와 문화", "실용 통계", "윤리문제 탐구", "심화 영어 독해와 작문", "전자기와 양자", "미디어 영어", "화학 반응의 세계", "생물의 유전", "행성우주과학", "인문학과 윤리", "국제 관계의 이해", "과학의 역사와 문화", "기후변화와 환경생태", "융합과학 탐구"], "note": ""}, {"id": "440f12c9", "name": "김포호수고", "area": "한강신도시", "addr": "김포한강4로420번길 115", "fond": "공립", "opened": 2025, "students": {"g1": 362, "g2": 341, "g3": 0, "classes1": 12}, "grad": null, "g2": ["문학", "독서와 작문", "대수", "미적분I", "영어I", "영어II", "세계 문화와 영어", "세계시민과 지리", "인공지능 수학", "문학과 영상", "윤리와 사상", "법과 사회", "생명과학", "지구과학", "세계사", "물리학", "경제", "화학", "동아시아 역사 기행", "현대사회와 윤리", "도시의 미래 탐구", "금융과 경제생활", "세포와 물질대사", "지구시스템과학", "주제 탐구 독서", "역학과 에너지", "물질과 에너지", "미디어 영어", "기하", "정치"], "g3": ["화법과 언어", "언어생활 탐구", "확률과 통계", "실용 통계", "영어 독해와 작문", "심화 영어 독해와 작문", "국제 관계의 이해", "화학 반응의 세계", "한국지리 탐구", "인문학과 윤리", "전자기와 양자", "행성우주과학", "인공지능 기초", "미적분II", "사회와 문화", "생물의 유전", "기후변화와 지속가능한 세계", "역사로 탐구하는 현대 세계", "기후변화와 환경생태", "과학의 역사와 문화", "소프트웨어와 생활", "사회문제 탐구", "윤리문제 탐구", "융합과학 탐구", "여행지리"], "note": ""}, {"id": "d3efb19f", "name": "마송고", "area": "북부 읍·면", "addr": "통진읍 마송1로 155", "fond": "공립", "opened": 2010, "students": {"g1": 201, "g2": 155, "g3": 194, "classes1": 8}, "grad": {"grads": 164, "jc": 32.3, "univ": 37.8, "abroad": 0.0, "advance": 70.1, "job": 0.0, "etc": 29.9, "as_of": "2025.11"}, "g2": ["문학", "독서와 작문", "대수", "미적분I", "영어I", "영어II", "물리학", "생명과학", "화학", "세계사", "현대사회와 윤리", "경제", "도시의 미래 탐구", "정치", "인공지능 수학", "기후변화와 환경생태", "매체 의사소통", "미디어 영어", "인공지능 기초", "지구과학", "사회와 문화", "세계시민과 지리", "물질과 에너지", "세포와 물질대사", "역학과 에너지", "동아시아 역사 기행", "법과 사회", "윤리와 사상", "경제 수학", "기하", "영어 발표와 토론", "독서 토론과 글쓰기"], "g3": ["화법과 언어", "주제 탐구 독서", "확률과 통계", "실용 통계", "영어 독해와 작문", "심화 영어", "생물의 유전", "전자기와 양자", "지구시스템과학", "행성우주과학", "화학 반응의 세계", "데이터 과학", "인문학과 윤리", "한국지리 탐구", "미적분II", "심화 영어 독해와 작문", "언어생활 탐구", "기후변화와 지속가능한 세계", "사회문제 탐구", "역사로 탐구하는 현대 세계", "문학과 영상", "과학의 역사와 문화", "융합과학 탐구", "소프트웨어와 생활", "금융과 경제생활", "여행지리", "윤리문제 탐구", "수학과 문화"], "note": ""}, {"id": "46bd5c05", "name": "사우고", "area": "원도심", "addr": "김포대로 824", "fond": "공립", "opened": 2000, "students": {"g1": 368, "g2": 363, "g3": 365, "classes1": 11}, "grad": {"grads": 361, "jc": 19.4, "univ": 56.2, "abroad": 0.0, "advance": 75.6, "job": 1.4, "etc": 23.0, "as_of": "2025.11"}, "g2": ["영어I", "문학", "대수", "화법과 언어", "미적분I", "영어II", "독서 토론과 글쓰기", "동아시아 역사 기행", "세계시민과 지리", "현대사회와 윤리", "사회와 문화", "심화 영어", "생명과학", "지구과학", "물리학", "화학", "세포와 물질대사", "지구시스템과학", "주제 탐구 독서", "한국지리 탐구", "역학과 에너지", "물질과 에너지", "미디어 영어", "윤리와 사상", "세계사", "경제", "인공지능 수학", "기하", "인공지능 기초", "데이터 과학"], "g3": ["독서와 작문", "언어생활 탐구", "영어 독해와 작문", "확률과 통계", "세계 문화와 영어", "실용 통계", "심화 영어 독해와 작문", "도시의 미래 탐구", "화학 반응의 세계", "인문학과 윤리", "전자기와 양자", "행성우주과학", "문학과 영상", "미적분II", "생물의 유전", "법과 사회", "정치", "역사로 탐구하는 현대 세계", "기후변화와 환경생태", "매체 의사소통", "사회문제 탐구", "윤리문제 탐구", "융합과학 탐구", "직무 영어", "여행지리", "소프트웨어와 생활"], "note": ""}, {"id": "fa139b36", "name": "솔터고", "area": "한강신도시", "addr": "김포한강7로22번길 109", "fond": "공립", "opened": 2013, "students": {"g1": 319, "g2": 327, "g3": 341, "classes1": 10}, "grad": {"grads": 337, "jc": 20.2, "univ": 65.0, "abroad": 0.0, "advance": 86.4, "job": 0.6, "etc": 13.1, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어 독해와 작문", "인공지능 기초", "세계 문화와 영어", "세계시민과 지리", "매체 의사소통", "인공지능 수학", "윤리문제 탐구", "사회와 문화", "여행지리", "생명과학", "지구과학", "세계사", "물리학", "화학", "역사로 탐구하는 현대 세계", "현대사회와 윤리", "도시의 미래 탐구", "주제 탐구 독서", "영미 문학 읽기", "한국지리 탐구", "역학과 에너지", "물질과 에너지", "행성우주과학", "생물의 유전", "법과 사회", "기하", "정치"], "g3": ["독서와 작문", "문학과 영상", "확률과 통계", "실용 통계", "영어II", "미디어 영어", "기후변화와 지속가능한 세계", "동아시아 역사 기행", "화학 반응의 세계", "세포와 물질대사", "지구시스템과학", "사회문제 탐구", "전자기와 양자", "융합과학 탐구", "미적분II", "윤리와 사상", "데이터 과학", "심화 영어", "경제", "기후변화와 환경생태", "과학의 역사와 문화", "소프트웨어와 생활", "영어 발표와 토론", "금융과 경제생활", "언어생활 탐구", "인문학과 윤리"], "note": ""}, {"id": "5e879db3", "name": "신양고", "area": "북부 읍·면", "addr": "양촌읍 양곡3로 57", "fond": "공립", "opened": 2026, "students": {"g1": 336, "g2": 0, "g3": 0, "classes1": 13}, "grad": null, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어 독해와 작문", "인공지능 기초", "세계 문화와 영어", "세계시민과 지리", "매체 의사소통", "인공지능 수학", "윤리문제 탐구", "사회와 문화", "여행지리", "생명과학", "지구과학", "세계사", "물리학", "화학", "역사로 탐구하는 현대 세계", "현대사회와 윤리", "도시의 미래 탐구", "주제 탐구 독서", "영미 문학 읽기", "한국지리 탐구", "역학과 에너지", "물질과 에너지", "행성우주과학", "생물의 유전", "법과 사회", "기하", "정치"], "g3": ["독서와 작문", "문학과 영상", "확률과 통계", "실용 통계", "영어II", "미디어 영어", "기후변화와 지속가능한 세계", "동아시아 역사 기행", "화학 반응의 세계", "세포와 물질대사", "지구시스템과학", "사회문제 탐구", "전자기와 양자", "융합과학 탐구", "미적분II", "윤리와 사상", "데이터 과학", "심화 영어", "경제", "기후변화와 환경생태", "과학의 역사와 문화", "소프트웨어와 생활", "영어 발표와 토론", "금융과 경제생활", "언어생활 탐구", "인문학과 윤리"], "note": "신양고는 2026년 개교한 학교로, 공시된 편제표가 솔터고와 같아요."}, {"id": "a760cab8", "name": "양곡고", "area": "북부 읍·면", "addr": "양촌읍 양곡4로 138", "fond": "사립", "opened": 1963, "students": {"g1": 255, "g2": 261, "g3": 263, "classes1": 8}, "grad": {"grads": 225, "jc": 24.4, "univ": 67.1, "abroad": 0.0, "advance": 91.6, "job": 3.6, "etc": 4.9, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "한국지리 탐구", "세계시민과 지리", "세계사", "역사로 탐구하는 현대 세계", "경제", "사회와 문화", "정치", "법과 사회", "현대사회와 윤리", "윤리와 사상", "물리학", "역학과 에너지", "화학", "물질과 에너지", "생명과학", "세포와 물질대사", "지구과학", "지구시스템과학", "세계 문화와 영어", "미디어 영어", "기하", "인공지능 수학", "인공지능 기초"], "g3": ["독서와 작문", "확률과 통계", "도시의 미래 탐구", "여행지리", "동아시아 역사 기행", "사회문제 탐구", "국제 관계의 이해", "금융과 경제생활", "인문학과 윤리", "윤리문제 탐구", "전자기와 양자", "과학의 역사와 문화", "화학 반응의 세계", "융합과학 탐구", "생물의 유전", "기후변화와 환경생태", "행성우주과학", "주제 탐구 독서", "문학과 영상", "영어 독해와 작문", "심화 영어", "미적분II", "수학과제 탐구", "데이터 과학", "영미 문학 읽기", "실용 통계"], "note": ""}, {"id": "380bf720", "name": "운양고", "area": "한강신도시", "addr": "김포한강11로 58", "fond": "공립", "opened": 2013, "students": {"g1": 334, "g2": 322, "g3": 335, "classes1": 10}, "grad": {"grads": 342, "jc": 17.3, "univ": 51.8, "abroad": 0.0, "advance": 69.0, "job": 6.7, "etc": 24.3, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "주제 탐구 독서", "기하", "심화 영어", "세계시민과 지리", "세계사", "사회와 문화", "현대사회와 윤리", "물리학", "화학", "생명과학", "지구과학", "문학과 영상", "인공지능 수학", "영미 문학 읽기", "도시의 미래 탐구", "동아시아 역사 기행", "법과 사회", "경제", "윤리와 사상", "역학과 에너지", "화학 반응의 세계", "생물의 유전", "행성우주과학", "인공지능 기초"], "g3": ["독서와 작문", "매체 의사소통", "확률과 통계", "실용 통계", "영어 독해와 작문", "세계 문화와 영어", "독서 토론과 글쓰기", "미적분II", "심화 영어 독해와 작문", "한국지리 탐구", "여행지리", "정치", "금융과 경제생활", "인문학과 윤리", "전자기와 양자", "물질과 에너지", "세포와 물질대사", "지구시스템과학", "데이터 과학", "언어생활 탐구", "수학과 문화", "미디어 영어", "기후변화와 지속가능한 세계", "역사로 탐구하는 현대 세계", "사회문제 탐구", "윤리문제 탐구", "융합과학 탐구", "기후변화와 환경생태", "소프트웨어와 생활"], "note": ""}, {"id": "8cff4562", "name": "운유고", "area": "한강신도시", "addr": "김포한강2로 236", "fond": "공립", "opened": 2024, "students": {"g1": 390, "g2": 396, "g3": 458, "classes1": 12}, "grad": null, "g2": ["독서와 작문", "문학", "대수", "미적분I", "영어I", "영어II", "인공지능 기초", "데이터 과학", "세계시민과 지리", "세계사", "윤리와 사상", "법과 사회", "물리학", "화학", "생명과학", "지구과학", "주제 탐구 독서", "기하", "심화 영어", "사회와 문화", "인문학과 윤리", "한국지리 탐구", "동아시아 역사 기행", "역학과 에너지", "물질과 에너지", "세포와 물질대사", "지구시스템과학"], "g3": ["화법과 언어", "독서 토론과 글쓰기", "확률과 통계", "수학과제 탐구", "영어 독해와 작문", "세계 문화와 영어", "문학과 영상", "미적분II", "미디어 영어", "정치", "경제", "현대사회와 윤리", "여행지리", "역사로 탐구하는 현대 세계", "전자기와 양자", "화학 반응의 세계", "생물의 유전", "행성우주과학", "융합과학 탐구", "소프트웨어와 생활", "경제 수학", "사회문제 탐구", "윤리문제 탐구", "기후변화와 지속가능한 세계", "과학의 역사와 문화", "기후변화와 환경생태"], "note": ""}, {"id": "4d32fb98", "name": "장기고", "area": "한강신도시", "addr": "김포한강2로 131", "fond": "공립", "opened": 2009, "students": {"g1": 332, "g2": 319, "g3": 376, "classes1": 10}, "grad": {"grads": 335, "jc": 12.5, "univ": 60.9, "abroad": 0.0, "advance": 73.4, "job": 0.0, "etc": 26.6, "as_of": "2025.11"}, "g2": ["문학", "독서와 작문", "대수", "미적분I", "영어I", "영어II", "세계시민과 지리", "세계사", "경제", "현대사회와 윤리", "사회와 문화", "물리학", "화학", "생명과학", "지구과학", "세계 문화와 영어", "기하", "주제 탐구 독서", "도시의 미래 탐구", "동아시아 역사 기행", "금융과 경제생활", "윤리와 사상", "정치", "역학과 에너지", "화학 반응의 세계", "세포와 물질대사", "행성우주과학", "미디어 영어", "인공지능 수학", "문학과 영상"], "g3": [], "note": "장기고는 2026학년도 1년 단위 편성표만 공시했어요. 2학년 과목은 2026년 현재 2학년(2025학년도 입학생) 기준이고, 2022 개정 교육과정 3학년 편성은 아직 공시되지 않았어요."}, {"id": "5d46e15d", "name": "통진고", "area": "북부 읍·면", "addr": "통진읍 김포대로 2165", "fond": "사립", "opened": 1949, "students": {"g1": 274, "g2": 277, "g3": 304, "classes1": 10}, "grad": {"grads": 271, "jc": 25.8, "univ": 41.3, "abroad": 0.0, "advance": 67.2, "job": 7.0, "etc": 25.8, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "세계 문화와 영어", "세계시민과 지리", "매체 의사소통", "인공지능 수학", "인공지능 기초", "사회와 문화", "윤리와 사상", "생명과학", "지구과학", "세계사", "물리학", "화학", "동아시아 역사 기행", "현대사회와 윤리", "세포와 물질대사", "지구시스템과학", "주제 탐구 독서", "한국지리 탐구", "역학과 에너지", "물질과 에너지", "미디어 영어", "기하", "정치"], "g3": ["독서와 작문", "독서 토론과 글쓰기", "실용 통계", "심화 영어", "확률과 통계", "영어 독해와 작문", "도시의 미래 탐구", "국제 관계의 이해", "화학 반응의 세계", "영미 문학 읽기", "인문학과 윤리", "전자기와 양자", "행성우주과학", "문학과 영상", "미적분II", "생물의 유전", "데이터 과학", "법과 사회", "경제", "기후변화와 지속가능한 세계", "역사로 탐구하는 현대 세계", "기후변화와 환경생태", "과학의 역사와 문화", "소프트웨어와 생활", "실생활 영어 회화", "금융과 경제생활", "언어생활 탐구", "수학과제 탐구", "사회문제 탐구", "윤리문제 탐구", "융합과학 탐구", "여행지리"], "note": ""}, {"id": "4ecec858", "name": "풍무고", "area": "원도심", "addr": "풍무로93번길 53", "fond": "공립", "opened": 2005, "students": {"g1": 352, "g2": 358, "g3": 362, "classes1": 11}, "grad": {"grads": 394, "jc": 31.2, "univ": 65.2, "abroad": 0.0, "advance": 96.4, "job": 1.8, "etc": 1.8, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "동아시아 역사 기행", "세계시민과 지리", "현대사회와 윤리", "인공지능 기초", "사회와 문화", "법과 사회", "생명과학", "지구과학", "물리학", "화학", "도시의 미래 탐구", "세포와 물질대사", "지구시스템과학", "역학과 에너지", "물질과 에너지", "데이터 과학", "세계사", "기하", "경제"], "g3": ["독서와 작문", "확률과 통계", "영어 독해와 작문", "기후변화와 환경생태", "세계 문화와 영어", "화학 반응의 세계", "주제 탐구 독서", "한국지리 탐구", "사회문제 탐구", "윤리문제 탐구", "전자기와 양자", "행성우주과학", "융합과학 탐구", "미적분II", "윤리와 사상", "생물의 유전", "여행지리", "수학과제 탐구", "문학과 영상", "심화 영어", "기후변화와 지속가능한 세계", "역사로 탐구하는 현대 세계", "소프트웨어와 생활"], "note": ""}, {"id": "48ec9590", "name": "하성고", "area": "북부 읍·면", "addr": "하성면 애기봉로806번길 30", "fond": "공립", "opened": 1974, "students": {"g1": 115, "g2": 75, "g3": 94, "classes1": 5}, "grad": {"grads": 71, "jc": 25.4, "univ": 49.3, "abroad": 0.0, "advance": 74.6, "job": 1.4, "etc": 23.9, "as_of": "2025.11"}, "g2": ["문학", "화법과 언어", "대수", "미적분I", "영어I", "영어II", "정치", "현대사회와 윤리", "세계시민과 지리", "세계사", "물리학", "화학", "생명과학", "지구과학", "데이터 과학", "경제", "법과 사회", "윤리와 사상", "기후변화와 지속가능한 세계", "역사로 탐구하는 현대 세계", "역학과 에너지", "물질과 에너지", "세포와 물질대사", "지구시스템과학", "문학과 영상", "미디어 영어", "기하"], "g3": ["독서와 작문", "주제 탐구 독서", "확률과 통계", "영어 독해와 작문", "영미 문학 읽기", "사회와 문화", "한국지리 탐구", "동아시아 역사 기행", "인문학과 윤리", "전자기와 양자", "화학 반응의 세계", "생물의 유전", "행성우주과학", "미적분II", "여행지리", "금융과 경제생활", "윤리문제 탐구", "기후변화와 환경생태", "융합과학 탐구", "수학과 문화", "실용 통계", "수학과제 탐구"], "note": ""}];
+
 const KYO = {
   kor:  { name: "국어", color: "var(--k-kor)" },
   math: { name: "수학", color: "var(--k-math)" },
   eng:  { name: "영어", color: "var(--k-eng)" },
   soc:  { name: "사회", color: "var(--k-soc)" },
   sci:  { name: "과학", color: "var(--k-sci)" },
+  info: { name: "정보", color: "var(--k-info)" },
 };
-// 과목명: [교과, 구분(일반/진로/융합)]
-const CATALOG = {
-  "문학": ["kor","일반"], "독서와 작문": ["kor","일반"], "화법과 언어": ["kor","일반"],
-  "주제 탐구 독서": ["kor","진로"], "문학과 영상": ["kor","진로"], "독서 토론과 글쓰기": ["kor","융합"],
-  "대수": ["math","일반"], "미적분I": ["math","일반"], "확률과 통계": ["math","일반"],
-  "기하": ["math","진로"], "미적분II": ["math","진로"], "경제 수학": ["math","진로"],
-  "인공지능 수학": ["math","진로"], "직무 수학": ["math","진로"], "실용 통계": ["math","융합"], "수학과제 탐구": ["math","융합"],
-  "영어I": ["eng","일반"], "영어II": ["eng","일반"], "영어 독해와 작문": ["eng","일반"],
-  "심화 영어": ["eng","진로"], "영미 문학 읽기": ["eng","진로"], "영어 발표와 토론": ["eng","진로"], "직무 영어": ["eng","진로"],
-  "사회와 문화": ["soc","일반"], "세계시민과 지리": ["soc","일반"], "현대사회와 윤리": ["soc","일반"], "세계사": ["soc","일반"],
-  "경제": ["soc","진로"], "정치": ["soc","진로"], "법과 사회": ["soc","진로"], "윤리와 사상": ["soc","진로"],
-  "인문학과 윤리": ["soc","진로"], "국제 관계의 이해": ["soc","진로"],
-  "사회문제 탐구": ["soc","융합"], "금융과 경제생활": ["soc","융합"], "여행지리": ["soc","융합"],
-  "물리학": ["sci","일반"], "화학": ["sci","일반"], "생명과학": ["sci","일반"], "지구과학": ["sci","일반"],
-  "역학과 에너지": ["sci","진로"], "전자기와 양자": ["sci","진로"], "물질과 에너지": ["sci","진로"],
-  "화학 반응의 세계": ["sci","진로"], "세포와 물질대사": ["sci","진로"], "생물의 유전": ["sci","진로"],
-  "지구시스템과학": ["sci","진로"], "행성우주과학": ["sci","진로"],
-  "융합과학 탐구": ["sci","융합"], "기후변화와 환경생태": ["sci","융합"],
+// 2022 개정 교육과정 선택과목: 교과 → 구분 → 과목
+const SUBJ = {
+  kor: { 일반: ["화법과 언어","독서와 작문","문학"], 진로: ["주제 탐구 독서","문학과 영상","직무 의사소통"], 융합: ["독서 토론과 글쓰기","매체 의사소통","언어생활 탐구"] },
+  math: { 일반: ["대수","미적분I","확률과 통계"], 진로: ["기하","미적분II","경제 수학","인공지능 수학","직무 수학"], 융합: ["수학과 문화","실용 통계","수학과제 탐구"] },
+  eng: { 일반: ["영어I","영어II","영어 독해와 작문"], 진로: ["영미 문학 읽기","영어 발표와 토론","심화 영어","심화 영어 독해와 작문","직무 영어"], 융합: ["실생활 영어 회화","미디어 영어","세계 문화와 영어"] },
+  soc: { 일반: ["세계시민과 지리","세계사","사회와 문화","현대사회와 윤리"], 진로: ["한국지리 탐구","도시의 미래 탐구","동아시아 역사 기행","정치","법과 사회","경제","윤리와 사상","인문학과 윤리","국제 관계의 이해"], 융합: ["여행지리","역사로 탐구하는 현대 세계","사회문제 탐구","금융과 경제생활","윤리문제 탐구","기후변화와 지속가능한 세계"] },
+  sci: { 일반: ["물리학","화학","생명과학","지구과학"], 진로: ["역학과 에너지","전자기와 양자","물질과 에너지","화학 반응의 세계","세포와 물질대사","생물의 유전","지구시스템과학","행성우주과학"], 융합: ["과학의 역사와 문화","기후변화와 환경생태","융합과학 탐구"] },
+  info: { 일반: [], 진로: ["인공지능 기초","데이터 과학"], 융합: ["소프트웨어와 생활"] },
 };
-const COMMON_G2 = ["문학","독서와 작문","대수","미적분I","확률과 통계","영어I","영어II",
-  "물리학","화학","생명과학","지구과학","사회와 문화","세계시민과 지리","현대사회와 윤리","세계사"];
+const CATALOG = {};
+for (const [k, cats] of Object.entries(SUBJ)) for (const [cat, list] of Object.entries(cats)) for (const n of list) CATALOG[n] = [k, cat];
 
-// 진로별 권장과목 (예시)
+// 진로별 권장과목 (상담용 예시)
 const TRACKS = {
   "의약": ["미적분II","확률과 통계","화학 반응의 세계","물질과 에너지","세포와 물질대사","생물의 유전"],
   "공학": ["미적분II","기하","역학과 에너지","전자기와 양자","물질과 에너지","인공지능 수학"],
@@ -268,29 +266,12 @@ const TRACKS = {
   "인문·어문": ["주제 탐구 독서","문학과 영상","영미 문학 읽기","심화 영어","윤리와 사상","인문학과 윤리"],
   "사회과학": ["사회와 문화","정치","법과 사회","국제 관계의 이해","사회문제 탐구","실용 통계"],
 };
-
-// mu/sd: 신입생 학업 수준 (전국 기준 z), dist: 1학년 성취도 A~E 비율(%)
-const SCHOOLS = [
-  { id: "hanbit", name: "한빛고", type: "일반고 · 남녀공학", area: "대치권", size: 330, mu: 0.85, sd: 0.75,
-    g2: [...COMMON_G2, "기하","역학과 에너지","물질과 에너지","인공지능 수학"],
-    g3: ["화법과 언어","주제 탐구 독서","미적분II","경제 수학","영어 독해와 작문","심화 영어","전자기와 양자","화학 반응의 세계","세포와 물질대사","생물의 유전","지구시스템과학","행성우주과학","경제","정치","윤리와 사상","실용 통계","융합과학 탐구"],
-    dist: { "공통수학1": [38,22,18,12,10], "공통영어1": [52,24,12,7,5], "통합과학1": [45,25,16,9,5] } },
-  { id: "nuri", name: "누리고", type: "일반고 · 남녀공학", area: "대치권", size: 280, mu: 0.75, sd: 0.8,
-    g2: [...COMMON_G2, "기하","주제 탐구 독서","영미 문학 읽기"],
-    g3: ["화법과 언어","문학과 영상","미적분II","경제 수학","영어 독해와 작문","심화 영어","영어 발표와 토론","물질과 에너지","화학 반응의 세계","생물의 유전","경제","정치","법과 사회","윤리와 사상","인문학과 윤리","국제 관계의 이해","사회문제 탐구","금융과 경제생활"],
-    dist: { "공통수학1": [34,22,19,14,11], "공통영어1": [55,22,12,7,4], "통합과학1": [40,26,18,10,6] } },
-  { id: "gaon", name: "가온여고", type: "일반고 · 여고", area: "도곡권", size: 270, mu: 0.55, sd: 0.85,
-    g2: [...COMMON_G2, "세포와 물질대사","물질과 에너지"],
-    g3: ["화법과 언어","주제 탐구 독서","기하","미적분II","영어 독해와 작문","심화 영어","화학 반응의 세계","생물의 유전","지구시스템과학","역학과 에너지","사회문제 탐구","윤리와 사상","경제","실용 통계","기후변화와 환경생태"],
-    dist: { "공통수학1": [28,22,21,16,13], "공통영어1": [46,24,15,9,6], "통합과학1": [38,26,19,11,6] } },
-  { id: "dasom", name: "다솜고", type: "일반고 · 남녀공학", area: "개포권", size: 220, mu: 0.25, sd: 0.9,
-    g2: [...COMMON_G2],
-    g3: ["화법과 언어","주제 탐구 독서","기하","미적분II","영어 독해와 작문","역학과 에너지","화학 반응의 세계","생물의 유전","경제","정치","윤리와 사상","여행지리","실용 통계"],
-    dist: { "공통수학1": [18,19,23,21,19], "공통영어1": [31,24,20,14,11], "통합과학1": [26,24,23,16,11] } },
-  { id: "mir", name: "미르고", type: "자율형 공립고 · 남녀공학", area: "수서권", size: 300, mu: 0.4, sd: 0.9,
-    g2: [...COMMON_G2, "기하","인공지능 수학","역학과 에너지"],
-    g3: ["화법과 언어","독서 토론과 글쓰기","미적분II","직무 수학","영어 독해와 작문","직무 영어","전자기와 양자","물질과 에너지","화학 반응의 세계","지구시스템과학","경제","법과 사회","수학과제 탐구","융합과학 탐구","기후변화와 환경생태"],
-    dist: { "공통수학1": [22,21,22,18,17], "공통영어1": [34,25,19,13,9], "통합과학1": [29,25,22,14,10] } },
+const AREAS = ["한강신도시", "원도심", "고촌", "북부 읍·면"];
+const LEVELS = [
+  { v: -0.3, label: "낮은 편" },
+  { v: 0, label: "보통" },
+  { v: 0.3, label: "높은 편" },
+  { v: 0.6, label: "매우 높음" },
 ];
 
 // ---------- 계산 ----------
@@ -308,33 +289,49 @@ function invPhi(p) {
 }
 const CUTS = [1.2816, 0.4125, -0.4125, -1.2816]; // 상위 10/34/66/90%
 const TAU = 0.45; // 고교 적응 등 불확실성
+const SCHOOL_SD = 0.9;
 
 function estimate(school, st) {
   const z = invPhi(1 - st.pct / 100) + st.level;
-  const m = (z - school.mu) / school.sd;
+  const mu = st.levels[school.id] ?? 0;
+  const m = (z - mu) / SCHOOL_SD;
   const c = CUTS.map(k => Phi((k - m) / TAU));
   const probs = [1 - c[0], c[0] - c[1], c[1] - c[2], c[2] - c[3], c[3]];
   const expected = probs.reduce((s, p, i) => s + p * (i + 1), 0);
   const top = (1 - Phi(m)) * 100;
   const keys = TRACKS[st.track];
   const offered = new Set([...school.g2, ...school.g3]);
-  const have = keys.filter(k => offered.has(k));
-  const miss = keys.filter(k => !offered.has(k));
-  return { probs, expected, top, have, miss, keys };
+  return { probs, expected, top, keys, have: keys.filter(k => offered.has(k)), miss: keys.filter(k => !offered.has(k)) };
 }
 
-// ---------- 상태 & 렌더 ----------
-const state = { track: "공학", pct: 7, level: 0.3, picked: ["hanbit", "nuri", "dasom"], active: "hanbit" };
+// ---------- 상태 ----------
+const byName = n => SCHOOLS.find(s => s.name === n);
+const state = {
+  track: "공학", pct: 10, level: 0,
+  picked: ["장기고", "운양고", "솔터고"].map(n => byName(n).id),
+  active: null, levels: {},
+};
+try {
+  const saved = JSON.parse(localStorage.getItem("gimpo-hs-levels") || "{}");
+  if (saved && typeof saved === "object") state.levels = saved;
+} catch (e) { /* 저장소를 쓸 수 없으면 기본값 사용 */ }
+state.active = state.picked[0];
+function saveLevels() { try { localStorage.setItem("gimpo-hs-levels", JSON.stringify(state.levels)); } catch (e) {} }
+
 const $ = id => document.getElementById(id);
 const GCOL = ["var(--g1)","var(--g2)","var(--g3)","var(--g4)","var(--g5)"];
 const GTXT = ["var(--surface)","var(--surface)","var(--ink)","var(--ink)","var(--ink)"];
 const fmtTop = t => t < 1 ? "1% 이내" : `${Math.round(t)}%`;
+const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b; };
 
 function buildInputs() {
   $("tracks").innerHTML = Object.keys(TRACKS).map((t, i) =>
     `<label class="chip"><input type="radio" name="track" id="track-${i}" value="${t}" ${t === state.track ? "checked" : ""}><span>${t}</span></label>`).join("");
-  $("schools").innerHTML = SCHOOLS.map(s =>
-    `<label class="chip"><input type="checkbox" name="school" id="sch-${s.id}" value="${s.id}" ${state.picked.includes(s.id) ? "checked" : ""}><span>${s.name} <span class="muted" style="font-size:12px">${s.area}</span></span></label>`).join("");
+  $("schools").innerHTML = AREAS.map(a => `
+    <div class="area-row"><span class="label">${a}</span><div class="chips">
+      ${SCHOOLS.filter(s => s.area === a).map(s =>
+        `<label class="chip"><input type="checkbox" name="school" id="sch-${s.id}" value="${s.id}" ${state.picked.includes(s.id) ? "checked" : ""}><span>${s.name}</span></label>`).join("")}
+    </div></div>`).join("");
 
   $("tracks").addEventListener("change", e => { state.track = e.target.value; render(); });
   $("pct").addEventListener("input", e => { state.pct = +e.target.value; render(); });
@@ -351,14 +348,22 @@ function buildInputs() {
     if (!state.picked.includes(state.active)) state.active = state.picked[0];
     render();
   });
+  $("cards").addEventListener("change", e => {
+    const sel = e.target.closest("select[data-lvl]"); if (!sel) return;
+    state.levels[sel.dataset.lvl] = +sel.value; saveLevels(); render();
+  });
+  $("tabs").addEventListener("click", e => {
+    const b = e.target.closest("button[data-id]"); if (!b) return;
+    state.active = b.dataset.id; render();
+  });
   $("form").addEventListener("submit", e => e.preventDefault());
 }
 function setHint(text, warn) { const h = $("schoolHint"); h.textContent = text; h.classList.toggle("warn", warn); }
 
+// ---------- 렌더 ----------
 function render() {
   $("pctVal").textContent = `상위 ${state.pct}%`;
-  const list = SCHOOLS.filter(s => state.picked.includes(s.id));
-  const res = list.map(s => ({ s, r: estimate(s, state) }));
+  const res = SCHOOLS.filter(s => state.picked.includes(s.id)).map(s => ({ s, r: estimate(s, state) }));
 
   if (!res.length) {
     $("summary").textContent = "위에서 후보 고등학교를 한 곳 이상 고르면 비교 결과가 나타납니다.";
@@ -366,111 +371,128 @@ function render() {
     return;
   }
 
-  // 요약 문장
-  const bestGrade = [...res].sort((a, b) => a.r.expected - b.r.expected)[0];
-  const bestFit = [...res].sort((a, b) => b.r.have.length - a.r.have.length || a.r.expected - b.r.expected)[0];
-  const total = bestFit.r.keys.length;
-  let sum = `<b>${state.track}</b> 계열, 중학교 상위 ${state.pct}% 기준으로 `;
-  if (res.length === 1) {
-    sum += `${bestGrade.s.name}에서는 평균 <b>${bestGrade.r.expected.toFixed(1)}등급</b>이 예상되고, 권장과목은 ${total}개 중 <b>${bestGrade.r.have.length}개</b>가 교내에 개설되어 있어요.`;
-  } else if (bestGrade.s.id === bestFit.s.id) {
-    sum += `<b>${bestGrade.s.name}</b>이(가) 내신(평균 ${bestGrade.r.expected.toFixed(1)}등급)과 권장과목 개설(${bestFit.r.have.length}/${total}) 모두 가장 유리해요.`;
+  // 요약
+  const total = TRACKS[state.track].length;
+  const maxHave = Math.max(...res.map(x => x.r.have.length));
+  const tops = res.filter(x => x.r.have.length === maxHave).map(x => x.s.name);
+  const allFull = res.every(x => x.r.have.length === total);
+  const anyLevelSet = res.some(x => (state.levels[x.s.id] ?? 0) !== 0);
+  let sum = `<b>${state.track}</b> 계열 권장과목 ${total}개 기준으로, `;
+  if (allFull) sum += `고른 학교 모두 권장과목을 교내에서 들을 수 있어요. `;
+  else if (tops.length > 1) sum += `<b>${tops.join("·")}</b>${josa(tops[tops.length - 1], "이", "가")} ${maxHave}개로 가장 많이 개설하고 있어요. `;
+  else sum += `<b>${tops[0]}</b>${josa(tops[0], "이", "가")} ${maxHave}개로 가장 많이 개설하고 있어요. `;
+  if (anyLevelSet) {
+    const bestGrade = [...res].sort((a, b) => a.r.expected - b.r.expected)[0];
+    sum += `직접 설정한 학교 수준으로 보면 내신은 <b>${bestGrade.s.name}</b>에서 가장 유리해요(평균 ${bestGrade.r.expected.toFixed(1)}등급).`;
   } else {
-    sum += `내신은 <b>${bestGrade.s.name}</b>이(가) 가장 유리하고(평균 ${bestGrade.r.expected.toFixed(1)}등급), 권장과목 개설은 <b>${bestFit.s.name}</b>이(가) 가장 많아요(${bestFit.r.have.length}/${total}). 둘 중 무엇을 우선할지가 선택의 핵심입니다.`;
+    sum += `예상 등급은 각 카드에서 학교 학업 수준을 설정하면 학교별로 달라집니다.`;
   }
   $("summary").innerHTML = sum;
 
   // 카드
   $("cards").innerHTML = res.map(({ s, r }) => {
+    const lv = state.levels[s.id] ?? 0;
     const p1 = Math.round(r.probs[0] * 100);
     const bar = r.probs.map((p, i) => {
       const w = p * 100;
       return `<div style="width:${w}%;background:${GCOL[i]};color:${GTXT[i]}" title="${i + 1}등급 ${Math.round(w)}%">${w >= 9 ? Math.round(w) + "%" : ""}</div>`;
     }).join("");
     const fitPct = r.have.length / r.keys.length * 100;
-    const note = r.miss.length
+    const note = (r.miss.length
       ? `<span class="miss">교내 미개설 ${r.miss.length}과목</span>: ${r.miss.join(", ")}. 공동교육과정이나 온라인학교로 들어야 해요.`
-      : `<span class="good">권장과목을 모두 교내에서 들을 수 있어요.</span>`;
+      : `<span class="good">권장과목을 모두 교내에서 들을 수 있어요.</span>`)
+      + (s.g3.length ? "" : ` 이 학교는 3학년 편성이 아직 공시되지 않아 실제보다 적게 보일 수 있어요.`);
+    const g = s.grad;
+    const gradHtml = g
+      ? `<div style="display:grid;gap:6px">
+          <span class="label">졸업생 진로 (${g.grads}명, 2025년 2월 졸업)</span>
+          <div class="bar" role="img" aria-label="4년제 대학 ${g.univ}%, 전문대학 ${g.jc}%, 취업 ${g.job}%, 기타 ${g.etc}%">
+            <div style="width:${g.univ}%;background:var(--g1);color:var(--surface)">${g.univ >= 22 ? "4년제 " + g.univ + "%" : ""}</div>
+            <div style="width:${g.jc}%;background:var(--g3);color:var(--ink)">${g.jc >= 24 ? "전문대 " + g.jc + "%" : ""}</div>
+            <div style="width:${g.job + g.etc}%;background:var(--g5);color:var(--ink)">${g.job + g.etc >= 22 ? "기타 " + (g.job + g.etc).toFixed(1) + "%" : ""}</div>
+          </div>
+          <span class="hint">4년제 ${g.univ}% · 전문대 ${g.jc}% · 기타 ${(g.job + g.etc).toFixed(1)}% (재수 준비·취업 등)</span>
+        </div>`
+      : `<div style="display:grid;gap:4px"><span class="label">졸업생 진로</span><span class="hint">${s.opened}년 개교로 아직 졸업생이 없어요.</span></div>`;
     return `<article class="card">
-      <div class="card-head"><h3>${s.name}</h3><span class="meta">${s.type} · ${s.area} · 학년당 <span class="num">${s.size}</span>명</span></div>
+      <div class="card-head"><h3>${s.name}</h3><span class="meta">${s.fond} · ${s.opened}년 개교 · ${s.addr}</span></div>
       <div class="stat-row">
-        <div class="stat"><span class="label">교내 예상 위치</span><span class="big">${fmtTop(r.top)}</span></div>
-        <div class="stat"><span class="label">평균 예상 등급</span><span class="big">${r.expected.toFixed(1)}<small>등급</small></span></div>
+        <div class="stat"><span class="label">1학년 학생 수</span><span class="big">${s.students.g1}<small>명</small></span><span class="sub">${s.students.classes1}학급 · 1등급 약 ${Math.round(s.students.g1 * 0.1)}명</span></div>
+        <div class="stat"><span class="label">평균 예상 등급</span><span class="big">${r.expected.toFixed(1)}<small>등급</small></span><span class="sub">교내 ${fmtTop(r.top)} 예상</span></div>
       </div>
       <div style="display:grid;gap:6px">
-        <span class="label">등급별 가능성 · 1등급 ${p1}% (약 ${Math.round(s.size * 0.1)}명 중)</span>
-        <div class="gradebar" role="img" aria-label="등급별 가능성 ${r.probs.map((p, i) => `${i + 1}등급 ${Math.round(p * 100)}%`).join(", ")}">${bar}</div>
+        <div class="lvl"><label class="label" for="lvl-${s.id}">학교 학업 수준</label>
+          <select id="lvl-${s.id}" data-lvl="${s.id}">${LEVELS.map(L => `<option value="${L.v}" ${L.v === lv ? "selected" : ""}>${L.label}</option>`).join("")}</select>
+          <span class="tag ${lv !== 0 ? "set" : ""}">${lv !== 0 ? "직접 설정" : "기본값"}</span></div>
+        <span class="label">등급별 가능성 · 1등급 ${p1}%</span>
+        <div class="bar" role="img" aria-label="등급별 가능성 ${r.probs.map((p, i) => `${i + 1}등급 ${Math.round(p * 100)}%`).join(", ")}">${bar}</div>
         <div class="legend">${GCOL.map((c, i) => `<span><i style="background:${c}"></i>${i + 1}등급</span>`).join("")}</div>
       </div>
       <div class="fit">
         <div class="fit-line"><span class="label">${state.track} 권장과목 개설</span><span class="num">${r.have.length} / ${r.keys.length}</span></div>
         <div class="meter"><div style="width:${fitPct}%"></div></div>
       </div>
+      ${gradHtml}
       <p class="note">${note}</p>
     </article>`;
   }).join("");
 
-  // 탭
   $("tabs").innerHTML = res.map(({ s }) =>
     `<button type="button" role="tab" id="tab-${s.id}" aria-selected="${s.id === state.active}" data-id="${s.id}">${s.name}</button>`).join("");
   renderDetail(res.find(x => x.s.id === state.active) || res[0]);
 }
 
-function subjChips(names, keys) {
+function chips(names, keys) {
   return names.map(n => {
-    const cat = CATALOG[n][1];
-    const k = keys.includes(n);
-    return `<span class="subj${k ? " key" : ""}">${n}${cat !== "일반" ? `<span class="tag">${cat}</span>` : ""}</span>`;
+    const cat = CATALOG[n] ? CATALOG[n][1] : "";
+    return `<span class="subj${keys.includes(n) ? " key" : ""}">${n}${cat && cat !== "일반" ? `<span class="t">${cat}</span>` : ""}</span>`;
   }).join("");
 }
 
 function renderDetail({ s, r }) {
   const rows = Object.entries(KYO).map(([k, v]) => {
-    const g2 = s.g2.filter(n => CATALOG[n][0] === k);
-    const g3 = s.g3.filter(n => CATALOG[n][0] === k);
+    const g2 = s.g2.filter(n => CATALOG[n] && CATALOG[n][0] === k);
+    const g3 = s.g3.filter(n => CATALOG[n] && CATALOG[n][0] === k);
+    if (!g2.length && !g3.length) return "";
     return `<tr><td class="kyo"><span class="dot" style="background:${v.color}"></span>${v.name}</td>
-      <td>${subjChips(g2, r.keys) || '<span class="muted">-</span>'}</td>
-      <td>${subjChips(g3, r.keys) || '<span class="muted">-</span>'}</td></tr>`;
+      <td>${chips(g2, r.keys) || '<span class="muted">-</span>'}</td>
+      <td>${s.g3.length ? (chips(g3, r.keys) || '<span class="muted">-</span>') : '<span class="muted">미공시</span>'}</td></tr>`;
   }).join("");
-
-  const dist = Object.entries(s.dist).map(([name, d]) => `
-    <div class="dist-row">
-      <div class="top"><span>${name}</span><span class="muted">A <span class="num">${d[0]}%</span></span></div>
-      <div class="abar" role="img" aria-label="${name} 성취도 ${d.map((v, i) => "ABCDE"[i] + " " + v + "%").join(", ")}">
-        ${d.map((v, i) => `<div style="width:${v}%;background:${GCOL[i]};color:${GTXT[i]}">${v >= 8 ? "ABCDE"[i] : ""}</div>`).join("")}
-      </div>
-    </div>`).join("");
 
   $("detail").innerHTML = `
     <div class="detail-grid">
       <div class="pyeonje">
         <div style="display:grid;gap:4px">
-          <h3>${s.name} 교육과정 편제표 <span class="muted" style="font-family:var(--f-body);font-size:13px;font-weight:400">2·3학년 선택과목</span></h3>
-          <p class="common">1학년은 공통과목(공통국어·공통수학·공통영어·통합사회·통합과학·한국사 등)으로 모든 학교가 같아요. <span class="subj key" style="margin:0">형광펜</span>은 ${state.track} 권장과목입니다.</p>
+          <h3>${s.name} 2·3학년 선택과목 <span class="muted" style="font-family:var(--f-body);font-size:13px;font-weight:400">2026학년도 입학생 편제표 기준</span></h3>
+          <p class="hint">1학년은 공통과목(공통국어·공통수학·공통영어·통합사회·통합과학·한국사 등)으로 모든 학교가 같아요. <span class="subj key" style="margin:0">형광펜</span>은 ${state.track} 권장과목입니다. 학생 선택 과목군은 그중 몇 과목만 골라 듣는 구조예요.</p>
         </div>
+        ${s.note ? `<p class="callout">${s.note}</p>` : ""}
         <div class="pyeonje-table">
           <table>
             <thead><tr><th>교과</th><th>2학년</th><th>3학년</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
+        <p class="src">출처: 학교알리미 「2026학년도 학교교육과정 편성·운영·평가 계획」 (2026년 4월 공시). 국·영·수·사·과·정보 교과만 표시했어요.</p>
       </div>
-      <div class="dist">
-        <h3>1학년 성취도 분포</h3>
-        <p class="hint">A 비율이 높을수록 우수한 학생이 많아 상대평가 등급 받기가 더 어렵다는 신호예요.</p>
-        ${dist}
-        <div style="display:grid;gap:8px;margin-top:8px">
-          <span class="label">교내에 없는 ${state.track} 권장과목</span>
-          ${r.miss.length ? `<div class="missing-list">${r.miss.map(m => `<span>${m}</span>`).join("")}</div>` : '<p class="hint" style="color:var(--ok)">없음. 모두 교내 개설되어 있어요.</p>'}
-        </div>
+      <div class="side">
+        <section>
+          <h3>교내에 없는 ${state.track} 권장과목</h3>
+          ${r.miss.length ? `<div class="missing-list">${r.miss.map(m => `<span>${m}</span>`).join("")}</div><p class="hint">공동교육과정이나 온라인학교로 이수할 수 있는지 학교에 확인해 보세요.</p>` : '<p class="hint" style="color:var(--ok)">없음. 모두 교내에 개설되어 있어요.</p>'}
+        </section>
+        <section>
+          <h3>학년별 학생 수</h3>
+          <p class="num" style="font-size:14px">1학년 ${s.students.g1}명 · 2학년 ${s.students.g2 || "-"}명 · 3학년 ${s.students.g3 || "-"}명</p>
+          <p class="hint">학년 인원이 적을수록 1등급(상위 10%) 인원도 적어요. 선택과목은 수강자가 적으면 등급 받기가 더 어려워질 수 있어요.</p>
+        </section>
+        <section>
+          <h3>교과별 성취도 분포</h3>
+          <p class="hint">학교알리미에서 학교를 검색한 뒤 「교과별 학업성취 사항」에서 보안문자를 입력하면 과목별 A~E 비율을 볼 수 있어요. 이 값을 보고 카드의 ‘학교 학업 수준’을 맞춰 주세요.</p>
+          <p class="hint"><a href="https://www.schoolinfo.go.kr" target="_blank" rel="noopener">학교알리미 열기</a></p>
+        </section>
       </div>
     </div>`;
 }
-
-$("tabs").addEventListener("click", e => {
-  const b = e.target.closest("button[data-id]"); if (!b) return;
-  state.active = b.dataset.id; render();
-});
 
 buildInputs();
 render();
