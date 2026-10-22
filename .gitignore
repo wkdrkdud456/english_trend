@@ -10,3 +10,20 @@ __pycache__/
 
 # 로그
 streamlit.log
+
+# Cordova/Android 빌드 파일
+MatchPuzzleApp/node_modules/
+MatchPuzzleApp/platforms/
+MatchPuzzleApp/plugins/
+MatchPuzzleApp/.gradle/
+MatchPuzzleApp/build/
+*.apk
+*.jks
+
+# android/ (네이티브 APK 프로젝트) 빌드 산출물
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+# 게임 HTML은 scripts/prepare_apk_assets.sh 가 빌드 시점에 복사한다
+android/app/src/main/assets/

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Puzzle - For 소현</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #764ba2;
+            font-weight: bold;
+        }
+
+        .subtitle-small {
+            font-size: 0.9em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 20px;
+        }
+
+        .tile {
+            aspect-ratio: 1;
+            font-size: 2.5em;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tile:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .tile.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: scale(1.1);
+        }
+
+        .tile.removing {
+            animation: remove 0.3s ease forwards;
+        }
+
+        @keyframes remove {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 20px;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-new {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-new:active {
+            transform: translateY(0);
+        }
+
+        .game-over {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .game-over.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .game-over-content {
+            background: white;
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .game-over h2 {
+            font-size: 3em;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+
+        .game-over h3 {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .game-over p {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .game-over button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.1em;
+        }
+
+        .rules {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .rules h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .rules li {
+            margin-left: 20px;
+            margin-bottom: 8px;
+        }
+
+        .connecting {
+            position: relative;
+            z-index: 1;
+        }
+
+        .message {
+            text-align: center;
+            font-size: 1.2em;
+            color: #764ba2;
+            font-weight: bold;
+            margin-bottom: 20px;
+            min-height: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🎮 Match Puzzle</div>
+            <div class="subtitle">소현(앨리, 야)을 위한 게임</div>
+            <div class="subtitle-small">by 동훈 ❤️</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">점수</div>
+                <div class="stat-value" id="score">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">레벨</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">이동</div>
+                <div class="stat-value" id="moves">0</div>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="game-board" id="gameBoard"></div>
+
+        <div class="buttons">
+            <button class="btn-new" onclick="newGame()">🔄 새로운 게임</button>
+        </div>
+
+        <div class="rules">
+            <h4>📋 게임 규칙</h4>
+            <ul>
+                <li>같은 색 타일 <strong>3개 이상</strong>이 연결되면 클릭!</li>
+                <li>터트린 타일 개수 × 10 = 점수 획득</li>
+                <li>더 이상 이동할 수 없으면 게임 오버</li>
+                <li>점수가 높을수록 레벨이 올라가요 🎯</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOverModal">
+        <div class="game-over-content">
+            <h2>🎉 게임 오버!</h2>
+            <h3 id="finalScore">최종 점수: 0</h3>
+            <p id="finalMoves">총 0번 이동</p>
+            <p id="finalLevel">레벨: 1</p>
+            <button class="btn-new" onclick="newGame()">🎮 다시 플레이</button>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = ['🔴', '🟡', '🔵', '🟢', '🟣', '🟠'];
+        const GRID_SIZE = 5;
+
+        let gameState = {
+            grid: [],
+            score: 0,
+            level: 1,
+            moves: 0,
+            selected: null,
+            gameOver: false
+        };
+
+        function initGame() {
+            gameState.grid = Array(GRID_SIZE).fill().map(() =>
+                Array(GRID_SIZE).fill().map(() => COLORS[Math.floor(Math.random() * COLORS.length)])
+            );
+            gameState.score = 0;
+            gameState.level = 1;
+            gameState.moves = 0;
+            gameState.selected = null;
+            gameState.gameOver = false;
+            document.getElementById('gameOverModal').classList.remove('show');
+            render();
+            checkGameOver();
+        }
+
+        function getConnectedGroup(row, col) {
+            const color = gameState.grid[row][col];
+            if (!color) return new Set();
+
+            const visited = new Set();
+            const queue = [[row, col]];
+            visited.add(`${row},${col}`);
+
+            while (queue.length) {
+                const [r, c] = queue.shift();
+                const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+
+                for (const [dr, dc] of directions) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    const key = `${nr},${nc}`;
+
+                    if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE &&
+                        !visited.has(key) && gameState.grid[nr][nc] === color) {
+                        visited.add(key);
+                        queue.push([nr, nc]);
+                    }
+                }
+            }
+
+            return visited.size >= 3 ? visited : new Set();
+        }
+
+        function dropTiles() {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                const tiles = [];
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    if (gameState.grid[row][col]) {
+                        tiles.push(gameState.grid[row][col]);
+                    }
+                }
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    gameState.grid[row][col] = tiles.shift() || null;
+                }
+            }
+        }
+
+        function onTileClick(row, col) {
+            if (gameState.gameOver || !gameState.grid[row][col]) return;
+
+            const color = gameState.grid[row][col];
+            const connected = getConnectedGroup(row, col);
+
+            if (connected.size > 0) {
+                gameState.moves++;
+                gameState.score += connected.size * 10;
+                gameState.level = Math.min(10, Math.floor(gameState.score / 100) + 1);
+
+                // Animate removal
+                const tiles = document.querySelectorAll('.tile');
+                connected.forEach(key => {
+                    const [r, c] = key.split(',').map(Number);
+                    const index = r * GRID_SIZE + c;
+                    tiles[index].classList.add('removing');
+                });
+
+                setTimeout(() => {
+                    connected.forEach(key => {
+                        const [r, c] = key.split(',').map(Number);
+                        gameState.grid[r][c] = null;
+                    });
+                    dropTiles();
+                    gameState.selected = null;
+                    render();
+                    checkGameOver();
+                }, 300);
+            } else {
+                gameState.selected = gameState.selected === `${row},${col}` ? null : `${row},${col}`;
+                render();
+            }
+        }
+
+        function hasValidMoves() {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    if (gameState.grid[row][col] && getConnectedGroup(row, col).size > 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkGameOver() {
+            if (!hasValidMoves()) {
+                gameState.gameOver = true;
+                showGameOver();
+            }
+        }
+
+        function showGameOver() {
+            document.getElementById('finalScore').textContent = `최종 점수: ${gameState.score}`;
+            document.getElementById('finalMoves').textContent = `총 ${gameState.moves}번 이동`;
+            document.getElementById('finalLevel').textContent = `레벨: ${gameState.level}`;
+            document.getElementById('gameOverModal').classList.add('show');
+        }
+
+        function render() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('moves').textContent = gameState.moves;
+
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.textContent = gameState.grid[row][col] || '';
+
+                    if (gameState.selected === `${row},${col}`) {
+                        tile.classList.add('selected');
+                    }
+
+                    tile.onclick = () => onTileClick(row, col);
+                    board.appendChild(tile);
+                }
+            }
+        }
+
+        function newGame() {
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
