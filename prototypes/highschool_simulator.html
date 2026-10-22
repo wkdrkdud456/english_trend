@@ -1,0 +1,477 @@
+<title>고교선택 시뮬레이터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 줄 입력 패널 → 후보 학교 비교 카드 → 학교별 편제표 상세. 편제표 위 형광펜 = 내 진로 권장과목 */
+:root {
+  --paper: #F2F4F7;
+  --surface: #FFFFFF;
+  --ink: #17223A;
+  --muted: #5A6476;
+  --line: #D8DDE6;
+  --accent: #1E57B0;
+  --accent-soft: #E3ECF8;
+  --mark: #FFE45C;
+  --warn: #B4520F;
+  --warn-soft: #FBEADC;
+  --ok: #1D7A4E;
+  --g1: #173F80; --g2: #3569BA; --g3: #7C9FD6; --g4: #B8CBEA; --g5: #DCE4F1;
+  --k-kor: #9C3D54; --k-math: #1E57B0; --k-eng: #1D7A4E; --k-soc: #8A5A12; --k-sci: #5B3FA0;
+  --f-display: "Gowun Batang", "Nanum Myeongjo", serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10151F; --surface: #19202D; --ink: #E7EBF2; --muted: #9AA4B6; --line: #2C3546;
+    --accent: #7FA8EC; --accent-soft: #1F2C44; --mark: rgba(255, 214, 10, .32);
+    --warn: #F0A26A; --warn-soft: #3A2718; --ok: #6BCB97;
+    --g1: #A9C4F5; --g2: #7299DB; --g3: #4A6FAE; --g4: #33507F; --g5: #253753;
+    --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10151F; --surface: #19202D; --ink: #E7EBF2; --muted: #9AA4B6; --line: #2C3546;
+  --accent: #7FA8EC; --accent-soft: #1F2C44; --mark: rgba(255, 214, 10, .32);
+  --warn: #F0A26A; --warn-soft: #3A2718; --ok: #6BCB97;
+  --g1: #A9C4F5; --g2: #7299DB; --g3: #4A6FAE; --g4: #33507F; --g5: #253753;
+  --k-kor: #E58FA3; --k-math: #7FA8EC; --k-eng: #6BCB97; --k-soc: #E0B36A; --k-sci: #B9A2EE;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(26px, 4vw, 34px); }
+h2 { font-size: 21px; }
+h3 { font-size: 17px; }
+p { margin: 0; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-size: 12px; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+
+header { display: grid; gap: 8px; }
+.badge {
+  justify-self: start; font-size: 12px; font-weight: 500; letter-spacing: .03em;
+  padding: 3px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn);
+}
+header p { max-width: 62ch; color: var(--muted); }
+
+/* 입력 패널 */
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; display: grid; gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.field { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.field.wide { grid-column: 1 / -1; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span {
+  display: inline-block; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); font-size: 14px;
+  transition: background .15s, border-color .15s;
+}
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 500; }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip span:hover { border-color: var(--accent); }
+.range-row { display: flex; align-items: center; gap: 12px; }
+.range-row input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.range-val { font-family: var(--f-num); font-size: 18px; min-width: 6.5ch; text-align: right; }
+select {
+  font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink);
+}
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hint { font-size: 13px; color: var(--muted); }
+.hint.warn { color: var(--warn); }
+
+/* 요약 */
+.summary {
+  padding: 14px 18px; border-radius: 10px; background: var(--accent-soft);
+  font-size: 15px; line-height: 1.7;
+}
+.summary b { font-weight: 700; }
+
+/* 비교 카드 */
+.cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 18px; display: grid; gap: 16px; align-content: start; min-width: 0;
+}
+.card-head { display: grid; gap: 2px; }
+.card-head .meta { font-size: 13px; color: var(--muted); }
+.stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat { display: grid; gap: 2px; }
+.stat .big { font-family: var(--f-num); font-size: 26px; line-height: 1.2; }
+.stat .big small { font-family: var(--f-body); font-size: 14px; margin-left: 2px; }
+.gradebar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; }
+.gradebar div { display: flex; align-items: center; justify-content: center; font-family: var(--f-num); font-size: 11px; min-width: 0; overflow: hidden; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.fit { display: grid; gap: 6px; }
+.fit-line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.meter { height: 8px; border-radius: 99px; background: var(--g5); overflow: hidden; }
+.meter div { height: 100%; background: var(--accent); }
+.note { font-size: 13.5px; line-height: 1.6; padding-top: 12px; border-top: 1px dashed var(--line); }
+.note .miss { color: var(--warn); }
+.note .good { color: var(--ok); }
+
+/* 상세 */
+.detail { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button {
+  font: inherit; font-weight: 500; background: none; border: 0; color: var(--muted);
+  padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.detail-body { padding: 20px; display: grid; gap: 24px; }
+.detail-grid { display: grid; gap: 24px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 760px) { .detail-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.pyeonje { display: grid; gap: 14px; }
+.pyeonje-table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { font-weight: 500; background: var(--paper); white-space: nowrap; }
+td.kyo { white-space: nowrap; font-weight: 500; }
+.subj { display: inline-block; margin: 2px 6px 2px 0; padding: 0 2px; }
+.subj.key { background: linear-gradient(transparent 38%, var(--mark) 38%, var(--mark) 92%, transparent 92%); font-weight: 700; }
+.subj .tag { font-size: 10.5px; color: var(--muted); margin-left: 2px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.common { font-size: 13.5px; color: var(--muted); }
+
+.dist { display: grid; gap: 14px; align-content: start; }
+.dist-row { display: grid; gap: 4px; }
+.dist-row .top { display: flex; justify-content: space-between; font-size: 14px; }
+.abar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; }
+.abar div { font-family: var(--f-num); font-size: 10.5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.missing-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.missing-list span { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+
+.method { display: grid; gap: 10px; font-size: 14px; color: var(--muted); max-width: 75ch; }
+.method h3 { color: var(--ink); }
+.method ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="badge">프로토타입 · 학교와 수치는 모두 예시(가상) 데이터</span>
+    <h1>고교선택 시뮬레이터</h1>
+    <p>희망 진로와 중학교 성적을 넣고 후보 고등학교를 고르면, 학교별 예상 내신 등급과 진로 권장과목 개설 현황을 나란히 보여줍니다. 2025학년도부터 적용된 고교학점제·5등급 상대평가 기준입니다.</p>
+  </header>
+
+  <form class="panel" id="form" autocomplete="off">
+    <div class="field">
+      <span class="label">희망 진로 계열</span>
+      <div class="chips" id="tracks"></div>
+    </div>
+    <div class="field">
+      <label class="label" for="pct">중학교 내 성적 (전교 상위 %)</label>
+      <div class="range-row">
+        <input type="range" id="pct" min="1" max="60" step="1" value="7">
+        <span class="range-val" id="pctVal">상위 7%</span>
+      </div>
+      <span class="hint">주요과목 성취도 기준으로 대략적인 위치를 넣어 주세요.</span>
+    </div>
+    <div class="field">
+      <label class="label" for="level">출신 중학교 학업 수준</label>
+      <select id="level">
+        <option value="0">평균적인 중학교</option>
+        <option value="0.3" selected>학업 수준이 높은 중학교</option>
+        <option value="0.55">최상위권 중학교</option>
+      </select>
+      <span class="hint">같은 상위 %라도 중학교 수준에 따라 고교에서의 위치가 달라집니다.</span>
+    </div>
+    <div class="field wide">
+      <span class="label">후보 고등학교 (최대 3곳)</span>
+      <div class="chips" id="schools"></div>
+      <span class="hint" id="schoolHint">비교할 학교를 1~3곳 고르세요.</span>
+    </div>
+  </form>
+
+  <section style="display:grid; gap:14px">
+    <h2>후보 학교 비교</h2>
+    <p class="summary" id="summary"></p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section style="display:grid; gap:14px">
+    <h2>학교별 편제표와 성취도 분포</h2>
+    <div class="detail">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="detail-body" id="detail"></div>
+    </div>
+  </section>
+
+  <section class="method">
+    <h3>예상 등급은 이렇게 계산했어요</h3>
+    <ol>
+      <li>중학교 전교 상위 %와 출신 중학교 수준으로 학생의 전국 기준 위치를 추정합니다.</li>
+      <li>학교마다 신입생 학업 수준(평균·편차)을 두고, 그 학교 안에서 학생이 어디쯤일지 계산합니다.</li>
+      <li>교내 위치를 5등급 상대평가 구간(1등급 상위 10%, 2등급 34%, 3등급 66%, 4등급 90%, 5등급 나머지)에 대입합니다. 고교 적응 같은 변수를 감안해 하나의 등급이 아니라 등급별 가능성으로 보여줍니다.</li>
+    </ol>
+    <p>실제 서비스에서는 학교알리미 공시자료(교육과정 편성표, 교과별 성취도 분포)와 대학별 권장과목 발표 자료로 예시 데이터를 바꿔 넣으면 됩니다. 예측치는 상담용 참고 자료이며 실제 결과를 보장하지 않습니다.</p>
+  </section>
+</div>
+
+<script>
+// ---------- 예시 데이터 (가상) ----------
+const KYO = {
+  kor:  { name: "국어", color: "var(--k-kor)" },
+  math: { name: "수학", color: "var(--k-math)" },
+  eng:  { name: "영어", color: "var(--k-eng)" },
+  soc:  { name: "사회", color: "var(--k-soc)" },
+  sci:  { name: "과학", color: "var(--k-sci)" },
+};
+// 과목명: [교과, 구분(일반/진로/융합)]
+const CATALOG = {
+  "문학": ["kor","일반"], "독서와 작문": ["kor","일반"], "화법과 언어": ["kor","일반"],
+  "주제 탐구 독서": ["kor","진로"], "문학과 영상": ["kor","진로"], "독서 토론과 글쓰기": ["kor","융합"],
+  "대수": ["math","일반"], "미적분I": ["math","일반"], "확률과 통계": ["math","일반"],
+  "기하": ["math","진로"], "미적분II": ["math","진로"], "경제 수학": ["math","진로"],
+  "인공지능 수학": ["math","진로"], "직무 수학": ["math","진로"], "실용 통계": ["math","융합"], "수학과제 탐구": ["math","융합"],
+  "영어I": ["eng","일반"], "영어II": ["eng","일반"], "영어 독해와 작문": ["eng","일반"],
+  "심화 영어": ["eng","진로"], "영미 문학 읽기": ["eng","진로"], "영어 발표와 토론": ["eng","진로"], "직무 영어": ["eng","진로"],
+  "사회와 문화": ["soc","일반"], "세계시민과 지리": ["soc","일반"], "현대사회와 윤리": ["soc","일반"], "세계사": ["soc","일반"],
+  "경제": ["soc","진로"], "정치": ["soc","진로"], "법과 사회": ["soc","진로"], "윤리와 사상": ["soc","진로"],
+  "인문학과 윤리": ["soc","진로"], "국제 관계의 이해": ["soc","진로"],
+  "사회문제 탐구": ["soc","융합"], "금융과 경제생활": ["soc","융합"], "여행지리": ["soc","융합"],
+  "물리학": ["sci","일반"], "화학": ["sci","일반"], "생명과학": ["sci","일반"], "지구과학": ["sci","일반"],
+  "역학과 에너지": ["sci","진로"], "전자기와 양자": ["sci","진로"], "물질과 에너지": ["sci","진로"],
+  "화학 반응의 세계": ["sci","진로"], "세포와 물질대사": ["sci","진로"], "생물의 유전": ["sci","진로"],
+  "지구시스템과학": ["sci","진로"], "행성우주과학": ["sci","진로"],
+  "융합과학 탐구": ["sci","융합"], "기후변화와 환경생태": ["sci","융합"],
+};
+const COMMON_G2 = ["문학","독서와 작문","대수","미적분I","확률과 통계","영어I","영어II",
+  "물리학","화학","생명과학","지구과학","사회와 문화","세계시민과 지리","현대사회와 윤리","세계사"];
+
+// 진로별 권장과목 (예시)
+const TRACKS = {
+  "의약": ["미적분II","확률과 통계","화학 반응의 세계","물질과 에너지","세포와 물질대사","생물의 유전"],
+  "공학": ["미적분II","기하","역학과 에너지","전자기와 양자","물질과 에너지","인공지능 수학"],
+  "자연과학": ["미적분II","기하","화학 반응의 세계","생물의 유전","지구시스템과학","행성우주과학"],
+  "경영·경제": ["미적분II","확률과 통계","경제 수학","경제","실용 통계","금융과 경제생활"],
+  "인문·어문": ["주제 탐구 독서","문학과 영상","영미 문학 읽기","심화 영어","윤리와 사상","인문학과 윤리"],
+  "사회과학": ["사회와 문화","정치","법과 사회","국제 관계의 이해","사회문제 탐구","실용 통계"],
+};
+
+// mu/sd: 신입생 학업 수준 (전국 기준 z), dist: 1학년 성취도 A~E 비율(%)
+const SCHOOLS = [
+  { id: "hanbit", name: "한빛고", type: "일반고 · 남녀공학", area: "대치권", size: 330, mu: 0.85, sd: 0.75,
+    g2: [...COMMON_G2, "기하","역학과 에너지","물질과 에너지","인공지능 수학"],
+    g3: ["화법과 언어","주제 탐구 독서","미적분II","경제 수학","영어 독해와 작문","심화 영어","전자기와 양자","화학 반응의 세계","세포와 물질대사","생물의 유전","지구시스템과학","행성우주과학","경제","정치","윤리와 사상","실용 통계","융합과학 탐구"],
+    dist: { "공통수학1": [38,22,18,12,10], "공통영어1": [52,24,12,7,5], "통합과학1": [45,25,16,9,5] } },
+  { id: "nuri", name: "누리고", type: "일반고 · 남녀공학", area: "대치권", size: 280, mu: 0.75, sd: 0.8,
+    g2: [...COMMON_G2, "기하","주제 탐구 독서","영미 문학 읽기"],
+    g3: ["화법과 언어","문학과 영상","미적분II","경제 수학","영어 독해와 작문","심화 영어","영어 발표와 토론","물질과 에너지","화학 반응의 세계","생물의 유전","경제","정치","법과 사회","윤리와 사상","인문학과 윤리","국제 관계의 이해","사회문제 탐구","금융과 경제생활"],
+    dist: { "공통수학1": [34,22,19,14,11], "공통영어1": [55,22,12,7,4], "통합과학1": [40,26,18,10,6] } },
+  { id: "gaon", name: "가온여고", type: "일반고 · 여고", area: "도곡권", size: 270, mu: 0.55, sd: 0.85,
+    g2: [...COMMON_G2, "세포와 물질대사","물질과 에너지"],
+    g3: ["화법과 언어","주제 탐구 독서","기하","미적분II","영어 독해와 작문","심화 영어","화학 반응의 세계","생물의 유전","지구시스템과학","역학과 에너지","사회문제 탐구","윤리와 사상","경제","실용 통계","기후변화와 환경생태"],
+    dist: { "공통수학1": [28,22,21,16,13], "공통영어1": [46,24,15,9,6], "통합과학1": [38,26,19,11,6] } },
+  { id: "dasom", name: "다솜고", type: "일반고 · 남녀공학", area: "개포권", size: 220, mu: 0.25, sd: 0.9,
+    g2: [...COMMON_G2],
+    g3: ["화법과 언어","주제 탐구 독서","기하","미적분II","영어 독해와 작문","역학과 에너지","화학 반응의 세계","생물의 유전","경제","정치","윤리와 사상","여행지리","실용 통계"],
+    dist: { "공통수학1": [18,19,23,21,19], "공통영어1": [31,24,20,14,11], "통합과학1": [26,24,23,16,11] } },
+  { id: "mir", name: "미르고", type: "자율형 공립고 · 남녀공학", area: "수서권", size: 300, mu: 0.4, sd: 0.9,
+    g2: [...COMMON_G2, "기하","인공지능 수학","역학과 에너지"],
+    g3: ["화법과 언어","독서 토론과 글쓰기","미적분II","직무 수학","영어 독해와 작문","직무 영어","전자기와 양자","물질과 에너지","화학 반응의 세계","지구시스템과학","경제","법과 사회","수학과제 탐구","융합과학 탐구","기후변화와 환경생태"],
+    dist: { "공통수학1": [22,21,22,18,17], "공통영어1": [34,25,19,13,9], "통합과학1": [29,25,22,14,10] } },
+];
+
+// ---------- 계산 ----------
+function erf(x) {
+  const s = Math.sign(x); x = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+  return s * y;
+}
+const Phi = x => 0.5 * (1 + erf(x / Math.SQRT2));
+function invPhi(p) {
+  let lo = -6, hi = 6;
+  for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; Phi(mid) < p ? lo = mid : hi = mid; }
+  return (lo + hi) / 2;
+}
+const CUTS = [1.2816, 0.4125, -0.4125, -1.2816]; // 상위 10/34/66/90%
+const TAU = 0.45; // 고교 적응 등 불확실성
+
+function estimate(school, st) {
+  const z = invPhi(1 - st.pct / 100) + st.level;
+  const m = (z - school.mu) / school.sd;
+  const c = CUTS.map(k => Phi((k - m) / TAU));
+  const probs = [1 - c[0], c[0] - c[1], c[1] - c[2], c[2] - c[3], c[3]];
+  const expected = probs.reduce((s, p, i) => s + p * (i + 1), 0);
+  const top = (1 - Phi(m)) * 100;
+  const keys = TRACKS[st.track];
+  const offered = new Set([...school.g2, ...school.g3]);
+  const have = keys.filter(k => offered.has(k));
+  const miss = keys.filter(k => !offered.has(k));
+  return { probs, expected, top, have, miss, keys };
+}
+
+// ---------- 상태 & 렌더 ----------
+const state = { track: "공학", pct: 7, level: 0.3, picked: ["hanbit", "nuri", "dasom"], active: "hanbit" };
+const $ = id => document.getElementById(id);
+const GCOL = ["var(--g1)","var(--g2)","var(--g3)","var(--g4)","var(--g5)"];
+const GTXT = ["var(--surface)","var(--surface)","var(--ink)","var(--ink)","var(--ink)"];
+const fmtTop = t => t < 1 ? "1% 이내" : `${Math.round(t)}%`;
+
+function buildInputs() {
+  $("tracks").innerHTML = Object.keys(TRACKS).map((t, i) =>
+    `<label class="chip"><input type="radio" name="track" id="track-${i}" value="${t}" ${t === state.track ? "checked" : ""}><span>${t}</span></label>`).join("");
+  $("schools").innerHTML = SCHOOLS.map(s =>
+    `<label class="chip"><input type="checkbox" name="school" id="sch-${s.id}" value="${s.id}" ${state.picked.includes(s.id) ? "checked" : ""}><span>${s.name} <span class="muted" style="font-size:12px">${s.area}</span></span></label>`).join("");
+
+  $("tracks").addEventListener("change", e => { state.track = e.target.value; render(); });
+  $("pct").addEventListener("input", e => { state.pct = +e.target.value; render(); });
+  $("level").addEventListener("change", e => { state.level = +e.target.value; render(); });
+  $("schools").addEventListener("change", e => {
+    const id = e.target.value;
+    if (e.target.checked) {
+      if (state.picked.length >= 3) { e.target.checked = false; setHint("최대 3곳까지 비교할 수 있어요. 다른 학교를 먼저 해제해 주세요.", true); return; }
+      state.picked.push(id);
+    } else {
+      state.picked = state.picked.filter(x => x !== id);
+    }
+    setHint("비교할 학교를 1~3곳 고르세요.", false);
+    if (!state.picked.includes(state.active)) state.active = state.picked[0];
+    render();
+  });
+  $("form").addEventListener("submit", e => e.preventDefault());
+}
+function setHint(text, warn) { const h = $("schoolHint"); h.textContent = text; h.classList.toggle("warn", warn); }
+
+function render() {
+  $("pctVal").textContent = `상위 ${state.pct}%`;
+  const list = SCHOOLS.filter(s => state.picked.includes(s.id));
+  const res = list.map(s => ({ s, r: estimate(s, state) }));
+
+  if (!res.length) {
+    $("summary").textContent = "위에서 후보 고등학교를 한 곳 이상 고르면 비교 결과가 나타납니다.";
+    $("cards").innerHTML = ""; $("tabs").innerHTML = ""; $("detail").innerHTML = "";
+    return;
+  }
+
+  // 요약 문장
+  const bestGrade = [...res].sort((a, b) => a.r.expected - b.r.expected)[0];
+  const bestFit = [...res].sort((a, b) => b.r.have.length - a.r.have.length || a.r.expected - b.r.expected)[0];
+  const total = bestFit.r.keys.length;
+  let sum = `<b>${state.track}</b> 계열, 중학교 상위 ${state.pct}% 기준으로 `;
+  if (res.length === 1) {
+    sum += `${bestGrade.s.name}에서는 평균 <b>${bestGrade.r.expected.toFixed(1)}등급</b>이 예상되고, 권장과목은 ${total}개 중 <b>${bestGrade.r.have.length}개</b>가 교내에 개설되어 있어요.`;
+  } else if (bestGrade.s.id === bestFit.s.id) {
+    sum += `<b>${bestGrade.s.name}</b>이(가) 내신(평균 ${bestGrade.r.expected.toFixed(1)}등급)과 권장과목 개설(${bestFit.r.have.length}/${total}) 모두 가장 유리해요.`;
+  } else {
+    sum += `내신은 <b>${bestGrade.s.name}</b>이(가) 가장 유리하고(평균 ${bestGrade.r.expected.toFixed(1)}등급), 권장과목 개설은 <b>${bestFit.s.name}</b>이(가) 가장 많아요(${bestFit.r.have.length}/${total}). 둘 중 무엇을 우선할지가 선택의 핵심입니다.`;
+  }
+  $("summary").innerHTML = sum;
+
+  // 카드
+  $("cards").innerHTML = res.map(({ s, r }) => {
+    const p1 = Math.round(r.probs[0] * 100);
+    const bar = r.probs.map((p, i) => {
+      const w = p * 100;
+      return `<div style="width:${w}%;background:${GCOL[i]};color:${GTXT[i]}" title="${i + 1}등급 ${Math.round(w)}%">${w >= 9 ? Math.round(w) + "%" : ""}</div>`;
+    }).join("");
+    const fitPct = r.have.length / r.keys.length * 100;
+    const note = r.miss.length
+      ? `<span class="miss">교내 미개설 ${r.miss.length}과목</span>: ${r.miss.join(", ")}. 공동교육과정이나 온라인학교로 들어야 해요.`
+      : `<span class="good">권장과목을 모두 교내에서 들을 수 있어요.</span>`;
+    return `<article class="card">
+      <div class="card-head"><h3>${s.name}</h3><span class="meta">${s.type} · ${s.area} · 학년당 <span class="num">${s.size}</span>명</span></div>
+      <div class="stat-row">
+        <div class="stat"><span class="label">교내 예상 위치</span><span class="big">${fmtTop(r.top)}</span></div>
+        <div class="stat"><span class="label">평균 예상 등급</span><span class="big">${r.expected.toFixed(1)}<small>등급</small></span></div>
+      </div>
+      <div style="display:grid;gap:6px">
+        <span class="label">등급별 가능성 · 1등급 ${p1}% (약 ${Math.round(s.size * 0.1)}명 중)</span>
+        <div class="gradebar" role="img" aria-label="등급별 가능성 ${r.probs.map((p, i) => `${i + 1}등급 ${Math.round(p * 100)}%`).join(", ")}">${bar}</div>
+        <div class="legend">${GCOL.map((c, i) => `<span><i style="background:${c}"></i>${i + 1}등급</span>`).join("")}</div>
+      </div>
+      <div class="fit">
+        <div class="fit-line"><span class="label">${state.track} 권장과목 개설</span><span class="num">${r.have.length} / ${r.keys.length}</span></div>
+        <div class="meter"><div style="width:${fitPct}%"></div></div>
+      </div>
+      <p class="note">${note}</p>
+    </article>`;
+  }).join("");
+
+  // 탭
+  $("tabs").innerHTML = res.map(({ s }) =>
+    `<button type="button" role="tab" id="tab-${s.id}" aria-selected="${s.id === state.active}" data-id="${s.id}">${s.name}</button>`).join("");
+  renderDetail(res.find(x => x.s.id === state.active) || res[0]);
+}
+
+function subjChips(names, keys) {
+  return names.map(n => {
+    const cat = CATALOG[n][1];
+    const k = keys.includes(n);
+    return `<span class="subj${k ? " key" : ""}">${n}${cat !== "일반" ? `<span class="tag">${cat}</span>` : ""}</span>`;
+  }).join("");
+}
+
+function renderDetail({ s, r }) {
+  const rows = Object.entries(KYO).map(([k, v]) => {
+    const g2 = s.g2.filter(n => CATALOG[n][0] === k);
+    const g3 = s.g3.filter(n => CATALOG[n][0] === k);
+    return `<tr><td class="kyo"><span class="dot" style="background:${v.color}"></span>${v.name}</td>
+      <td>${subjChips(g2, r.keys) || '<span class="muted">-</span>'}</td>
+      <td>${subjChips(g3, r.keys) || '<span class="muted">-</span>'}</td></tr>`;
+  }).join("");
+
+  const dist = Object.entries(s.dist).map(([name, d]) => `
+    <div class="dist-row">
+      <div class="top"><span>${name}</span><span class="muted">A <span class="num">${d[0]}%</span></span></div>
+      <div class="abar" role="img" aria-label="${name} 성취도 ${d.map((v, i) => "ABCDE"[i] + " " + v + "%").join(", ")}">
+        ${d.map((v, i) => `<div style="width:${v}%;background:${GCOL[i]};color:${GTXT[i]}">${v >= 8 ? "ABCDE"[i] : ""}</div>`).join("")}
+      </div>
+    </div>`).join("");
+
+  $("detail").innerHTML = `
+    <div class="detail-grid">
+      <div class="pyeonje">
+        <div style="display:grid;gap:4px">
+          <h3>${s.name} 교육과정 편제표 <span class="muted" style="font-family:var(--f-body);font-size:13px;font-weight:400">2·3학년 선택과목</span></h3>
+          <p class="common">1학년은 공통과목(공통국어·공통수학·공통영어·통합사회·통합과학·한국사 등)으로 모든 학교가 같아요. <span class="subj key" style="margin:0">형광펜</span>은 ${state.track} 권장과목입니다.</p>
+        </div>
+        <div class="pyeonje-table">
+          <table>
+            <thead><tr><th>교과</th><th>2학년</th><th>3학년</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="dist">
+        <h3>1학년 성취도 분포</h3>
+        <p class="hint">A 비율이 높을수록 우수한 학생이 많아 상대평가 등급 받기가 더 어렵다는 신호예요.</p>
+        ${dist}
+        <div style="display:grid;gap:8px;margin-top:8px">
+          <span class="label">교내에 없는 ${state.track} 권장과목</span>
+          ${r.miss.length ? `<div class="missing-list">${r.miss.map(m => `<span>${m}</span>`).join("")}</div>` : '<p class="hint" style="color:var(--ok)">없음. 모두 교내 개설되어 있어요.</p>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-id]"); if (!b) return;
+  state.active = b.dataset.id; render();
+});
+
+buildInputs();
+render();
+</script>
