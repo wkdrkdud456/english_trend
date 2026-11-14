@@ -680,7 +680,7 @@ func status_stats(y: float) -> void:
         ["설거지 연타", str(game.dish_damage(0)) + " / " + str(game.dish_damage(1)) + " / " + str(game.dish_damage(2)), "도구 +" + str(game.gear_sum("atk"))],
         ["월급 박치기", str(game.salary_damage()), "기력 3 · 40원"],
         ["야근 버티기 회복", str(game.guard_heal()), "뽀뽀사탕 " + str(game.candy_heal()) + " · 가방 " + str(game.bag_count("candy")) + "개"],
-        ["이동 속도", str(int(game.speed_mul() * 100)) + "%", String(game.slot_gear(2).name)],
+        ["이동 속도", str(int(game.speed_mul() * 100)) + "%", String(game.slot_gear(2).name) + " · 기념품 " + str(game.souvenirs()) + " / 10"],
     ]
     for i in range(rows.size()):
         row(Rect2(12, y + 88 + i * 64, w - 24, 58), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")

@@ -103,6 +103,19 @@ const SHARDS = [
     [["기억 조각", "코알라가 종이를 물고 있다가 떨어뜨렸다."], ["동훈의 일기", "“못하는 걸 들키기 싫어서 서핑을 미뤘다. 사실은 같이 넘어지는 게 무서웠다.”"], ["소현", "넘어지면 같이 웃으면 되지."]],
     [["기억 조각", "벤치 위에 병원 메모지가 놓여 있다."], ["동훈의 일기", "“마지막 장. 소현이에게 — 기억이 다 돌아오지 않아도, 내일 아침은 내가 차릴게.”"], ["동훈", "이건 병원에서 쓴 거야. 기억이 없을 때도 이건 쓰고 싶었나 봐."], ["소현", "그러니까 괜찮아. 넌 잊어도 다시 약속하는 사람이야."]],
 ]
+# 숨은 발견 — 도시마다 중심가 / 골목 / 자연 구역에 하나씩
+const EGGS = [
+    [["비둘기 둥지", "둥지 속에 누가 흘린 동전이 반짝인다."], ["화가의 낡은 팔레트", "팔레트 밑에 간식 꾸러미가 숨겨져 있다."], ["센강의 사랑 자물쇠", "“동훈♥소현 — 다음엔 꼭 같이.” 언제 걸어 둔 걸까?"]],
+    [["동전 던지는 석등", "석등 구멍에 동전이 가득하다. 하나쯤은 괜찮겠지."], ["길고양이의 선물", "고양이가 물어다 놓은 간식 봉지."], ["소원 대나무 쪽지", "“야근 없는 금요일.” 동훈의 글씨다."]],
+    [["모래 속 항아리", "항아리에서 옛 동전이 쏟아진다."], ["상인의 덤", "“단골에게만 주는 거요.” 향신료 대신 간식을 받았다."], ["오아시스의 병 편지", "“다음엔 낙타 타자.” 소현의 글씨다."]],
+    [["흘린 분수 동전", "분수까지 닿지 못한 동전들이 여기 모여 있다."], ["할머니의 창가", "창가에서 떨어진 비스코티 한 봉지."], ["길가의 옛 주화", "이천 년 전 병사가 흘린 주화. 행운의 부적으로 삼자."]],
+    [["소화전 뒤 지갑", "주인은 못 찾았지만 사례금 쪽지가 들어 있다."], ["길거리 농구 내기", "공을 한 번 넣었더니 간식을 준다."], ["공원 벤치의 이름표", "“여기서 프러포즈할 뻔함 — D.” …뻔함?"]],
+    [["어부의 통발", "통발 속에 물고기 대신 동전이 들어 있다."], ["훈제 가게의 덤", "따뜻한 간식 꾸러미를 받았다."], ["얼음 속 반지 상자", "빈 상자다. 반지는 지금 소현의 손에 있다."]],
+    [["당나귀 방울", "방울 속에서 동전 소리가 난다."], ["할아버지의 올리브", "“멀리서 왔구먼.” 간식을 한 움큼 쥐여 준다."], ["석양 엽서", "“다음엔 둘이 같이 나오게 찍자.” 부치지 못한 엽서."]],
+    [["우체통 밑", "왕관이 새겨진 동전 몇 닢."], ["펍의 다트 판", "과녁 한가운데를 맞혔더니 간식이 나온다."], ["강변의 낡은 우산", "손잡이에 ‘J.D.H’ 이니셜이 새겨져 있다."]],
+    [["서퍼의 왁스 통", "왁스 통 안에 비상금이 숨겨져 있다."], ["시장 할머니의 덤", "“신혼이야?” 간식을 얹어 준다."], ["코알라의 나무", "나무 틈에 ‘D+S’가 새겨져 있다. 낯익은 솜씨다."]],
+    [["붕어빵 봉지", "봉지 밑에 거스름돈이 그대로 있다."], ["포장마차 이모의 서비스", "“많이 먹어.” 간식이 한가득."], ["한강 벤치의 낙서", "“여기서 처음 손잡음.” 날짜가 십 년 전이다."]],
+]
 const NPC_TALK = [
     [["골목의 화가", "이 골목 상자에는 여행자들이 두고 간 선물이 들어 있어요."], ["골목의 화가", "여기 풀숲 녀석들은 중심가보다 사나워요. 대신 보상도 크죠."]],
     [["찻집 할머니", "켄지 씨는 15년째 막차를 타요. 유키 씨가 매일 등불을 켜 두고요."], ["찻집 할머니", "대나무 숲 안쪽에 종이 한 장이 걸려 있던데, 두 분 것 아닌가요?"]],
@@ -342,7 +355,7 @@ func speed_mul() -> float:
     return 1.0 + gear_sum("spd") / 100.0
 
 func party_max() -> int:
-    return 36 + tour.completed.count(true) * 3 + (level - 1) * 2 + gear_sum("hp")
+    return 36 + tour.completed.count(true) * 3 + (level - 1) * 2 + gear_sum("hp") + souvenirs() * 3
 
 func stamps() -> int:
     return tour.completed.count(true)
@@ -715,6 +728,34 @@ func side_target() -> void:
     world.marker.visible = state == "explore"; world.marker.position = target + Vector3(0, 0.2, 0)
     story_rival.visible = false
 
+func near_egg() -> Dictionary:
+    var rec = tour.record()
+    for egg in world.eggs:
+        if not bool(rec.eggs[int(egg.i)]) and hero.position.distance_to(Vector3(egg.x, hero.position.y, egg.z)) < 1.4: return egg
+    return {}
+
+# 자연 구역의 숨은 발견은 기념품이 되어 최대 체력을 올려 준다
+func souvenirs() -> int:
+    var count = 0
+    for rec in tour.records:
+        if bool(rec.get("eggs", [false, false, false])[2]): count += 1
+    return count
+
+func find_egg(egg: Dictionary) -> void:
+    var i = clampi(int(egg.i), 0, 2)
+    tour.record().eggs[i] = true
+    chime(1318); burst(hero.position + Vector3(0, 0.8, 0), "fffbe0", 16)
+    var prize = ""
+    match i:
+        0:
+            coins += 100 + city_index * 30; prize = "여행비 " + str(100 + city_index * 30) + "원을 얻었어요!"
+        1:
+            bag_add("candy", 2); bag_add("treat", 1); prize = "뽀뽀사탕 2개와 펫 간식을 얻었어요!"
+        _:
+            PARTY_HP = party_max(); health = PARTY_HP; prize = "기념품으로 간직했어요. 최대 체력 +3 (기념품 " + str(souvenirs()) + " / 10)"
+    save_progress()
+    show_dialogue( [ ["숨은 발견 · " + String(EGGS[city_index][i][0]), String(EGGS[city_index][i][1])], ["소현", prize]], "explore")
+
 func near_gate() -> Dictionary:
     for gate in world.gates:
         if hero.position.distance_to(Vector3(gate.x, hero.position.y, gate.z)) < 1.8: return gate
@@ -724,6 +765,7 @@ func near_gate() -> Dictionary:
 func near_label() -> String:
     var gate = near_gate()
     if not gate.is_empty(): return String(gate.label) + " 가기"
+    if not near_egg().is_empty(): return "살펴보기"
     if area_index == 0: return ""
     var rec = tour.record()
     for chest in world.chests:
@@ -817,6 +859,9 @@ func interact() -> void:
     var door = near_gate()
     if not door.is_empty():
         enter_area(int(door.to)); return
+    var found = near_egg()
+    if not found.is_empty():
+        find_egg(found); return
     if area_index > 0:
         side_interact(); return
     if city_index > 0:

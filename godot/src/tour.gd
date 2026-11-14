@@ -36,7 +36,7 @@ func reset_records() -> void:
     for i in range(10):
         var marks = []
         for point in CityData.CITIES[i].points: marks.append(false)
-        records.append({ "stage": 0, "collected": [false, false, false], "marks": marks, "runes": [0, 0, 0], "sequence": 0, "deliveries": 0, "carrying": false, "solved": false, "visited": false, "chests": [false, false, false, false], "shard": false, "wild_wins": 0, "wild_seen": [false, false, false], "best_combo": 0, "perfects": 0, "position": CityData.CITIES[i].spawn.duplicate()})
+        records.append({ "stage": 0, "collected": [false, false, false], "marks": marks, "runes": [0, 0, 0], "sequence": 0, "deliveries": 0, "carrying": false, "solved": false, "visited": false, "chests": [false, false, false, false], "shard": false, "eggs": [false, false, false], "wild_wins": 0, "wild_seen": [false, false, false], "best_combo": 0, "perfects": 0, "position": CityData.CITIES[i].spawn.duplicate()})
         completed.append(false)
 
 func record() -> Dictionary:

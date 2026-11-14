@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Cities = preload ("res://scripts/city_data.gd")
+const AreaData = preload ("res://scripts/area_data.gd")
 var w: Node3D
 var data: Dictionary
 var index = 0
@@ -318,35 +319,43 @@ func tree_kind() -> String:
 
 func build_area(world: Node3D, city: int, zone: int) -> void:
     w = world; index = city; data = Cities.CITIES[index]
+    var plan = AreaData.AREAS[str(city) + "_" + str(zone)]
     w.roads.clear(); w.water_zones.clear(); w.bridges.clear(); w.grass_zones.clear()
     w.box(w, Vector3(0, -0.65, 0), Vector3(27, 1.2, 29), data.pal.p2)
     w.box(w, Vector3(0, 0.015, 0), Vector3(26.8, 0.14, 28.8), data.pal.g0)
-    var wall = String(data.pal.w1)
-    var roof = String(data.pal.r1)
-    var roof2 = String(data.pal.a2)
-    var kind = tree_kind()
-    if zone == 1:
-        # 골목: 큰길 하나와 한 바퀴 도는 뒷길, 집이 빽빽하다
-        for rect in [Rect2(-10, -1, 21.6, 2), Rect2(-9, -8, 2, 16), Rect2(-9, -8, 12, 2), Rect2(-9, 6, 12, 2), Rect2(1, -8, 2, 16)]: road(rect)
-        house(-3.5, -3.8, 3.4, 2.6, 2.2, wall, roof); house(-3.5, 3.8, 3.4, 2.6, 2.2, wall, roof2)
-        house(6.5, -5.2, 3.2, 2.8, 2.4, wall, roof2); house(6.5, 5.0, 3.2, 2.8, 2.0, wall, roof)
-        house(-3.5, -10.6, 3.0, 2.2, 1.8, wall, roof); house(9.8, -9.8, 2.8, 2.4, 2.0, wall, roof)
-        for p in [ [-11.2, -10.5], [-11.2, 4], [4.5, -10.5], [10.8, 3.5], [-11, 10.5], [5, 10.8], [10.5, 10.5]]: tree(p[0], p[1], kind)
-        w.gates.append({ "x": 11.2, "z": 0.0, "to": 0, "label": String(data.name) + " 중심가"})
-        w.flat.append({ "t": "gate", "x": 11.2, "z": 0.0, "label": String(data.name) + " 중심가"})
-        w.chests.append({ "x": 0.2, "z": -10.2, "i": 0}); w.chests.append({ "x": -5.5, "z": 9.6, "i": 1})
-        w.extras.append({ "t": "npc", "x": -6.0, "z": 2.0})
-    else:
-        # 자연 구역: 호수를 끼고 구불구불 이어지는 길
-        for rect in [Rect2(-1, -12, 2, 8), Rect2(-8, -5, 9, 2), Rect2(-8, -5, 2, 11), Rect2(-8, 4, 16, 2), Rect2(6, 4, 2, 7.4)]: road(rect)
-        water(Rect2(-3.5, -1.2, 7, 3.6))
-        for p in [ [-11, -9.5], [-5, -9.5], [4, -9], [9, -8], [11, -1.5], [-11, 0], [5.6, 0.8], [-11, 7], [-3, 8.5], [2, 9.8], [10.5, 7], [-6, 11.2], [11, 11], [3.5, -4.5]]: tree(p[0], p[1], kind)
-        w.gates.append({ "x": 0.0, "z": -11.6, "to": 0, "label": String(data.name) + " 중심가"})
-        w.flat.append({ "t": "gate", "x": 0.0, "z": -11.6, "label": String(data.name) + " 중심가"})
-        w.chests.append({ "x": 9.6, "z": -3.6, "i": 2}); w.chests.append({ "x": -10.4, "z": 10.2, "i": 3})
-        w.extras.append({ "t": "shard", "x": 7.0, "z": 10.4})
+    for z in plan.zones: w.zones.append({ "r": Rect2(z[0], z[1], z[2], z[3]), "c": String(z[4])})
+    for r in plan.roads: road(Rect2(r[0], r[1], r[2], r[3]))
+    for r in plan.water: water(Rect2(r[0], r[1], r[2], r[3]))
+    for r in plan.bridges: bridge(Rect2(r[0], r[1], r[2], r[3]))
+    for h in plan.houses:
+        house(float(h.x), float(h.z), float(h.w), float(h.d), 2.2, String(h.wall), String(h.roof))
+        var made = w.flat[w.flat.size() - 1]
+        made["title"] = String(h.title); made["dome"] = String(h.dome); made["spire"] = bool(h.spire)
+    for t in plan.trees: tree(float(t[0]), float(t[1]), String(t[2]))
+    for d in plan.decor:
+        var kind = String(d[0])
+        var dx = float(d[1])
+        var dz = float(d[2])
+        if kind == "lamp" or kind == "bench":
+            w.flat.append({ "t": kind, "x": dx, "z": dz}); continue
+        w.flat.append({ "t": "decor", "kind": kind, "x": dx, "z": dz, "tint": String(d[3])})
+        if not AreaData.SOLID.has(kind): continue
+        var wet = false
+        for pool in w.water_zones:
+            if pool.has_point(Vector2(dx, dz)): wet = true
+        if wet: continue
+        var size = AreaData.SOLID[kind]
+        w.solid.append(Rect2(dx - float(size[0]) / 2, dz - float(size[1]) / 2, float(size[0]), float(size[1])))
+    var back = String(data.name) + " 중심가"
+    w.gates.append({ "x": float(plan.gate[0]), "z": float(plan.gate[1]), "to": 0, "label": back})
+    w.flat.append({ "t": "gate", "x": float(plan.gate[0]), "z": float(plan.gate[1]), "label": back})
+    for n in range(plan.chests.size()):
+        w.chests.append({ "x": float(plan.chests[n][0]), "z": float(plan.chests[n][1]), "i": (zone - 1) * 2 + n})
+    if plan.has("npc"): w.extras.append({ "t": "npc", "x": float(plan.npc[0]), "z": float(plan.npc[1])})
+    if plan.has("shard"): w.extras.append({ "t": "shard", "x": float(plan.shard[0]), "z": float(plan.shard[1])})
+    w.eggs.append({ "x": float(plan.egg[0]), "z": float(plan.egg[1]), "i": zone})
     for chest in w.chests: w.flat.append({ "t": "chest", "x": chest.x, "z": chest.z, "i": chest.i})
     for extra in w.extras: w.flat.append({ "t": String(extra.t), "x": extra.x, "z": extra.z})
+    for egg in w.eggs: w.flat.append({ "t": "egg", "x": egg.x, "z": egg.z, "i": egg.i})
     var marker = w.group(Vector3.ZERO); marker.set_meta("moving", true); w.marker = marker
     w.merge_static_geometry(); w.prepare_occluders()
-

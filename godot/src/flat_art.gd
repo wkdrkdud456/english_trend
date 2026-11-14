@@ -322,6 +322,17 @@ func house(c: Control, d: Dictionary) -> void:
                 var wx = cx + side * (w * 0.3) - 15
                 block(c, wx, by - 36, 30, 26, out); block(c, wx + 3, by - 33, 24, 20, soft(String(pal.a0), 0.25)); block(c, wx + 3, by - 33, 24, 5, Color(1, 1, 1, 0.6)); block(c, wx + 14, by - 33, 2, 20, out)
                 block(c, wx - 2, by - 11, 34, 5, out); block(c, wx, by - 10, 30, 3, tone("f0", 0.2))
+    var dome = String(d.get("dome", ""))
+    if dome != "":
+        var dc = soft(dome, 0.15)
+        for row in [[22, 0], [16, 6], [9, 11]]: block(c, cx - row[0] - 2, p.y - 13 - row[1], row[0] * 2 + 4, 9, out)
+        for row in [[22, 0], [16, 6], [9, 11]]: block(c, cx - row[0], p.y - 11 - row[1], row[0] * 2, 6, dc)
+        block(c, cx - 10, p.y - 15, 6, 3, dc.lerp(Color.WHITE, 0.5))
+    if bool(d.get("spire", false)):
+        var sx0 = p.x + w * 0.2
+        block(c, sx0 - 7, p.y - 44, 14, 44, out); block(c, sx0 - 5, p.y - 42, 10, 40, wall)
+        block(c, sx0 - 9, p.y - 52, 18, 10, out); block(c, sx0 - 7, p.y - 50, 14, 6, roof)
+        block(c, sx0 - 3, p.y - 60, 6, 10, out); block(c, sx0 - 1.5, p.y - 58, 3, 8, roof); block(c, sx0 - 3, p.y - 34, 6, 8, roof_d)
     var title = String(d.get("title", ""))
     if title != "":
         var tw = c.font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 18
@@ -431,6 +442,132 @@ func shop(c: Control, d: Dictionary) -> void:
     block(c, p.x - 25 * k, p.y - 22 * k, 50 * k, 2 * k, out)
     block(c, p.x - 18 * k, p.y - 16 * k, 10 * k, 9 * k, Color("e0a85a")); block(c, p.x - 4 * k, p.y - 16 * k, 10 * k, 9 * k, Color("c98b4b")); block(c, p.x + 9 * k, p.y - 16 * k, 9 * k, 9 * k, Color("f6d58b"))
 
+func tint_of(d: Dictionary, fallback: String = "c85068") -> Color:
+    var hex = String(d.get("tint", ""))
+    return Color(hex if hex != "" else fallback)
+
+func line(c: Control, a: Vector2, b: Vector2, color: Color, width: float) -> void:
+    c.draw_line(a, b, color, maxf(1.0, width))
+
+# 세부 구역을 꾸미는 소품들
+func decor(c: Control, d: Dictionary, t: float) -> void:
+    var p = at(d.x, d.z)
+    if p.x < view.position.x - 4 * u or p.x > view.end.x + 4 * u or p.y < view.position.y - u or p.y > view.end.y + 5 * u: return
+    var cr = Color("fff8e8")
+    var tn = tint_of(d)
+    match String(d.kind):
+        "stall":
+            shadow(c, p, 48 * k, 8 * k)
+            block(c, p.x - 23 * k, p.y - 30 * k, 46 * k, 30 * k, out); block(c, p.x - 21 * k, p.y - 18 * k, 42 * k, 16 * k, Color("f4e6c8"))
+            for i in range(5): block(c, p.x - 21 * k + i * 8.4 * k, p.y - 28 * k, 8.4 * k, 10 * k, cr if i % 2 == 1 else tn.lerp(mute, 0.2))
+            block(c, p.x - 21 * k, p.y - 18 * k, 42 * k, 2 * k, out)
+            block(c, p.x - 16 * k, p.y - 13 * k, 8 * k, 7 * k, Color("e0a85a")); block(c, p.x - 4 * k, p.y - 13 * k, 8 * k, 7 * k, tn.lerp(Color.WHITE, 0.3)); block(c, p.x + 8 * k, p.y - 13 * k, 8 * k, 7 * k, Color("c98b4b"))
+        "boat":
+            var sway = sin(t * 1.5 + d.x) * 1.5
+            block(c, p.x - 22 * k, p.y - 6 * k + sway, 44 * k, 12 * k, out); block(c, p.x - 20 * k, p.y - 4 * k + sway, 40 * k, 8 * k, tn.lerp(mute, 0.15)); block(c, p.x - 20 * k, p.y - 4 * k + sway, 40 * k, 3 * k, cr)
+            block(c, p.x - 6 * k, p.y - 13 * k + sway, 14 * k, 9 * k, out); block(c, p.x - 4 * k, p.y - 11 * k + sway, 10 * k, 7 * k, cr)
+        "fountain":
+            shadow(c, p, 58 * k, 10 * k)
+            block(c, p.x - 28 * k, p.y - 20 * k, 56 * k, 24 * k, out); block(c, p.x - 26 * k, p.y - 18 * k, 52 * k, 20 * k, tone("w1", 0.3)); block(c, p.x - 22 * k, p.y - 15 * k, 44 * k, 13 * k, a0)
+            block(c, p.x - 4 * k, p.y - 36 * k, 8 * k, 26 * k, out); block(c, p.x - 2 * k, p.y - 34 * k, 4 * k, 24 * k, tone("w1", 0.3))
+            block(c, p.x - 9 * k, p.y - 40 * k, 18 * k, 6 * k, out); block(c, p.x - 7 * k, p.y - 38 * k, 14 * k, 3 * k, a0)
+            for i in range(3): block(c, p.x - 12 * k + i * 10 * k, p.y - 30 * k + fmod(t * 8 + i * 3, 8.0) * k, 3 * k, 5 * k, Color("dff2f4"))
+        "column":
+            shadow(c, p, 18 * k, 5 * k)
+            var tall = (26.0 if int(absf(d.x * 3 + d.z * 5)) % 2 == 1 else 38.0) * k
+            block(c, p.x - 8 * k, p.y - 6 * k, 16 * k, 6 * k, out); block(c, p.x - 6 * k, p.y - tall, 12 * k, tall, out)
+            block(c, p.x - 4 * k, p.y - tall + 2 * k, 8 * k, tall - 4 * k, Color("d8cdb4")); block(c, p.x - 4 * k, p.y - tall + 2 * k, 3 * k, tall - 4 * k, Color("eee6d2"))
+            if tall > 30 * k:
+                block(c, p.x - 9 * k, p.y - tall - 4 * k, 18 * k, 6 * k, out); block(c, p.x - 7 * k, p.y - tall - 2 * k, 14 * k, 3 * k, Color("d8cdb4"))
+        "arch":
+            shadow(c, p, 60 * k, 7 * k)
+            for side in [-1, 1]:
+                block(c, p.x + side * 22 * k - 8 * k, p.y - 40 * k, 16 * k, 40 * k, out); block(c, p.x + side * 22 * k - 6 * k, p.y - 38 * k, 12 * k, 38 * k, Color("cfc3a8"))
+            block(c, p.x - 32 * k, p.y - 52 * k, 64 * k, 16 * k, out); block(c, p.x - 30 * k, p.y - 50 * k, 60 * k, 12 * k, Color("cfc3a8")); block(c, p.x - 30 * k, p.y - 50 * k, 60 * k, 3 * k, Color("e6dcc4"))
+            block(c, p.x - 14 * k, p.y - 40 * k, 28 * k, 5 * k, out)
+        "rock":
+            shadow(c, p, 36 * k, 7 * k)
+            var stone = tint_of(d, "9a9a92").lerp(mute, 0.25)
+            block(c, p.x - 17 * k, p.y - 18 * k, 34 * k, 18 * k, out); block(c, p.x - 11 * k, p.y - 27 * k, 22 * k, 11 * k, out)
+            block(c, p.x - 15 * k, p.y - 16 * k, 30 * k, 14 * k, stone); block(c, p.x - 9 * k, p.y - 25 * k, 18 * k, 10 * k, stone)
+            block(c, p.x - 9 * k, p.y - 25 * k, 10 * k, 4 * k, stone.lerp(Color.WHITE, 0.3)); block(c, p.x + 3 * k, p.y - 10 * k, 12 * k, 8 * k, stone.lerp(out, 0.25))
+        "tent":
+            shadow(c, p, 52 * k, 8 * k)
+            var cloth = tn.lerp(mute, 0.18)
+            for i in range(6): block(c, p.x - (46 - i * 7) * k / 2 - 2, p.y - (i + 1) * 6 * k - 2, (46 - i * 7) * k + 4, 6 * k + 4, out)
+            for i in range(6): block(c, p.x - (46 - i * 7) * k / 2, p.y - (i + 1) * 6 * k, (46 - i * 7) * k, 6 * k, cloth.lerp(Color.WHITE, 0.25) if i % 2 == 1 else cloth)
+            block(c, p.x - 5 * k, p.y - 16 * k, 10 * k, 16 * k, cloth.lerp(out, 0.55))
+        "parasol":
+            shadow(c, p, 26 * k, 5 * k)
+            block(c, p.x - 1.5 * k, p.y - 30 * k, 3 * k, 30 * k, Color("8a6a4c")); block(c, p.x - 19 * k, p.y - 36 * k, 38 * k, 9 * k, out); block(c, p.x - 13 * k, p.y - 42 * k, 26 * k, 7 * k, out)
+            for i in range(4): block(c, p.x - 17 * k + i * 8.5 * k, p.y - 34 * k, 8.5 * k, 5 * k, cr if i % 2 == 1 else tn.lerp(mute, 0.15))
+            block(c, p.x - 11 * k, p.y - 40 * k, 22 * k, 5 * k, tn.lerp(mute, 0.15))
+        "torii":
+            for side in [-1, 1]:
+                block(c, p.x + side * 18 * k - 4 * k, p.y - 44 * k, 8 * k, 44 * k, out); block(c, p.x + side * 18 * k - 2.5 * k, p.y - 43 * k, 5 * k, 43 * k, Color("b54e42"))
+            block(c, p.x - 30 * k, p.y - 56 * k, 60 * k, 9 * k, out); block(c, p.x - 28 * k, p.y - 54 * k, 56 * k, 5 * k, Color("73423a"))
+            block(c, p.x - 23 * k, p.y - 42 * k, 46 * k, 6 * k, out); block(c, p.x - 21 * k, p.y - 41 * k, 42 * k, 4 * k, Color("c4604c"))
+        "easel":
+            block(c, p.x - 7 * k, p.y - 22 * k, 2 * k, 22 * k, Color("8a6a4c")); block(c, p.x + 5 * k, p.y - 22 * k, 2 * k, 22 * k, Color("8a6a4c"))
+            block(c, p.x - 9 * k, p.y - 30 * k, 18 * k, 20 * k, out); block(c, p.x - 7 * k, p.y - 28 * k, 14 * k, 16 * k, cr)
+            block(c, p.x - 5 * k, p.y - 26 * k, 6 * k, 6 * k, [Color("e48a98"), Color("6fa3c8"), Color("e5b33c")][int(absf(roundf(d.x))) % 3]); block(c, p.x - k, p.y - 19 * k, 7 * k, 5 * k, Color("7fae5e"))
+        "windmill":
+            shadow(c, p, 36 * k, 8 * k)
+            var body = tn.lerp(mute, 0.12)
+            block(c, p.x - 13 * k, p.y - 40 * k, 26 * k, 40 * k, out); block(c, p.x - 11 * k, p.y - 38 * k, 22 * k, 38 * k, body); block(c, p.x - 11 * k, p.y - 38 * k, 6 * k, 38 * k, body.lerp(Color.WHITE, 0.4))
+            block(c, p.x - 15 * k, p.y - 50 * k, 30 * k, 12 * k, out); block(c, p.x - 13 * k, p.y - 48 * k, 26 * k, 8 * k, Color("8a5a3c")); block(c, p.x - 4 * k, p.y - 12 * k, 8 * k, 12 * k, Color("5a4038"))
+            var hub = Vector2(p.x, p.y - 42 * k)
+            for i in range(4):
+                var turn = t * 0.8 + i * PI / 2
+                line(c, hub, hub + Vector2(cos(turn), sin(turn)) * 30 * k, out, 5 * k); line(c, hub, hub + Vector2(cos(turn), sin(turn)) * 29 * k, Color("e9dcc0"), 2.5 * k)
+        "phonebox":
+            shadow(c, p, 16 * k, 5 * k)
+            block(c, p.x - 8 * k, p.y - 36 * k, 16 * k, 36 * k, out); block(c, p.x - 6 * k, p.y - 34 * k, 12 * k, 32 * k, Color("c8323a")); block(c, p.x - 4 * k, p.y - 28 * k, 8 * k, 16 * k, Color("cfe6ee"))
+            block(c, p.x - 0.7 * k, p.y - 28 * k, 1.4 * k, 16 * k, Color("c8323a")); block(c, p.x - 6 * k, p.y - 34 * k, 12 * k, 3 * k, Color("e25a60"))
+        "bus":
+            shadow(c, p, 68 * k, 8 * k)
+            var paint = tn.lerp(mute, 0.1)
+            block(c, p.x - 33 * k, p.y - 30 * k, 66 * k, 28 * k, out); block(c, p.x - 31 * k, p.y - 28 * k, 62 * k, 24 * k, paint); block(c, p.x - 31 * k, p.y - 28 * k, 62 * k, 4 * k, paint.lerp(Color.WHITE, 0.35))
+            for i in range(5): block(c, p.x - 28 * k + i * 12 * k, p.y - 21 * k, 9 * k, 8 * k, Color("cfe6ee"))
+            for side in [-1, 1]:
+                block(c, p.x + side * 20 * k - 6 * k, p.y - 7 * k, 12 * k, 9 * k, out); block(c, p.x + side * 20 * k - 3 * k, p.y - 4 * k, 6 * k, 4 * k, Color("8a8f96"))
+        "wheel":
+            var mid = Vector2(p.x, p.y - 52 * k)
+            var rad = 40 * k
+            shadow(c, p, 60 * k, 8 * k)
+            line(c, p + Vector2(-18 * k, 0), mid, out, 5 * k); line(c, p + Vector2(18 * k, 0), mid, out, 5 * k)
+            c.draw_arc(mid, rad, 0, TAU, 40, out, maxf(2.0, 6 * k)); c.draw_arc(mid, rad, 0, TAU, 40, Color("e9e4d8"), maxf(1.0, 3 * k))
+            for i in range(8):
+                var ang = t * 0.3 + i * PI / 4
+                var tip = mid + Vector2(cos(ang), sin(ang)) * rad
+                line(c, mid, tip, Color("b8c2c8"), 1.5 * k)
+                block(c, tip.x - 4 * k, tip.y - 4 * k, 8 * k, 8 * k, out); block(c, tip.x - 3 * k, tip.y - 3 * k, 6 * k, 6 * k, Color("6fa3c8"))
+        "ice":
+            block(c, p.x - 14 * k, p.y - 6 * k, 28 * k, 12 * k, Color("eef6f8")); block(c, p.x - 8 * k, p.y - 11 * k, 16 * k, 6 * k, Color.WHITE); block(c, p.x - 14 * k, p.y + 4 * k, 28 * k, 2 * k, Color("b9d6e0"))
+        "lantern":
+            block(c, p.x - 1.5 * k, p.y - 34 * k, 3 * k, 34 * k, Color("4a4440")); block(c, p.x - 1.5 * k, p.y - 34 * k, 10 * k, 2.5 * k, Color("4a4440"))
+            block(c, p.x + 3 * k, p.y - 32 * k, 10 * k, 14 * k, out); block(c, p.x + 4.5 * k, p.y - 30.5 * k, 7 * k, 11 * k, Color("d8433a")); block(c, p.x + 4.5 * k, p.y - 26 * k, 7 * k, 2 * k, Color("f6d98b"))
+        "bush":
+            var leafy = tint_of(d, "7fa878").lerp(mute, 0.2)
+            block(c, p.x - 13 * k, p.y - 16 * k, 26 * k, 16 * k, out); block(c, p.x - 11 * k, p.y - 14 * k, 22 * k, 12 * k, leafy)
+            block(c, p.x - 9 * k, p.y - 12 * k, 5 * k, 4 * k, leafy.lerp(Color.WHITE, 0.45)); block(c, p.x + 2 * k, p.y - 9 * k, 5 * k, 4 * k, leafy.lerp(Color.WHITE, 0.45))
+        "camel":
+            shadow(c, p, 34 * k, 6 * k)
+            var fur = tint_of(d, "c9a66b").lerp(mute, 0.15)
+            for leg in [-11, -5, 5, 11]: block(c, p.x + leg * k - 1.5 * k, p.y - 10 * k, 3 * k, 10 * k, fur.lerp(out, 0.35))
+            block(c, p.x - 15 * k, p.y - 22 * k, 30 * k, 13 * k, out); block(c, p.x - 13 * k, p.y - 20 * k, 26 * k, 10 * k, fur)
+            block(c, p.x - 5 * k, p.y - 28 * k, 12 * k, 8 * k, out); block(c, p.x - 3 * k, p.y - 26 * k, 8 * k, 6 * k, fur)
+            block(c, p.x + 11 * k, p.y - 34 * k, 7 * k, 16 * k, out); block(c, p.x + 12.5 * k, p.y - 32 * k, 4 * k, 13 * k, fur)
+            block(c, p.x + 11 * k, p.y - 38 * k, 13 * k, 8 * k, out); block(c, p.x + 12.5 * k, p.y - 36.5 * k, 10 * k, 5 * k, fur)
+
+# 숨은 발견: 몇 초에 한 번 잠깐 반짝인다
+func egg(c: Control, d: Dictionary, t: float) -> void:
+    var p = at(d.x, d.z)
+    var beat = fmod(t * 1.2 + d.x, 3.0)
+    if beat > 1.2: return
+    var r = 4.0 + beat * 3.0
+    block(c, p.x - 1, p.y - 10 - r, 2, r * 2, Color("fffbe0")); block(c, p.x - r, p.y - 11, r * 2, 2, Color("fffbe0"))
+
 func gate(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
     var stone = tone("w1", 0.3)
@@ -498,6 +635,9 @@ func _by_depth(a: Dictionary, b: Dictionary) -> bool:
 func draw(c: Control, g) -> void:
     setup(c, g)
     ground(c, g)
+    for zone in g.world.zones:
+        var key = String(zone.c)
+        wrect(c, zone.r, (col(key) if pal.has(key) else Color(key)).lerp(mute, 0.25))
     water(c, g)
     paths(c, g)
     if g.world.marker and g.world.marker.visible: marker(c, g)
@@ -541,6 +681,9 @@ func draw(c: Control, g) -> void:
             "prop": prop(c, d)
             "pickup": pickup(c, d, g.clock_time)
             "gate": gate(c, d)
+            "decor": decor(c, d, g.clock_time)
+            "egg":
+                if not bool(g.tour.record().eggs[int(d.i)]): egg(c, d, g.clock_time)
             "chest": chest(c, d, bool(g.tour.record().chests[int(d.i)]), g.clock_time)
             "shard":
                 if not bool(g.tour.record().shard): shard(c, d, g.clock_time)
