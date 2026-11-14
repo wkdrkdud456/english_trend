@@ -222,42 +222,42 @@ func top_bar(subtitle: String = "파리 · 첫 번째 도시") -> void:
 func draw_explore() -> void:
     var dy = flat_bottom()
     var top = safe_top + 6
-    # ── 위쪽 카드들 ─────────────────────────────────────
-    var cw = w * 0.395
-    plate(Rect2(14, top, cw, 54), ink)
-    txt(game.city().name, 26, top + 25, 20)
-    txt(game.city().subtitle, 26, top + 43, 10, muted)
+    # ── 위쪽 카드들 (월드를 덜 가리게 얇게) ─────────────────
+    var cw = w * 0.30
+    plate(Rect2(14, top, cw, 44), ink, cream, 14)
+    txt(game.city().name, 26, top + 28, 17)
     var coin_x = 14 + cw + 6
-    var coin_w = w * 0.215
-    plate(Rect2(coin_x, top, coin_w, 54), rose)
-    icon_coin(Vector2(coin_x + 17, top + 21), 9)
-    txt(str(game.coins), coin_x + 30, top + 27, 18, rose)
-    txt("도장 " + str(game.tour.completed.count(true)) + "/10", coin_x + 9, top + 45, 10, muted)
+    var coin_w = w * 0.20
+    plate(Rect2(coin_x, top, coin_w, 44), rose, cream, 14)
+    icon_coin(Vector2(coin_x + 17, top + 21), 8)
+    txt(str(game.coins), coin_x + 30, top + 27, 16, rose)
     var lv_x = coin_x + coin_w + 6
-    var lv_w = w - 14 - 52 - 6 - lv_x
-    var lv_rect = Rect2(lv_x, top, lv_w, 54)
-    plate(lv_rect, Color("4a8a38"))
-    icon_star(Vector2(lv_x + 17, top + 20), 8)
-    txt("Lv." + str(game.level), lv_x + 30, top + 26, 17, Color("3f7a32"))
-    bar(Rect2(lv_x + 10, top + 36, lv_w - 20, 9), float(game.xp) / maxf(1, game.exp_needed()), Color("86cc5e"))
+    var lv_w = w - 14 - 48 - 6 - lv_x
+    var lv_rect = Rect2(lv_x, top, lv_w, 44)
+    plate(lv_rect, Color("4a8a38"), cream, 14)
+    icon_star(Vector2(lv_x + 16, top + 16), 6)
+    txt("Lv." + str(game.level), lv_x + 28, top + 21, 14, Color("3f7a32"))
+    txt("도장 " + str(game.stamps()) + "/10", lv_x + lv_w - 70, top + 20, 10, muted, 60, HORIZONTAL_ALIGNMENT_RIGHT)
+    bar(Rect2(lv_x + 10, top + 28, lv_w - 20, 7), float(game.xp) / maxf(1, game.exp_needed()), Color("86cc5e"))
     buttons["status_card"] = lv_rect
-    button("pause", "Ⅱ", Rect2(w - 66, top, 52, 54), false, true, 19)
+    var pause_rect = Rect2(w - 62, top, 48, 44)
+    plate(pause_rect, ink, cream, 14)
+    txt("Ⅱ", pause_rect.position.x, top + 29, 17, ink, 48, HORIZONTAL_ALIGNMENT_CENTER)
+    buttons["pause"] = pause_rect
 
     # ── 목표 카드 ───────────────────────────────────────
-    var oy = top + 62
-    plate(Rect2(14, oy, w - 28, 64), ink)
-    icon_goal(Vector2(36, oy + 32), 12)
-    txt("지금의 작은 목표", 58, oy + 22, 10, muted)
-    txt(game.tour.objective(), 58, oy + 44, 16)
+    var oy = top + 50
+    plate(Rect2(14, oy, w - 28, 44), ink, cream, 14)
+    icon_goal(Vector2(34, oy + 21), 9)
+    txt(game.tour.objective(), 52, oy + 27, 15)
     var done = game.tour.progress_count() if game.stage == 0 else game.stage
     var total = game.tour.progress_total() if game.stage == 0 else 4
     for i in range(mini(total, 5)):
-        var bx = w - 28 - (mini(total, 5) - i) * 20
-        panel(Rect2(bx, oy + 14, 16, 16), Color("ffe36c") if i < done else Color("e6dcc6"), 5, ink)
-    txt(str(done) + " / " + str(total), w - 112, oy + 52, 10, muted, 84, HORIZONTAL_ALIGNMENT_RIGHT)
+        var bx = w - 24 - (mini(total, 5) - i) * 19
+        panel(Rect2(bx, oy + 14, 15, 15), Color("ffe36c") if i < done else Color("e6dcc6"), 5, ink)
 
     # ── 상황 칩 ─────────────────────────────────────────
-    var sy = oy + 72
+    var sy = oy + 52
     if game.city_index == 8 and game.stage == 0:
         var low = game.tour.low_tide()
         var remaining = (4.0 if low else 7.0) - fmod(game.game_time, 7.0)
@@ -311,7 +311,10 @@ func draw_explore() -> void:
     deck_button("status", "내 정보" + (" ●" if game.skill_points > 0 else ""), "", Rect2(bx0 + bw + 8, by0, bw, bh), Color("c85068"), 4)
     deck_button("map", "지도", "", Rect2(bx0, by0 + bh + 6, bw, bh), Color("6f9a4e"), 2)
     deck_button("tour_help", "여행 수첩", "", Rect2(bx0 + bw + 8, by0 + bh + 6, bw, bh), Color("4a8a9c"), 1)
-    button("zoom", "시야 넓게" if not game.overview else "시야 기본", Rect2(w - 124, top + 132, 110, 38), false, true, 12)
+    var zoom_rect = Rect2(w - 98, sy, 84, 32)
+    plate(zoom_rect, Color("8a7fb0"), cream, 12, 2)
+    txt("넓게 보기" if not game.overview else "가까이 보기", zoom_rect.position.x, sy + 21, 12, ink, 84, HORIZONTAL_ALIGNMENT_CENTER)
+    buttons["zoom"] = zoom_rect
     if game.stage == 4: button("album", "추억 앨범", Rect2(14, dy + 10, 118, 38), false, true, 13)
     if not game.save_ok: txt("저장 공간을 확인해 주세요.", 14, dy - 8, 10, rose, w - 28, HORIZONTAL_ALIGNMENT_CENTER)
 

@@ -57,13 +57,38 @@ var cam = Vector2.ZERO       # 화면 중심이 보는 월드 좌표 (x, z)
 var org = Vector2.ZERO       # 월드 (0,0)이 찍히는 화면 좌표
 var view = Rect2()           # 월드를 그리는 화면 영역
 var pal = {}
+var k = 1.0                  # 소품 크기 단위 (u 에 비례)
+var mute = Color("b3bca6")
+var out = Color("343b41")
+var shade = Color(0.16, 0.2, 0.17, 0.22)
+var g0 = Color.WHITE
+var g1 = Color.WHITE
+var gm = Color.WHITE
+var gd = Color.WHITE
+var p0 = Color.WHITE
+var p1 = Color.WHITE
+var pe = Color.WHITE
+var a0 = Color.WHITE
+var a1 = Color.WHITE
+var a2 = Color.WHITE
+var leaf0 = Color.WHITE
+var leaf1 = Color.WHITE
+var leaf2 = Color.WHITE
+const CANOPY = [[10, -52], [18, -48], [22, -42], [24, -34], [22, -26], [16, -20]]
 var items: Array = []
 
-const MAP = Vector2(14.6, 15.2)
+const MAP = Vector2(13.4, 14.4)
 
 func col(key: String, fallback: String = "7a9a68") -> Color:
     if pal.has(key): return Color(pal[key])
     return Color(fallback)
+
+# 전투씬과 같은 차분한 톤: 도시 색을 세이지 회색 쪽으로 당긴다
+func tone(key: String, t: float = 0.42) -> Color:
+    return col(key).lerp(mute, t)
+
+func soft(hex: String, t: float = 0.18) -> Color:
+    return Color(hex).lerp(mute, t)
 
 func block(c: Control, x: float, y: float, w: float, h: float, color: Color) -> void:
     if w <= 0 or h <= 0: return
@@ -77,6 +102,9 @@ func wrect(c: Control, r: Rect2, color: Color) -> void:
     var p = at(r.position.x, r.position.y)
     var q = at(r.end.x, r.end.y)
     block(c, p.x, p.y, q.x - p.x, q.y - p.y, color)
+
+func noise(i: float, j: float) -> float:
+    return fposmod(sin(i * 127.1 + j * 311.7) * 43758.5453, 1.0)
 
 func sprite(c: Control, rows: Array, foot: Vector2, s: float, palette: Dictionary) -> void:
     var ox = roundf(foot.x - rows[0].length() * s / 2.0)
@@ -111,282 +139,322 @@ func mob(c: Control, art: String, foot: Vector2, s: float) -> void:
     for part in Pixels.PARTS[art]:
         c.draw_rect(Rect2(o + (Vector2(part[0], part[1]) - lo) * s, Vector2(part[2], part[3]) * s), Color(part[4]))
 
-func shadow(c: Control, foot: Vector2, w: float) -> void:
-    block(c, foot.x - w / 2, foot.y - 2, w, 5, Color(0.11, 0.07, 0.04, 0.22))
+func shadow(c: Control, foot: Vector2, w: float, h: float = 6.0) -> void:
+    block(c, foot.x - w / 2, foot.y - h / 2, w, h, shade)
 
 # ── 카메라 ────────────────────────────────────────────────
 func setup(c: Control, g) -> void:
     pal = g.city().pal
     view = Rect2(0, 0, c.w, c.flat_bottom())
-    u = maxf(view.size.y / 22.6, view.size.x / 17.4)
-    if g.overview: u *= 0.80
-    var lead = Vector2(g.move_vel.x, g.move_vel.z) * 0.30
-    var want = Vector2(g.hero.position.x, g.hero.position.z) + lead
+    u = view.size.x / (14.6 if g.overview else 10.6)
+    k = u * 0.036
+    var lead = Vector2(g.move_vel.x, g.move_vel.z) * 0.25
+    var want = Vector2(g.hero.position.x, g.hero.position.z - 0.6) + lead
     var half = Vector2(view.size.x, view.size.y) / (2.0 * u)
     var lx = maxf(0.0, MAP.x - half.x)
     var lz = maxf(0.0, MAP.y - half.y)
     cam = Vector2(clampf(want.x, - lx, lx), clampf(want.y, - lz, lz))
     org = Vector2(view.size.x / 2.0, view.size.y / 2.0) - cam * u
+    # 이번 프레임에 쓸 색
+    g0 = tone("g0"); g1 = g0.lerp(tone("g1"), 0.22); gm = tone("g1").lerp(tone("g2"), 0.35); gd = tone("g1").lerp(tone("g2"), 0.5)
+    p0 = tone("p0", 0.3); p1 = p0.lerp(tone("p2"), 0.22); pe = p0.lerp(tone("p2"), 0.55)
+    a0 = tone("a0", 0.3); a1 = tone("a1", 0.38); a2 = tone("a2", 0.4)
+    leaf0 = tone("tr0", 0.4); leaf1 = tone("tr1", 0.42); leaf2 = tone("tr2", 0.4).lerp(out, 0.15)
 
 func on_screen(wx: float, wz: float, pad: float = 2.0) -> bool:
     var p = at(wx, wz)
     return p.x > view.position.x - pad * u and p.x < view.end.x + pad * u and p.y > view.position.y - pad * u and p.y < view.end.y + pad * u
 
+func in_water(g, wx: float, wz: float) -> bool:
+    for r in g.world.water_zones:
+        if r.has_point(Vector2(wx, wz)): return true
+    return false
+
 # ── 바닥 ──────────────────────────────────────────────────
 func ground(c: Control, g) -> void:
-    block(c, view.position.x, view.position.y, view.size.x, view.size.y, col("g2"))
-    wrect(c, Rect2(-13.4, -14.4, 26.8, 28.8), col("g1"))
-    if g.city_index == 0:
-        wrect(c, Rect2(-13.2, -13.5, 26.4, 15.0), col("g0"))
-        wrect(c, Rect2(-13.2, 4.1, 26.4, 9.8), col("g0"))
-    else:
-        wrect(c, Rect2(-13.3, -14.3, 26.6, 28.6), col("g0"))
-    # 키 큰 풀숲 (파리의 잔디밭 표시)
-    for zone in g.world.grass_zones:
-        wrect(c, zone, col("tr1"))
-        var zp = at(zone.position.x, zone.position.y)
-        var blades = mini(int(zone.size.x * 3), 18)
-        for i in range(blades):
-            for j in range(3):
-                block(c, zp.x + (i + 0.3) * zone.size.x * u / blades, zp.y + (j + 0.25) * zone.size.y * u / 3.0, 3, 7, col("tr0") if (i + j) % 3 else col("tr2"))
-    # 풀 질감 — 보이는 범위만 성글게
-    var step = 1.7
-    var x0 = snappedf(cam.x - view.size.x / (2.0 * u) - step, step)
-    var z0 = snappedf(cam.y - view.size.y / (2.0 * u) - step, step)
-    var nx = mini(int(view.size.x / (step * u)) + 3, 14)
-    var nz = mini(int(view.size.y / (step * u)) + 3, 18)
-    var tuft0 = col("tr0")
-    var tuft1 = col("g2")
+    block(c, view.position.x, view.position.y, view.size.x, view.size.y, gd)
+    wrect(c, Rect2(-13.4, -14.4, 26.8, 28.8), g0)
+    var x0 = floorf(cam.x - view.size.x / (2.0 * u)) - 1.0
+    var z0 = floorf(cam.y - view.size.y / (2.0 * u)) - 1.0
+    var nx = int(ceilf(view.size.x / u)) + 2
+    var nz = int(ceilf(view.size.y / u)) + 2
+    # 한 칸씩 엇갈리는 잔디 무늬
     for i in range(nx):
         for j in range(nz):
-            var wx = x0 + i * step + fmod(j * 0.61, 1.1)
-            var wz = z0 + j * step + fmod(i * 0.83, 1.0)
-            if absf(wx) > 13.0 or absf(wz) > 14.0: continue
-            if g.world.on_path(Vector3(wx, 0, wz)): continue
-            var p = at(wx, wz)
-            block(c, p.x, p.y - 3, 3, 5, tuft0 if (i + j) % 3 == 0 else tuft1)
+            var wx = x0 + i
+            var wz = z0 + j
+            if wx < -13.4 or wx >= 13.4 or wz < -14.4 or wz >= 14.4: continue
+            if int(wx + wz + 64) % 2 == 1:
+                var p = at(wx, wz)
+                block(c, p.x, p.y, u, u, g1)
+    # 키 큰 풀숲 (파리의 잔디밭 표시)
+    for zone in g.world.grass_zones:
+        wrect(c, zone, leaf1.lerp(g0, 0.35))
+        var zp = at(zone.position.x, zone.position.y)
+        var blades = mini(int(zone.size.x * 2.5), 16)
+        for i in range(blades):
+            for j in range(3):
+                block(c, zp.x + (i + 0.3) * zone.size.x * u / blades, zp.y + (j + 0.2) * zone.size.y * u / 3.0, 3, 9, leaf2 if (i + j) % 3 == 0 else leaf0)
+    # ㄴ자 풀과 작은 꽃 (전투 화면 풀과 같은 모양)
+    for i in range(nx):
+        for j in range(nz):
+            var tx = x0 + i
+            var tz = z0 + j
+            var r = noise(tx, tz)
+            if r > 0.42: continue
+            var fx = tx + 0.2 + noise(tx + 7.0, tz) * 0.6
+            var fz = tz + 0.2 + noise(tx, tz + 7.0) * 0.6
+            if absf(fx) > 13.2 or absf(fz) > 14.2: continue
+            if g.world.on_path(Vector3(fx, 0, fz)) or in_water(g, fx, fz): continue
+            var q = at(fx, fz)
+            if r < 0.05:
+                block(c, q.x, q.y, 4, 4, tone("f0", 0.25)); block(c, q.x + 1, q.y + 4, 2, 4, gm)
+            elif r < 0.09:
+                block(c, q.x, q.y, 4, 4, tone("f1", 0.2)); block(c, q.x + 1, q.y + 4, 2, 4, gm)
+            else:
+                block(c, q.x, q.y, 3, 7, gm); block(c, q.x + 3, q.y + 4, 6, 3, gm)
 
 func water(c: Control, g) -> void:
     for r in g.world.water_zones:
-        wrect(c, r, col("a1"))
+        wrect(c, r, a1)
         var top = at(r.position.x, r.position.y)
         var bot = at(r.position.x, r.end.y)
-        block(c, top.x, top.y, r.size.x * u, 3, col("a2"))
-        block(c, bot.x, bot.y - 3, r.size.x * u, 3, col("a2"))
-        for i in range(14):
+        var wide = r.size.x * u
+        if r.size.x >= r.size.y:
+            block(c, top.x, top.y, wide, 5, gd); block(c, top.x, top.y + 5, wide, 5, a2)
+            block(c, bot.x, bot.y - 4, wide, 4, a2)
+        else:
+            block(c, top.x, top.y, 5, r.size.y * u, gd); block(c, top.x + 5, top.y, 5, r.size.y * u, a2)
+        for i in range(26):
             var wx = r.position.x + r.size.x * fmod(i * 0.317 + g.clock_time * 0.014, 1.0)
-            var wz = r.position.y + r.size.y * (0.22 + fmod(i * 0.29, 0.58))
+            var wz = r.position.y + r.size.y * (0.2 + fmod(i * 0.29, 0.6))
             var p = at(wx, wz)
-            block(c, p.x, p.y, maxf(4, r.size.x * u * 0.035), 2, col("a0"))
+            block(c, p.x, p.y, 18, 3, a0); block(c, p.x + 6, p.y + 5, 10, 3, a0)
 
 func paths(c: Control, g) -> void:
-    for r in g.world.roads:
-        wrect(c, r, col("p0"))
+    for r in g.world.roads: wrect(c, r, p0)
+    # 돌바닥 줄눈
+    var bw = u * 0.9
+    var bh = u * 0.5
     for r in g.world.roads:
         var p = at(r.position.x, r.position.y)
         var q = at(r.end.x, r.end.y)
-        block(c, p.x, p.y, q.x - p.x, 2, col("p2"))
-        block(c, p.x, q.y - 2, q.x - p.x, 2, col("p2"))
-        # 가운데 점선
-        if r.size.y > r.size.x:
-            var cx = (p.x + q.x) / 2
-            var n = int(r.size.y / 1.6)
-            for i in range(mini(n, 22)):
-                block(c, cx - 1, p.y + (i + 0.4) * 1.6 * u, 2, u * 0.5, col("p1"))
-        else:
-            var cy = (p.y + q.y) / 2
-            var n2 = int(r.size.x / 1.6)
-            for i in range(mini(n2, 22)):
-                block(c, p.x + (i + 0.4) * 1.6 * u, cy - 1, u * 0.5, 2, col("p1"))
+        var row = 0
+        var y = p.y
+        while y < q.y:
+            if y <= view.end.y and y + bh >= view.position.y:
+                block(c, p.x, y, q.x - p.x, 2, p1)
+                var x = p.x + (bw / 2.0 if row % 2 == 1 else 0.0)
+                while x < q.x:
+                    if x <= view.end.x and x >= view.position.x - bw: block(c, x, y, 2, minf(bh, q.y - y), p1)
+                    x += bw
+            y += bh; row += 1
+    # 가장자리 턱 — 다른 길과 만나는 쪽은 건너뛴다
+    var step = 0.5
+    for r in g.world.roads:
+        for side in range(4):
+            var along_x = side < 2
+            var count = int(round((r.size.x if along_x else r.size.y) / step))
+            for i in range(count):
+                var ex = r.position.x + ((i + 0.5) * step if along_x else (r.size.x if side == 3 else 0.0))
+                var ez = r.position.y + ((r.size.y if side == 1 else 0.0) if along_x else (i + 0.5) * step)
+                var e = at(ex, ez)
+                if e.x < view.position.x - u or e.x > view.end.x + u or e.y < view.position.y - u or e.y > view.end.y + u: continue
+                var probe = Vector3(ex + (-0.1 if side == 2 else (0.1 if side == 3 else 0.0)), 0, ez + (-0.1 if side == 0 else (0.1 if side == 1 else 0.0)))
+                if g.world.on_path(probe): continue
+                if along_x: block(c, e.x - step * u / 2.0, e.y - (3 if side == 1 else 0), step * u, 3, pe)
+                else: block(c, e.x - (3 if side == 3 else 0), e.y - step * u / 2.0, 3, step * u, pe)
     for r in g.world.bridges:
-        wrect(c, r, col("w0"))
         var p = at(r.position.x, r.position.y)
         var q = at(r.end.x, r.end.y)
-        if r.size.x > r.size.y:
-            block(c, p.x, p.y, q.x - p.x, 3, col("r1"))
-            block(c, p.x, q.y - 3, q.x - p.x, 3, col("r1"))
+        var deck = tone("w0", 0.2)
+        var rail = tone("r1", 0.35)
+        block(c, p.x, p.y, q.x - p.x, q.y - p.y, deck)
+        if r.size.y >= r.size.x:
+            var y = p.y + 8
+            while y < q.y:
+                block(c, p.x + 6, y, q.x - p.x - 12, 2, deck.lerp(tone("w2"), 0.25)); y += 14
+            block(c, p.x - 2, p.y, 8, q.y - p.y, out); block(c, p.x, p.y, 4, q.y - p.y, rail)
+            block(c, q.x - 6, p.y, 8, q.y - p.y, out); block(c, q.x - 4, p.y, 4, q.y - p.y, rail)
         else:
-            block(c, p.x, p.y, 3, q.y - p.y, col("r1"))
-            block(c, q.x - 3, p.y, 3, q.y - p.y, col("r1"))
+            var x = p.x + 8
+            while x < q.x:
+                block(c, x, p.y + 6, 2, q.y - p.y - 12, deck.lerp(tone("w2"), 0.25)); x += 14
+            block(c, p.x, p.y - 2, q.x - p.x, 8, out); block(c, p.x, p.y, q.x - p.x, 4, rail)
+            block(c, p.x, q.y - 6, q.x - p.x, 8, out); block(c, p.x, q.y - 4, q.x - p.x, 4, rail)
 
 # ── 입체물 ────────────────────────────────────────────────
 func house(c: Control, d: Dictionary) -> void:
-    var r = Rect2(d.x - d.bw / 2, d.z - d.bd / 2, d.bw, d.bd)
-    var p = at(r.position.x, r.position.y)
-    var q = at(r.end.x, r.end.y)
+    var p = at(d.x - d.bw / 2, d.z - d.bd / 2)
+    var q = at(d.x + d.bw / 2, d.z + d.bd / 2)
     var w = q.x - p.x
     var h = q.y - p.y
-    var wall = Color(d.wall)
-    var roof = Color(d.roof)
-    block(c, p.x + 4, p.y + 7, w, h, Color(0.11, 0.07, 0.04, 0.20))
-    block(c, p.x, p.y, w, h, wall)
-    block(c, p.x, p.y, w, maxf(7, h * 0.30), roof)
-    var o = col("out", "2a1c18")
-    block(c, p.x, p.y, w, 3, o)
-    block(c, p.x, q.y - 3, w, 3, o)
-    block(c, p.x, p.y, 3, h, o)
-    block(c, q.x - 3, p.y, 3, h, o)
-    block(c, p.x + 3, p.y + maxf(7, h * 0.30), w - 6, 2, o)
-    var top = p.y + maxf(7, h * 0.30) + 8
-    var cols = maxi(1, int((w - 20) / 26))
-    var rows = maxi(1, int((q.y - 10 - top) / 24))
-    var ox = (w - (cols * 26 - 8)) / 2
-    for i in range(cols):
-        for j in range(rows):
-            var wx = p.x + ox + i * 26
-            var wy = top + j * 24
-            block(c, wx - 1, wy - 1, 20, 18, o)
-            block(c, wx, wy, 18, 16, col("a0"))
-            block(c, wx, wy, 18, 5, Color(1, 1, 1, 0.35))
-    # 문
-    block(c, (p.x + q.x) / 2 - 8, q.y - 17, 16, 14, roof)
-    block(c, (p.x + q.x) / 2 - 9, q.y - 18, 18, 2, o)
+    var wall = soft(d.wall)
+    var roof = soft(d.roof, 0.2)
+    var roof_d = roof.lerp(out, 0.3)
+    var roof_l = roof.lerp(Color.WHITE, 0.25)
+    block(c, p.x + 6, p.y + 10, w, h, shade)
+    var rh = roundf(h * 0.46)
+    block(c, p.x - 4, p.y - 6, w + 8, rh + 6, out); block(c, p.x - 1, p.y - 3, w + 2, rh, roof); block(c, p.x - 1, p.y - 3, w + 2, 4, roof_l)
+    var ty = p.y + 8
+    var band = 0
+    while ty < p.y + rh - 6:
+        block(c, p.x - 1, ty, w + 2, 2, roof_d)
+        var tx = p.x + (7.0 if band % 2 == 1 else 0.0)
+        while tx < p.x + w:
+            block(c, tx, ty, 2, 9, roof_d); tx += 14
+        ty += 9; band += 1
+    if w > 110:
+        block(c, p.x + w * 0.72, p.y - 16, 16, 18, out); block(c, p.x + w * 0.72 + 3, p.y - 13, 10, 14, wall.lerp(out, 0.25))
+    var wy = p.y + rh
+    block(c, p.x, wy, w, h - rh, out); block(c, p.x + 3, wy + 3, w - 6, h - rh - 6, wall); block(c, p.x + 3, wy + 3, w - 6, 4, wall.lerp(Color.WHITE, 0.3))
+    var stripes = int((w - 10) / 12)
+    for i in range(stripes + 1):
+        block(c, p.x + 5 + i * 12, wy + 8, minf(12, w - 10 - i * 12), 9, Color("fff8e8") if i % 2 == 1 else roof)
+    block(c, p.x + 5, wy + 17, w - 10, 2, out)
+    var cx = p.x + w / 2
+    var by = q.y - 3
+    if h - rh > 52:
+        block(c, cx - 13, by - 34, 26, 34, out); block(c, cx - 10, by - 31, 20, 31, roof_d); block(c, cx - 10, by - 31, 20, 4, roof_l); block(c, cx + 4, by - 17, 3, 3, Color("f6d58b"))
+        if w > 120:
+            for side in [-1, 1]:
+                var wx = cx + side * (w * 0.3) - 15
+                block(c, wx, by - 36, 30, 26, out); block(c, wx + 3, by - 33, 24, 20, soft(String(pal.a0), 0.25)); block(c, wx + 3, by - 33, 24, 5, Color(1, 1, 1, 0.6)); block(c, wx + 14, by - 33, 2, 20, out)
+                block(c, wx - 2, by - 11, 34, 5, out); block(c, wx, by - 10, 30, 3, tone("f0", 0.2))
+    var title = String(d.get("title", ""))
+    if title != "":
+        var tw = c.font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 18
+        block(c, cx - tw / 2 - 2, wy - 13, tw + 4, 22, out); block(c, cx - tw / 2, wy - 11, tw, 18, Color("fff8e8"))
+        c.txt(title, cx - tw / 2, wy + 3, 13, c.ink, tw, HORIZONTAL_ALIGNMENT_CENTER)
 
 func tree(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042 * d.get("s", 1.0)
-    var o = col("out", "2a1c18")
-    shadow(c, p, 18 * s)
-    var kind = d.get("kind", "tree")
+    var s = k * float(d.get("s", 1.0))
+    var kind = String(d.get("kind", "tree"))
+    shadow(c, p, 30 * s, 8 * s)
     if kind == "palm":
-        block(c, p.x - 2 * s, p.y - 26 * s, 4 * s, 26 * s, Color("b28e5b"))
+        block(c, p.x - 4 * s, p.y - 44 * s, 8 * s, 46 * s, out); block(c, p.x - 2.5 * s, p.y - 43 * s, 5 * s, 44 * s, Color("b0926a"))
         for i in range(6):
             var a = i * TAU / 6.0
-            block(c, p.x + cos(a) * 11 * s - 5 * s, p.y - 30 * s + sin(a) * 5 * s, 10 * s, 5 * s, col("tr1"))
+            var lx = p.x + cos(a) * 15 * s
+            var ly = p.y - 48 * s + sin(a) * 7 * s
+            block(c, lx - 10 * s - 2, ly - 4 * s - 2, 20 * s + 4, 8 * s + 4, out); block(c, lx - 10 * s, ly - 4 * s, 20 * s, 8 * s, leaf1 if i % 2 == 0 else leaf0)
         return
     if kind == "bamboo":
-        for k in range(3):
-            var bx = p.x + (k - 1) * 5 * s
-            block(c, bx - 2 * s, p.y - (30 + k * 4) * s, 4 * s, (30 + k * 4) * s, Color("719257"))
-            block(c, bx - 3 * s, p.y - 16 * s, 6 * s, 2 * s, Color("bdc58a"))
-        block(c, p.x - 12 * s, p.y - 38 * s, 24 * s, 7 * s, col("tr1"))
+        for n in range(3):
+            var bx = p.x + (n - 1) * 8 * s
+            var tall = (46 + n * 6) * s
+            block(c, bx - 3 * s, p.y - tall, 6 * s, tall, out); block(c, bx - 2 * s, p.y - tall + s, 4 * s, tall - s, Color("7f9a66"))
+            block(c, bx - 3 * s, p.y - tall * 0.5, 6 * s, 2 * s, Color("c3caa0"))
+        block(c, p.x - 18 * s, p.y - 60 * s, 36 * s, 10 * s, out); block(c, p.x - 16 * s, p.y - 58 * s, 32 * s, 6 * s, leaf0)
         return
-    block(c, p.x - 2.5 * s, p.y - 16 * s, 5 * s, 18 * s, Color("7a5230"))
-    var leaf = col("tr1")
-    if kind == "cherry": leaf = Color("e9b4c5")
-    if kind == "snow": leaf = Color("e8eff6")
-    block(c, p.x - 14 * s, p.y - 34 * s, 28 * s, 20 * s, leaf)
-    block(c, p.x - 10 * s, p.y - 41 * s, 20 * s, 9 * s, leaf)
-    block(c, p.x - 16 * s, p.y - 30 * s, 3 * s, 12 * s, o)
-    block(c, p.x + 13 * s, p.y - 30 * s, 3 * s, 12 * s, o)
-    block(c, p.x - 11 * s, p.y - 32 * s, 8 * s, 6 * s, col("tr0") if kind == "tree" else leaf.lightened(0.18))
+    var body = leaf1
+    var light = leaf0
+    var dark = leaf2
+    if kind == "cherry":
+        body = Color("e6b9c6"); light = Color("f3d3dc"); dark = Color("c995a6")
+    elif kind == "snow":
+        body = Color("dfe9ee"); light = Color("f6fafb"); dark = Color("b9cdd8")
+    block(c, p.x - 4 * s, p.y - 18 * s, 8 * s, 20 * s, out); block(c, p.x - 2.5 * s, p.y - 17 * s, 5 * s, 18 * s, Color("8a6a4c"))
+    for row in CANOPY: block(c, p.x - row[0] * s - 2, p.y + row[1] * s - 2, row[0] * 2 * s + 4, 8 * s + 4, out)
+    for row in CANOPY: block(c, p.x - row[0] * s, p.y + row[1] * s, row[0] * 2 * s, 8 * s, body)
+    block(c, p.x - 14 * s, p.y - 46 * s, 14 * s, 6 * s, light); block(c, p.x - 18 * s, p.y - 38 * s, 12 * s, 6 * s, light); block(c, p.x - 6 * s, p.y - 50 * s, 10 * s, 4 * s, light)
+    block(c, p.x + 6 * s, p.y - 28 * s, 14 * s, 6 * s, dark); block(c, p.x - 2 * s, p.y - 21 * s, 16 * s, 5 * s, dark); block(c, p.x + 12 * s, p.y - 36 * s, 8 * s, 6 * s, dark)
 
 func lamp(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    shadow(c, p, 10 * s)
-    block(c, p.x - 1.5 * s, p.y - 30 * s, 3 * s, 30 * s, Color("5c6470"))
-    block(c, p.x - 5 * s, p.y - 39 * s, 10 * s, 9 * s, col("f1"))
-    block(c, p.x - 5 * s, p.y - 39 * s, 10 * s, 2 * s, col("out", "2a1c18"))
+    shadow(c, p, 14 * k, 5 * k)
+    block(c, p.x - 3 * k, p.y - 4 * k, 6 * k, 5 * k, out); block(c, p.x - 2 * k, p.y - 40 * k, 4 * k, 40 * k, out); block(c, p.x - k, p.y - 39 * k, 2 * k, 38 * k, Color("6d7a80"))
+    block(c, p.x - 7 * k, p.y - 54 * k, 14 * k, 15 * k, out); block(c, p.x - 5 * k, p.y - 52 * k, 10 * k, 11 * k, Color("f6d98b")); block(c, p.x - 5 * k, p.y - 52 * k, 10 * k, 3 * k, Color("fff4cd"))
+    block(c, p.x - 8 * k, p.y - 57 * k, 16 * k, 4 * k, out)
 
 func flowerbed(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    block(c, p.x - 15 * s, p.y - 6 * s, 30 * s, 12 * s, Color("b08a5e"))
-    block(c, p.x - 13 * s, p.y - 10 * s, 26 * s, 5 * s, col("tr1"))
-    for i in range(6):
-        block(c, p.x - 12 * s + i * 4.2 * s, p.y - 13 * s, 3 * s, 3 * s, col("f0") if i % 2 else col("f1"))
+    block(c, p.x - 22 * k, p.y - 12 * k, 44 * k, 20 * k, out); block(c, p.x - 20 * k, p.y - 4 * k, 40 * k, 10 * k, Color("b08a66")); block(c, p.x - 20 * k, p.y - 10 * k, 40 * k, 7 * k, leaf1)
+    for i in range(7): block(c, p.x - 18 * k + i * 5.6 * k, p.y - 15 * k, 4 * k, 5 * k, tone("f0", 0.15) if i % 2 == 1 else tone("f1", 0.12))
 
 func bench(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    shadow(c, p, 22 * s)
-    block(c, p.x - 11 * s, p.y - 6 * s, 22 * s, 5 * s, Color("a8763e"))
-    block(c, p.x - 11 * s, p.y - 12 * s, 22 * s, 5 * s, Color("c08a4e"))
-    block(c, p.x - 9 * s, p.y - 1 * s, 3 * s, 6 * s, Color("7a5230"))
-    block(c, p.x + 6 * s, p.y - 1 * s, 3 * s, 6 * s, Color("7a5230"))
+    shadow(c, p, 34 * k, 6 * k)
+    block(c, p.x - 17 * k, p.y - 20 * k, 34 * k, 17 * k, out); block(c, p.x - 15 * k, p.y - 18 * k, 30 * k, 5 * k, Color("c79a66")); block(c, p.x - 15 * k, p.y - 11 * k, 30 * k, 6 * k, Color("b48655"))
+    block(c, p.x - 14 * k, p.y - 3 * k, 4 * k, 6 * k, out); block(c, p.x + 10 * k, p.y - 3 * k, 4 * k, 6 * k, out)
 
 func tower(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    var o = col("out", "2a1c18")
-    shadow(c, p, 46 * s)
-    for i in range(16):
-        var t = i / 15.0
-        var w = (5 + 42 * t * t) * s
-        var y = p.y - (16 - i) * 4.6 * s
-        block(c, p.x - w / 2 - s, y, w + 2 * s, 5 * s, o)
-        block(c, p.x - w / 2, y, w, 4 * s, Color("c8ae84") if i % 3 else Color("8a7352"))
-    block(c, p.x - 2 * s, p.y - 86 * s, 4 * s, 12 * s, o)
-    block(c, p.x - s, p.y - 85 * s, 2 * s, 11 * s, Color("c8ae84"))
+    shadow(c, p, 70 * k, 10 * k)
+    var c0 = Color("bfae8f")
+    var c1 = Color("8f8068")
+    for i in range(22):
+        var t = i / 21.0
+        var w = (6 + 62 * t * t) * k
+        block(c, p.x - w / 2 - 2, p.y - (22 - i) * 5.4 * k - 1, w + 4, 5.4 * k + 2, out)
+    for i in range(22):
+        var t2 = i / 21.0
+        var w2 = (6 + 62 * t2 * t2) * k
+        var y = p.y - (22 - i) * 5.4 * k
+        block(c, p.x - w2 / 2, y, w2, 5.4 * k, c1 if i % 4 == 3 else c0)
+        if i > 8 and i % 4 != 3: block(c, p.x - w2 * 0.28, y, w2 * 0.56, 5.4 * k, g0)
+    block(c, p.x - 3 * k, p.y - 138 * k, 6 * k, 20 * k, out); block(c, p.x - 1.5 * k, p.y - 136 * k, 3 * k, 18 * k, c0)
 
 func monument(c: Control, d: Dictionary) -> void:
-    var r = Rect2(d.x - d.bw / 2, d.z - d.bd / 2, d.bw, d.bd)
-    var p = at(r.position.x, r.position.y)
-    var q = at(r.end.x, r.end.y)
-    var o = col("out", "2a1c18")
-    block(c, p.x + 4, p.y + 7, q.x - p.x, q.y - p.y, Color(0.11, 0.07, 0.04, 0.20))
-    block(c, p.x, p.y, q.x - p.x, q.y - p.y, col("w1"))
-    block(c, p.x, p.y, q.x - p.x, maxf(6, (q.y - p.y) * 0.3), col("w2"))
-    block(c, p.x, p.y, q.x - p.x, 3, o)
-    block(c, p.x, q.y - 3, q.x - p.x, 3, o)
-    block(c, p.x, p.y, 3, q.y - p.y, o)
-    block(c, q.x - 3, p.y, 3, q.y - p.y, o)
+    var p = at(d.x - d.bw / 2, d.z - d.bd / 2)
+    var q = at(d.x + d.bw / 2, d.z + d.bd / 2)
+    var w = q.x - p.x
+    var h = q.y - p.y
+    var stone = tone("w1", 0.3)
+    block(c, p.x + 5, p.y + 8, w, h, shade)
+    block(c, p.x - 2, p.y - 8, w + 4, h + 8, out); block(c, p.x + 1, p.y - 5, w - 2, h + 2, stone); block(c, p.x + 1, p.y - 5, w - 2, maxf(5, h * 0.3), stone.lerp(Color.WHITE, 0.35))
+    block(c, p.x + 1, q.y - maxf(4, h * 0.22), w - 2, maxf(4, h * 0.22) - 3, stone.lerp(out, 0.25))
 
 func prop(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    var o = col("out", "2a1c18")
-    shadow(c, p, 16 * s)
-    var body = col("r1") if d.get("done", false) == false else col("tr1")
-    block(c, p.x - 9 * s, p.y - 20 * s, 18 * s, 20 * s, o)
-    block(c, p.x - 7 * s, p.y - 18 * s, 14 * s, 16 * s, body)
-    block(c, p.x - 7 * s, p.y - 18 * s, 14 * s, 4 * s, Color(1, 1, 1, 0.30))
+    shadow(c, p, 26 * k, 6 * k)
+    var gem = tone("tr1", 0.2) if bool(d.get("done", false)) else tone("r1", 0.2)
+    block(c, p.x - 12 * k, p.y - 10 * k, 24 * k, 10 * k, out); block(c, p.x - 10 * k, p.y - 8 * k, 20 * k, 6 * k, Color("cdbf9c"))
+    block(c, p.x - 9 * k, p.y - 34 * k, 18 * k, 26 * k, out); block(c, p.x - 7 * k, p.y - 32 * k, 14 * k, 22 * k, gem); block(c, p.x - 7 * k, p.y - 32 * k, 14 * k, 5 * k, gem.lerp(Color.WHITE, 0.4))
 
 func pickup(c: Control, d: Dictionary, t: float) -> void:
-    var bob = sin(t * 3.0 + d.x) * u * 0.07
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    var o = col("out", "2a1c18")
-    shadow(c, p, 14 * s)
-    var y = p.y - 16 * s + bob
-    block(c, p.x - 8 * s, y, 16 * s, 16 * s, o)
-    block(c, p.x - 6 * s, y + 2 * s, 12 * s, 12 * s, col("f1"))
-    block(c, p.x - 6 * s, y + 2 * s, 12 * s, 3 * s, Color("fffbe0"))
+    shadow(c, p, 20 * k, 6 * k)
+    var y = p.y - 26 * k + sin(t * 3.0 + d.x) * 3.0
+    block(c, p.x - 11 * k, y - 2 * k, 22 * k, 24 * k, out); block(c, p.x - 9 * k, y, 18 * k, 20 * k, Color("f4e6c8")); block(c, p.x - 9 * k, y, 18 * k, 6 * k, Color("e0b46a")); block(c, p.x - 4 * k, y + 9 * k, 8 * k, 7 * k, Color("c8553d"))
     for i in range(4):
         var a = i * 1.57 + t * 1.4
-        block(c, p.x + cos(a) * 14 * s, y + 7 * s + sin(a) * 12 * s, 3 * s, 3 * s, Color("fffbe0"))
+        block(c, p.x + cos(a) * 19 * k - 2, y + 10 * k + sin(a) * 16 * k - 2, 4, 4, Color("fffbe0"))
 
 func shop(c: Control, d: Dictionary) -> void:
     var p = at(d.x, d.z)
-    var s = u * 0.042
-    var o = col("out", "2a1c18")
-    shadow(c, p, 36 * s)
-    block(c, p.x - 18 * s, p.y - 24 * s, 36 * s, 24 * s, o)
-    block(c, p.x - 16 * s, p.y - 22 * s, 32 * s, 20 * s, col("w0"))
-    for i in range(4):
-        block(c, p.x - 16 * s + i * 8 * s, p.y - 30 * s, 8 * s, 8 * s, col("r1") if i % 2 else col("w0"))
-    block(c, p.x - 17 * s, p.y - 31 * s, 34 * s, 2 * s, o)
-    block(c, p.x - 6 * s, p.y - 14 * s, 12 * s, 12 * s, col("f1"))
+    shadow(c, p, 56 * k, 8 * k)
+    block(c, p.x - 27 * k, p.y - 36 * k, 54 * k, 36 * k, out); block(c, p.x - 25 * k, p.y - 22 * k, 50 * k, 20 * k, Color("f4e6c8"))
+    for i in range(5): block(c, p.x - 25 * k + i * 10 * k, p.y - 34 * k, 10 * k, 12 * k, Color("fff8e8") if i % 2 == 1 else tone("r1", 0.25))
+    block(c, p.x - 25 * k, p.y - 22 * k, 50 * k, 2 * k, out)
+    block(c, p.x - 18 * k, p.y - 16 * k, 10 * k, 9 * k, Color("e0a85a")); block(c, p.x - 4 * k, p.y - 16 * k, 10 * k, 9 * k, Color("c98b4b")); block(c, p.x + 9 * k, p.y - 16 * k, 9 * k, 9 * k, Color("f6d58b"))
 
 func person(c: Control, foot: Vector2, girl: bool, outfit: Dictionary, hop: float = 0.0) -> void:
     var s = maxf(2.0, roundf(u * 0.075))
-    shadow(c, foot, 11 * s)
+    shadow(c, foot, 13 * s, 2 * s)
     sprite(c, GIRL if girl else BOY, foot - Vector2(0, roundf(hop)), s, outfit)
 
 func pet_draw(c: Control, d: Dictionary, t: float) -> void:
     var foot = at(d.x, d.z)
     if foot.x < view.position.x - 60 or foot.x > view.end.x + 60 or foot.y < view.position.y - 20 or foot.y > view.end.y + 60: return
-    var s = u * 0.055
-    shadow(c, foot, 20 * s)
+    var s = u * 0.058
+    shadow(c, foot, 18 * s, 4 * s)
     var bob = absf(sin(t * 5.0 + d.x * 2.0)) * 2.0
     mob(c, d.art, foot - Vector2(0, bob), s)
     var grade = int(d.get("grade", 0))
     if grade > 0:
-        var tone = Color(d.tone)
+        var spark = Color(d.tone)
         for i in range(3):
-            var a2 = t * 2.2 + i * TAU / 3.0
-            c.draw_rect(Rect2(foot.x + cos(a2) * 14 * s - 2, foot.y - 12 * s + sin(a2) * 7 * s - 2, 4, 4), tone)
+            var spin = t * 2.2 + i * TAU / 3.0
+            c.draw_rect(Rect2(foot.x + cos(spin) * 14 * s - 2, foot.y - 12 * s + sin(spin) * 7 * s - 2, 4, 4), spark)
 
 func marker(c: Control, g) -> void:
     var p = at(g.target.x, g.target.z)
-    var s = u * 0.042
-    var pulse = 0.78 + sin(g.clock_time * 3.4) * 0.22
-    var rad = 15 * s * pulse
-    for i in range(20):
-        var a = i * TAU / 20.0
-        block(c, p.x + cos(a) * rad - 2 * s, p.y + sin(a) * rad * 0.55 - 2 * s, 4 * s, 4 * s, Color("f9cc72"))
-    block(c, p.x - 2 * s, p.y - (26 + sin(g.clock_time * 3.4) * 4) * s, 4 * s, 10 * s, Color("f9cc72"))
+    var rad = 20 * k * (0.86 + sin(g.clock_time * 3.4) * 0.14)
+    for i in range(16):
+        var a = i * TAU / 16.0 + g.clock_time
+        block(c, p.x + cos(a) * rad - 3, p.y + sin(a) * rad * 0.5 - 3, 6, 6, Color("f6cf6a"))
 
 # ── 정렬용 수집 ───────────────────────────────────────────
 func _by_depth(a: Dictionary, b: Dictionary) -> bool:
@@ -413,10 +481,10 @@ func draw(c: Control, g) -> void:
             items.append({ "t": "prop", "x": m.position.x, "z": m.position.z, "done": g.tour.point_done(i)})
     items.append({ "t": "boy", "x": g.partner.position.x, "z": g.partner.position.z})
     items.append({ "t": "girl", "x": g.hero.position.x, "z": g.hero.position.z})
-    for k in range(mini(g.pet_spots.size(), g.pet_team.size())):
-        var friend = g.pets[int(g.pet_team[k])]
+    for n in range(mini(g.pet_spots.size(), g.pet_team.size())):
+        var friend = g.pets[int(g.pet_team[n])]
         var fg = int(friend.get("g", 0))
-        items.append({ "t": "pet", "x": g.pet_spots[k].x, "z": g.pet_spots[k].z, "art": g.pet_art(friend), "grade": fg, "tone": g.GRADES[fg].color})
+        items.append({ "t": "pet", "x": g.pet_spots[n].x, "z": g.pet_spots[n].z, "art": g.pet_art(friend), "grade": fg, "tone": g.GRADES[fg].color})
     if g.story_rival and g.story_rival.visible:
         items.append({ "t": "rival", "x": g.story_rival.position.x, "z": g.story_rival.position.z})
     items.sort_custom(_by_depth)
@@ -444,13 +512,8 @@ func draw(c: Control, g) -> void:
                 var rf = at(d.x, d.z)
                 var art = String(g.city().boss.art)
                 if Pixels.PARTS.has(art):
-                    shadow(c, rf, 26 * u * 0.05)
-                    mob(c, art, rf - Vector2(0, absf(sin(g.clock_time * 2.0)) * 2.0), u * 0.085)
-                    c.txt(String(g.city().boss.name), rf.x - 60, rf.y - mob_size(art).y * u * 0.085 - 8, 12, col("r2", "8a2c44"), 120, HORIZONTAL_ALIGNMENT_CENTER)
+                    shadow(c, rf, 22 * u * 0.07, 6)
+                    mob(c, art, rf - Vector2(0, absf(sin(g.clock_time * 2.0)) * 2.0), u * 0.07)
+                    c.txt(String(g.city().boss.name), rf.x - 60, rf.y - mob_size(art).y * u * 0.07 - 8, 12, out, 120, HORIZONTAL_ALIGNMENT_CENTER)
                 else:
                     person(c, rf, false, boy_look)
-    # 건물 이름표
-    for d in g.world.flat:
-        if d.t == "house" and d.get("title", "") != "" and on_screen(d.x, d.z, 2.0):
-            var p = at(d.x, d.z - d.bd / 2)
-            c.txt(d.title, p.x - 70, p.y - 8, 12, col("out", "2a1c18"), 140, HORIZONTAL_ALIGNMENT_CENTER)
