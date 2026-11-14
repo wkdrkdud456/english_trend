@@ -311,3 +311,42 @@ func build(world: Node3D, city: int) -> void:
     w.box(stand, Vector3(0, 0.45, -0.55), Vector3(1.8, 0.8, 0.65), data.pal.r1)
     w.sign3d(stand, Vector3(0, 1.55, -0.55), data.shop, 23, "35524d")
     w.merge_static_geometry(); w.prepare_occluders()
+
+# ── 세부 구역 ─────────────────────────────────────────────
+func tree_kind() -> String:
+    return { 1: "bamboo", 2: "palm", 5: "snow", 8: "palm", 9: "cherry"}.get(index, "tree")
+
+func build_area(world: Node3D, city: int, zone: int) -> void:
+    w = world; index = city; data = Cities.CITIES[index]
+    w.roads.clear(); w.water_zones.clear(); w.bridges.clear(); w.grass_zones.clear()
+    w.box(w, Vector3(0, -0.65, 0), Vector3(27, 1.2, 29), data.pal.p2)
+    w.box(w, Vector3(0, 0.015, 0), Vector3(26.8, 0.14, 28.8), data.pal.g0)
+    var wall = String(data.pal.w1)
+    var roof = String(data.pal.r1)
+    var roof2 = String(data.pal.a2)
+    var kind = tree_kind()
+    if zone == 1:
+        # 골목: 큰길 하나와 한 바퀴 도는 뒷길, 집이 빽빽하다
+        for rect in [Rect2(-10, -1, 21.6, 2), Rect2(-9, -8, 2, 16), Rect2(-9, -8, 12, 2), Rect2(-9, 6, 12, 2), Rect2(1, -8, 2, 16)]: road(rect)
+        house(-3.5, -3.8, 3.4, 2.6, 2.2, wall, roof); house(-3.5, 3.8, 3.4, 2.6, 2.2, wall, roof2)
+        house(6.5, -5.2, 3.2, 2.8, 2.4, wall, roof2); house(6.5, 5.0, 3.2, 2.8, 2.0, wall, roof)
+        house(-3.5, -10.6, 3.0, 2.2, 1.8, wall, roof); house(9.8, -9.8, 2.8, 2.4, 2.0, wall, roof)
+        for p in [ [-11.2, -10.5], [-11.2, 4], [4.5, -10.5], [10.8, 3.5], [-11, 10.5], [5, 10.8], [10.5, 10.5]]: tree(p[0], p[1], kind)
+        w.gates.append({ "x": 11.2, "z": 0.0, "to": 0, "label": String(data.name) + " 중심가"})
+        w.flat.append({ "t": "gate", "x": 11.2, "z": 0.0, "label": String(data.name) + " 중심가"})
+        w.chests.append({ "x": 0.2, "z": -10.2, "i": 0}); w.chests.append({ "x": -5.5, "z": 9.6, "i": 1})
+        w.extras.append({ "t": "npc", "x": -6.0, "z": 2.0})
+    else:
+        # 자연 구역: 호수를 끼고 구불구불 이어지는 길
+        for rect in [Rect2(-1, -12, 2, 8), Rect2(-8, -5, 9, 2), Rect2(-8, -5, 2, 11), Rect2(-8, 4, 16, 2), Rect2(6, 4, 2, 7.4)]: road(rect)
+        water(Rect2(-3.5, -1.2, 7, 3.6))
+        for p in [ [-11, -9.5], [-5, -9.5], [4, -9], [9, -8], [11, -1.5], [-11, 0], [5.6, 0.8], [-11, 7], [-3, 8.5], [2, 9.8], [10.5, 7], [-6, 11.2], [11, 11], [3.5, -4.5]]: tree(p[0], p[1], kind)
+        w.gates.append({ "x": 0.0, "z": -11.6, "to": 0, "label": String(data.name) + " 중심가"})
+        w.flat.append({ "t": "gate", "x": 0.0, "z": -11.6, "label": String(data.name) + " 중심가"})
+        w.chests.append({ "x": 9.6, "z": -3.6, "i": 2}); w.chests.append({ "x": -10.4, "z": 10.2, "i": 3})
+        w.extras.append({ "t": "shard", "x": 7.0, "z": 10.4})
+    for chest in w.chests: w.flat.append({ "t": "chest", "x": chest.x, "z": chest.z, "i": chest.i})
+    for extra in w.extras: w.flat.append({ "t": String(extra.t), "x": extra.x, "z": extra.z})
+    var marker = w.group(Vector3.ZERO); marker.set_meta("moving", true); w.marker = marker
+    w.merge_static_geometry(); w.prepare_occluders()
+

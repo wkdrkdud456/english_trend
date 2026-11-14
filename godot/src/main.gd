@@ -89,6 +89,32 @@ const GRADES = [
     { "tag": "전설", "prefix": "전설의 ", "hp": 3.0, "atk": 1.65, "gold": 7.0, "xp": 5.0, "color": "e0a020"},
 ]
 var wild_grade = 0
+# ── 세부 구역과 기억 조각 ─────────────────────────────────
+var area_index = 0              # 0 = 도시 중심, 1 = 골목, 2 = 자연 구역
+const SHARDS = [
+    [["기억 조각", "일기 한 장이 강바람에 날려 왔다."], ["동훈의 일기", "“이번 달도 야근. 소현이 생일 케이크는 혼자 먹었다고 했다. 미안하다는 문자를 쓰다가 지웠다.”"], ["소현", "…그 문자, 지우지 말지. 괜찮아. 이제 같이 읽으니까."]],
+    [["기억 조각", "대나무 사이에 종이 한 장이 걸려 있다."], ["동훈의 일기", "“새벽 두 시에 들어오니 식탁에 라면이 불어 있었다. 기다리다 잠든 소현이 옆에서 조용히 다 먹었다.”"], ["동훈", "맛없었을 텐데… 왜 그게 제일 맛있었다고 기억하지."]],
+    [["기억 조각", "물가의 돌 밑에 종이가 눌려 있다."], ["동훈의 일기", "“오늘은 한마디도 못 했다. 미안하다는 말이 목에 걸려서. 내일 해야지. 내일.”"], ["소현", "그 ‘내일’이 오늘이야."]],
+    [["기억 조각", "올리브 나무 아래, 수첩에서 찢긴 한 장."], ["동훈의 일기", "“수첩 뒷장에 적었다. 소현이랑 나중에 하고 싶은 것 — 파리, 교토, 오로라, 서핑… 나중에.”"], ["동훈", "이 여행, 내가 적어 둔 목록이었어?"], ["소현", "응. 네 수첩을 내가 찾았어. 하나씩 지우러 온 거야."]],
+    [["기억 조각", "공원 벤치 밑에 구겨진 종이가 끼어 있다."], ["동훈의 일기", "“회사에서 쓰러졌다. 눈을 떴을 때 소현이 손을 잡고 있었는데, 이름이 생각나지 않았다.”"], ["동훈", "…그래서 내가 기억을 잃은 거구나."], ["소현", "의사 선생님이 그랬어. 좋았던 곳을 다시 걸으면 돌아올 거라고."]],
+    [["기억 조각", "얼음 위에 종이 한 장이 얼어붙어 있다."], ["동훈의 일기", "“별 보이는 데까지 차 타고 가기. 열 번째 줄. 언젠가.”"], ["동훈", "‘언젠가’라는 말, 내가 제일 많이 썼네."]],
+    [["기억 조각", "파도에 밀려온 유리병 안에 종이가 들어 있다."], ["동훈의 일기", "“사진첩에 소현이만 있다. 나는 늘 찍는 사람이었다. 아니, 늘 없는 사람이었다.”"], ["소현", "오늘은 같이 찍자. 둘 다 나오게."]],
+    [["기억 조각", "가로등에 젖은 종이가 붙어 있다."], ["동훈의 일기", "“우산을 하나만 챙겼다. 일부러. 그런데 그날도 회사에 불려 갔다.”"], ["동훈", "이번엔 끝까지 같이 쓸게."]],
+    [["기억 조각", "코알라가 종이를 물고 있다가 떨어뜨렸다."], ["동훈의 일기", "“못하는 걸 들키기 싫어서 서핑을 미뤘다. 사실은 같이 넘어지는 게 무서웠다.”"], ["소현", "넘어지면 같이 웃으면 되지."]],
+    [["기억 조각", "벤치 위에 병원 메모지가 놓여 있다."], ["동훈의 일기", "“마지막 장. 소현이에게 — 기억이 다 돌아오지 않아도, 내일 아침은 내가 차릴게.”"], ["동훈", "이건 병원에서 쓴 거야. 기억이 없을 때도 이건 쓰고 싶었나 봐."], ["소현", "그러니까 괜찮아. 넌 잊어도 다시 약속하는 사람이야."]],
+]
+const NPC_TALK = [
+    [["골목의 화가", "이 골목 상자에는 여행자들이 두고 간 선물이 들어 있어요."], ["골목의 화가", "여기 풀숲 녀석들은 중심가보다 사나워요. 대신 보상도 크죠."]],
+    [["찻집 할머니", "켄지 씨는 15년째 막차를 타요. 유키 씨가 매일 등불을 켜 두고요."], ["찻집 할머니", "대나무 숲 안쪽에 종이 한 장이 걸려 있던데, 두 분 것 아닌가요?"]],
+    [["향신료 상인", "아흐메드는 말수가 적지만 라일라 앞에서는 지팡이를 내려놓지."], ["향신료 상인", "오아시스 물가에서 낯선 글씨의 종이를 봤소."]],
+    [["젤라또 가게 주인", "마르코는 방패 뒤에 숨는 게 아니야. 지킬 게 많은 거지."], ["젤라또 가게 주인", "올리브 언덕에 누가 수첩 조각을 떨어뜨렸더군."]],
+    [["핫도그 아저씨", "거울 속에서 게임기를 든 청년이 걸어 나온다는 소문, 들었소?"], ["핫도그 아저씨", "공원 벤치 밑에 종이가 끼어 있던데."]],
+    [["어부", "비요른은 양보다 아스타를 먼저 세지. 매일 밤."], ["어부", "빙하 호수 끝에 바람에도 안 날아가는 종이가 있어."]],
+    [["당나귀 몰이꾼", "니코스는 석양을 30년 봤지만 엘레니 얼굴이 더 좋대."], ["당나귀 몰이꾼", "절벽 아래 해변에 유리병 하나가 떠밀려 왔어."]],
+    [["펍 주인", "올리버는 우산을 안 써. 누가 씌워 주길 기다리는 거지."], ["펍 주인", "강변 공원 가로등에 젖은 종이가 붙어 있더군."]],
+    [["서핑 가게 점원", "잭은 사실 파도를 무서워해요. 그래서 클로이랑만 타요."], ["서핑 가게 점원", "유칼립투스 숲에서 코알라가 종이를 물고 있었어요."]],
+    [["분식집 이모", "내일의 너라는 사람이 현관 앞에 서 있다며? 바쁘다는 핑계지 뭐."], ["분식집 이모", "한강 공원 벤치에 병원 메모지가 있던데."]],
+]
 # ── 도시별 옷차림 (소현 상의 / 소현 모자 / 동훈 상의 / 동훈 모자 / 동훈 바지) — 모자 "" = 없음
 const CITY_LOOK = [
     ["f08898", "c85068", "4a5570", "", "39415e"],
@@ -264,7 +290,7 @@ func city() -> Dictionary:
 func rebuild_city() -> void:
     if is_instance_valid(world): remove_child(world); world.free()
     sparks.clear(); creatures.clear()
-    world = World.new(); add_child(world); world.build(font, city_index)
+    world = World.new(); add_child(world); world.build(font, city_index, area_index)
     WILD_NAMES = []
     for mob in city().mobs: WILD_NAMES.append(mob.name)
     hero = world.character(true); hero.position = tour.v(city().spawn) + Vector3(-0.45, 0, 0)
@@ -276,6 +302,7 @@ func rebuild_city() -> void:
     else: preload ("res://scripts/tour_world.gd").new().dress_boss(world, rival, city_index)
     world.sign3d(rival, Vector3(0, 2.25, 0), city().boss.name, 28)
     story_rival = rival
+    if area_index > 0: rival.visible = false
     for i in range(3):
         var creature = world.creature(i); creature.visible = false; creatures.append(creature)
     call_deferred("spawn_pet")
@@ -484,6 +511,8 @@ func _process(dt: float) -> void:
         check_encounter(Vector2(before.x, before.z).distance_to(Vector2(hero.position.x, hero.position.z)))
         save_clock += dt
         if save_clock > 6: save_clock = 0; save_progress()
+    elif state == "puzzle":
+        tour.pz.tick(dt)
     elif state == "cook":
         order_wait = maxf(0, order_wait - dt)
         if order_wait <= 0:
@@ -500,7 +529,7 @@ func _process(dt: float) -> void:
         world.animate_person(hero, clock_time, 0)
         world.animate_person(partner, clock_time, 0)
     # 2D로 덮이는 화면에서는 3D 렌더링을 꺼서 배터리와 프레임을 아낀다 (사진·엔딩만 입체)
-    var flat_now = hud.flat_backdrop() or state in ["battle", "battle_ready", "battle_won", "battle_lost"] or (state == "pause" and previous_state == "battle")
+    var flat_now = hud.flat_backdrop() or state in ["battle", "battle_ready", "battle_won", "battle_lost", "puzzle"] or (state == "pause" and previous_state == "battle")
     if get_viewport().disable_3d != flat_now: get_viewport().disable_3d = flat_now
     set_camera(dt)
     if not flat_now: world.update_occlusion(camera, [hero, partner], false, dt)
@@ -656,12 +685,109 @@ func finish_tutorial() -> void:
     toast("왼쪽 스틱으로 이동해요. 동훈이는 뒤에서 따라올게요!")
 
 func update_target() -> void:
+    if area_index > 0:
+        side_target(); return
+    update_main_target()
+    if need_shard():
+        var gate = world.gate_to(2)
+        target = Vector3(gate.x, 0, gate.z); target_name = String(gate.label) + "에서 기억 조각 찾기"
+        world.marker.position = target + Vector3(0, 0.2, 0)
+
+# 라이벌에게 도전하려면 자연 구역의 기억 조각이 필요하다
+func need_shard() -> bool:
+    return area_index == 0 and stage == 2 and not bool(tour.record().get("shard", false)) and not world.gate_to(2).is_empty()
+
+func side_target() -> void:
+    var rec = tour.record()
+    var best = 999.0
+    target_name = ""
+    for chest in world.chests:
+        if bool(rec.chests[int(chest.i)]): continue
+        var spot = Vector3(chest.x, 0, chest.z)
+        if hero.position.distance_to(spot) < best:
+            best = hero.position.distance_to(spot); target = spot; target_name = "보물 상자"
+    for extra in world.extras:
+        if String(extra.t) == "shard" and not bool(rec.shard):
+            target = Vector3(extra.x, 0, extra.z); target_name = "기억 조각"
+    if target_name == "":
+        var back = world.gate_to(0)
+        target = Vector3(back.x, 0, back.z); target_name = String(back.label)
+    world.marker.visible = state == "explore"; world.marker.position = target + Vector3(0, 0.2, 0)
+    story_rival.visible = false
+
+func near_gate() -> Dictionary:
+    for gate in world.gates:
+        if hero.position.distance_to(Vector3(gate.x, hero.position.y, gate.z)) < 1.8: return gate
+    return {}
+
+# 행동 버튼에 띄울 말 — 문이나 세부 구역의 물건 가까이에서만
+func near_label() -> String:
+    var gate = near_gate()
+    if not gate.is_empty(): return String(gate.label) + " 가기"
+    if area_index == 0: return ""
+    var rec = tour.record()
+    for chest in world.chests:
+        if not bool(rec.chests[int(chest.i)]) and hero.position.distance_to(Vector3(chest.x, hero.position.y, chest.z)) < 1.9: return "상자 열기"
+    for extra in world.extras:
+        if hero.position.distance_to(Vector3(extra.x, hero.position.y, extra.z)) < 1.9:
+            if String(extra.t) == "npc": return "말 걸기"
+            if not bool(rec.shard): return "기억 조각 줍기"
+    return "둘러보기"
+
+func enter_area(zone: int) -> void:
+    var from = area_index
+    tour.store_current()
+    area_index = zone
+    rebuild_city()
+    var door = world.gate_to(from) if zone == 0 else world.gate_to(0)
+    var spot = tour.v(city().spawn)
+    if not door.is_empty(): spot = Vector3(door.x, 0, door.z)
+    var inward = Vector3(- spot.x, 0, - spot.z)
+    if inward.length() > 0.1: inward = inward.normalized() * 1.5
+    hero.position = spot + inward if world.can_walk(spot + inward) else spot
+    hero.position.y = world.surface_height(hero.position) + 0.015
+    partner.position = hero.position
+    for offset in [Vector3(0.8, 0, 0.5), Vector3(-0.8, 0, 0.5), Vector3(0, 0, 1), Vector3(0, 0, -1)]:
+        if world.can_walk(hero.position + offset):
+            partner.position = hero.position + offset; break
+    wild_battle = false; grass_steps = 0; encounter_grace = 2.5
+    reset_follow_path()
+    if zone == 0: tour.sync_props()
+    state = "explore"; update_target(); set_camera(1, true); save_progress()
+    toast( (String(city().name) + " 중심가") if zone == 0 else String(world.AREA_NAMES[city_index][zone - 1]) + " — 이곳의 야생 친구들은 더 강해요.")
+
+func side_interact() -> void:
+    var rec = tour.record()
+    for chest in world.chests:
+        var i = int(chest.i)
+        if bool(rec.chests[i]) or hero.position.distance_to(Vector3(chest.x, hero.position.y, chest.z)) > 1.9: continue
+        rec.chests[i] = true; chime(1046); burst(hero.position + Vector3(0, 0.8, 0), "f6d484", 14)
+        match i:
+            0:
+                coins += 60 + city_index * 25; toast("상자에서 여행비 " + str(60 + city_index * 25) + "원을 찾았어요!")
+            1:
+                bag_add("candy", 2); bag_add("drink", 1); toast("상자에서 뽀뽀사탕 2개와 기력 드링크를 찾았어요!")
+            2:
+                coins += 90 + city_index * 30; toast("상자에서 여행비 " + str(90 + city_index * 30) + "원을 찾았어요!")
+            _:
+                skill_points += 1; toast("낡은 요령 수첩을 찾았어요!  기술 포인트 +1")
+        update_target(); save_progress(); return
+    for extra in world.extras:
+        if hero.position.distance_to(Vector3(extra.x, hero.position.y, extra.z)) > 1.9: continue
+        if String(extra.t) == "npc":
+            show_dialogue(NPC_TALK[city_index], "explore"); return
+        if not bool(rec.shard):
+            rec.shard = true; chime(1318); save_progress()
+            show_dialogue(SHARDS[city_index], "explore"); return
+    toast("금색 표시를 따라가 보세요. 이곳 풀숲의 친구들은 중심가보다 강해요.")
+
+func update_main_target() -> void:
     if city_index > 0:
         if stage == 0: target = tour.v(city().points[tour.mission_target()]); target_name = tour.target_name()
         elif stage == 2: target = tour.v(city().boss_at); target_name = city().boss.name + "의 도전"
         else: target = tour.v(city().photo_at); target_name = city().name + " 추억 사진"
         world.marker.visible = state == "explore"; world.marker.position = target + Vector3(0, 0.2, 0)
-        story_rival.visible = stage <= 2 and not wild_battle; return
+        story_rival.visible = stage <= 2 and not wild_battle and area_index == 0; return
     if stage == 0:
         var best = 1000.0
         for i in range(3):
@@ -673,10 +799,10 @@ func update_target() -> void:
     else: target = Vector3(0, 0, -6.5); target_name = "우리의 첫 사진"
     world.marker.visible = state == "explore"
     world.marker.position = target + Vector3(0, 0.2, 0)
-    story_rival.visible = stage <= 2 and not wild_battle
+    story_rival.visible = stage <= 2 and not wild_battle and area_index == 0
 
 func check_pickups() -> void:
-    if city_index > 0 or stage != 0: return
+    if city_index > 0 or stage != 0 or area_index > 0: return
     for i in range(3):
         if not collected[i] and hero.position.distance_to(world.pickups[i].position) < 0.85:
             collected[i] = true; world.pickups[i].visible = false
@@ -688,6 +814,11 @@ func check_pickups() -> void:
 
 func interact() -> void:
     if state != "explore": return
+    var door = near_gate()
+    if not door.is_empty():
+        enter_area(int(door.to)); return
+    if area_index > 0:
+        side_interact(); return
     if city_index > 0:
         if stage == 0: tour.interact_mission(); return
         if hero.position.distance_to(target) > 2.05 and tour.near_shop(): state = "food_shop"; joystick = Vector2.ZERO; return
@@ -699,6 +830,8 @@ func interact() -> void:
     elif stage == 1:
         show_dialogue( [ ["빵집 주인", "여행자 두 분! 주문을 조금만 도와줄래요?"], ["소현", "좋아요. 동훈아, 메뉴를 잘 보고 같이 만들자."], ["동훈", "크루아상, 바게트, 커피… 이번에는 안 헷갈릴게!"]], "cook")
     elif stage == 2:
+        if need_shard():
+            toast(String(city().boss.name) + ": “아직 떠올리지 못한 게 있군요.” — " + String(world.AREA_NAMES[city_index][1]) + "에서 기억 조각을 찾아와요."); return
         wild_battle = false; rival = story_rival
         battle_return = hero.position; partner_return = partner.position
         if city_index > 0:
@@ -716,6 +849,9 @@ func action(id: String) -> void:
         tour.selected = clampi(int(id.trim_prefix("city_")), 0, 9); state = "journal"; return
     if id.begins_with("answer_"):
         tour.puzzle_choice(int(id.trim_prefix("answer_"))); return
+    if id.begins_with("pz_"):
+        if state == "puzzle": tour.pz.press(String(id.trim_prefix("pz_")))
+        return
     if id.begins_with("meal_"):
         tour.buy_meal(int(id.trim_prefix("meal_"))); return
     if id.begins_with("tab_"):
@@ -1061,9 +1197,10 @@ func meet_wild() -> void:
     wild_grade = 0
     if wild_wins >= 2 or city_index > 0:
         var roll = randf()
-        if roll < 0.02 + city_index * 0.003: wild_grade = 3
-        elif roll < 0.09 + city_index * 0.006: wild_grade = 2
-        elif roll < 0.28 + city_index * 0.01: wild_grade = 1
+        var boost = 1.0 + area_index * 0.9
+        if roll < (0.02 + city_index * 0.003) * boost: wild_grade = 3
+        elif roll < (0.09 + city_index * 0.006) * boost: wild_grade = 2
+        elif roll < (0.28 + city_index * 0.01) * boost: wild_grade = 1
     rival = creatures[wild_index]; story_rival.visible = false
     hero.position = Vector3(-0.7, 0.12, -3.6); partner.position = Vector3(0.65, 0.12, -3.6)
     hero.rotation.y = PI; partner.rotation.y = PI
@@ -1355,7 +1492,7 @@ func pick_pet(index: int) -> void:
 func restart() -> void:
     if wild_battle: restore_from_wild()
     tour.reset_records(); city_index = 0; level = 1; xp = 0; pets.clear(); pet_active = -1; pet_team = []
-    skill_points = 0; wild_grade = 0
+    skill_points = 0; wild_grade = 0; area_index = 0
     for entry in SKILLS: skill_lv[entry.id] = 1
     owned_gear = ["g0", "a0", "s0"]; equipped = ["g0", "a0", "s0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()

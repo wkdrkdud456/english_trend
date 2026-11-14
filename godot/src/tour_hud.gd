@@ -76,11 +76,13 @@ func draw(c) -> void:
             var y = 139; var choices = []
             if g.state == "deduction":
                 for clue in t.WITNESSES: y = c.para(clue, 26, y, w - 52, 18, c.ink, 1.6) + 18
-                choices = ["찻잔을 든 티룸 주인", "중절모를 쓴 경비", "신문 배달부"]
+                choices = t.SUSPECTS
             else:
-                y = c.para(t.QUESTIONS[t.question][0], 26, y, w - 52, 25, c.ink, 1.5)
-                choices = t.QUESTIONS[t.question][1]
-            for i in range(3): c.button("answer_" + str(i), choices[i], Rect2(26, h - 330 + i * 75, w - 52, 62), false, true, 16)
+                c.txt("질문 " + str(t.quiz_step + 1) + " / 2", 26, y - 14, 12, c.rose)
+                y = c.para(t.QUESTIONS[t.question * 2 + t.quiz_step][0], 26, y + 14, w - 52, 23, c.ink, 1.5)
+                choices = t.QUESTIONS[t.question * 2 + t.quiz_step][1]
+            var gap = 62.0 if choices.size() > 3 else 75.0
+            for i in range(choices.size()): c.button("answer_" + str(i), choices[i], Rect2(26, h - 100 - choices.size() * gap + i * gap, w - 52, gap - 10), false, true, 15)
             c.button("puzzle_close", "조금 더 생각해 볼게", Rect2(26, h - 87, w - 52, 60), false, true, 14)
         "food_shop":
             c.panel(Rect2(0, 0, w, h), c.cream, 0)

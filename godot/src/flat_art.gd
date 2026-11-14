@@ -149,7 +149,8 @@ func setup(c: Control, g) -> void:
     u = view.size.x / (14.6 if g.overview else 10.6)
     k = u * 0.036
     var lead = Vector2(g.move_vel.x, g.move_vel.z) * 0.25
-    var want = Vector2(g.hero.position.x, g.hero.position.z - 0.6) + lead
+    # 위쪽 카드와 아래쪽 조작부 사이 가운데에 주인공이 오게 한다
+    var want = Vector2(g.hero.position.x, g.hero.position.z + view.size.y * 0.04 / u) + lead
     var half = Vector2(view.size.x, view.size.y) / (2.0 * u)
     var lx = maxf(0.0, MAP.x - half.x)
     var lz = maxf(0.0, MAP.y - half.y)
@@ -183,7 +184,7 @@ func ground(c: Control, g) -> void:
         for j in range(nz):
             var wx = x0 + i
             var wz = z0 + j
-            if wx < -13.4 or wx >= 13.4 or wz < -14.4 or wz >= 14.4: continue
+            if wx < -13.0 or wx >= 13.0 or wz < -14.0 or wz >= 14.0: continue
             if int(wx + wz + 64) % 2 == 1:
                 var p = at(wx, wz)
                 block(c, p.x, p.y, u, u, g1)
@@ -430,6 +431,40 @@ func shop(c: Control, d: Dictionary) -> void:
     block(c, p.x - 25 * k, p.y - 22 * k, 50 * k, 2 * k, out)
     block(c, p.x - 18 * k, p.y - 16 * k, 10 * k, 9 * k, Color("e0a85a")); block(c, p.x - 4 * k, p.y - 16 * k, 10 * k, 9 * k, Color("c98b4b")); block(c, p.x + 9 * k, p.y - 16 * k, 9 * k, 9 * k, Color("f6d58b"))
 
+func gate(c: Control, d: Dictionary) -> void:
+    var p = at(d.x, d.z)
+    var stone = tone("w1", 0.3)
+    shadow(c, p, 62 * k, 8 * k)
+    for side in [-1, 1]:
+        block(c, p.x + side * 22 * k - 6 * k, p.y - 50 * k, 12 * k, 52 * k, out); block(c, p.x + side * 22 * k - 4 * k, p.y - 48 * k, 8 * k, 48 * k, stone)
+    block(c, p.x - 32 * k, p.y - 62 * k, 64 * k, 14 * k, out); block(c, p.x - 30 * k, p.y - 60 * k, 60 * k, 10 * k, tone("r1", 0.3)); block(c, p.x - 30 * k, p.y - 60 * k, 60 * k, 3 * k, Color(1, 1, 1, 0.3))
+    var label = String(d.get("label", ""))
+    if label != "":
+        var tw = c.font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 14
+        block(c, p.x - tw / 2 - 2, p.y - 86 * k, tw + 4, 20, out); block(c, p.x - tw / 2, p.y - 86 * k + 2, tw, 16, Color("fff8e8"))
+        c.txt(label, p.x - tw / 2, p.y - 86 * k + 14, 11, c.ink, tw, HORIZONTAL_ALIGNMENT_CENTER)
+
+func chest(c: Control, d: Dictionary, opened: bool, t: float) -> void:
+    var p = at(d.x, d.z)
+    shadow(c, p, 30 * k, 6 * k)
+    block(c, p.x - 14 * k, p.y - 20 * k, 28 * k, 20 * k, out); block(c, p.x - 12 * k, p.y - 12 * k, 24 * k, 10 * k, Color("9a6a3c"))
+    if opened:
+        block(c, p.x - 12 * k, p.y - 18 * k, 24 * k, 6 * k, Color("3a2a1e")); block(c, p.x - 14 * k, p.y - 30 * k, 28 * k, 10 * k, out); block(c, p.x - 12 * k, p.y - 28 * k, 24 * k, 6 * k, Color("7a5230"))
+    else:
+        block(c, p.x - 12 * k, p.y - 18 * k, 24 * k, 6 * k, Color("b9834a")); block(c, p.x - 12 * k, p.y - 13 * k, 24 * k, 2 * k, Color("e5b33c")); block(c, p.x - 2 * k, p.y - 15 * k, 4 * k, 6 * k, Color("f6d98b"))
+        var glint = t * 2.0 + d.x
+        block(c, p.x + cos(glint) * 16 * k - 2, p.y - 24 * k + sin(glint) * 6 * k - 2, 4, 4, Color("fffbe0"))
+
+func shard(c: Control, d: Dictionary, t: float) -> void:
+    var p = at(d.x, d.z)
+    shadow(c, p, 20 * k, 5 * k)
+    var y = p.y - 30 * k + sin(t * 2.4) * 4.0
+    block(c, p.x - 10 * k, y - 2 * k, 20 * k, 26 * k, out); block(c, p.x - 8 * k, y, 16 * k, 22 * k, Color("fff8e8"))
+    for i in range(4): block(c, p.x - 5 * k, y + (4 + i * 4) * k, (10 - (i % 2) * 3) * k, 1.5 * k, Color("8a7254"))
+    for i in range(5):
+        var spin = t * 1.6 + i * TAU / 5.0
+        block(c, p.x + cos(spin) * 20 * k - 2, y + 10 * k + sin(spin) * 16 * k - 2, 4, 4, Color("f6cf6a"))
+
 func person(c: Control, foot: Vector2, girl: bool, outfit: Dictionary, hop: float = 0.0) -> void:
     var s = maxf(2.0, roundf(u * 0.075))
     shadow(c, foot, 13 * s, 2 * s)
@@ -470,7 +505,7 @@ func draw(c: Control, g) -> void:
     items.clear()
     for d in g.world.flat:
         if on_screen(d.x, d.z, 3.0): items.append(d)
-    if g.city_index == 0 and g.stage == 0:
+    if g.city_index == 0 and g.stage == 0 and g.area_index == 0:
         for i in range(3):
             if not g.collected[i]:
                 var q = g.world.pickups[i].position
@@ -505,6 +540,11 @@ func draw(c: Control, g) -> void:
             "shop": shop(c, d)
             "prop": prop(c, d)
             "pickup": pickup(c, d, g.clock_time)
+            "gate": gate(c, d)
+            "chest": chest(c, d, bool(g.tour.record().chests[int(d.i)]), g.clock_time)
+            "shard":
+                if not bool(g.tour.record().shard): shard(c, d, g.clock_time)
+            "npc": person(c, at(d.x, d.z), true, { "O": out, "S": Color("f1c9a0"), "G": Color("f1c9a0"), "H": Color("b9b2a8"), "C": Color("b9b2a8"), "T": tone("a1", 0.3), "D": Color("5a5248"), "E": Color("3a3430")})
             "pet": pet_draw(c, d, g.clock_time)
             "girl": person(c, at(d.x, d.z), true, girl_look, hop)
             "boy": person(c, at(d.x, d.z), false, boy_look, hop2)

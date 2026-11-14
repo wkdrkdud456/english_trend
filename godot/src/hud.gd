@@ -53,15 +53,43 @@ func centered(text: String, y: float, size_px: int = 18, color: Color = ink) -> 
     txt(text, 0, y, size_px, color, w, HORIZONTAL_ALIGNMENT_CENTER)
 
 func button(id: String, label: String, rect: Rect2, primary: bool = false, enabled: bool = true, size_px: int = 17) -> void:
-    var minimum = Vector2(maxf(60, rect.size.x), maxf(60, rect.size.y))
+    var minimum = Vector2(maxf(48, rect.size.x), maxf(44, rect.size.y))
     rect = Rect2(rect.position - (minimum - rect.size) / 2, minimum)
     var active = pressed.values().has(id)
-    var bg = ink if primary else cream
-    if active: bg = bg.darkened(0.12)
-    if not enabled: bg = Color("c7cdbd")
-    panel(rect, bg, 18, Color("d4d8c5") if not primary else Color.TRANSPARENT)
-    txt(label, rect.position.x, rect.position.y + rect.size.y / 2 + size_px * 0.36, size_px, cream if primary else ink, rect.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+    var face = ink if primary else cream
+    var edge = Color("17302c") if primary else ink
+    if not enabled:
+        face = Color("dcd7c9"); edge = Color("aaa698")
+    if active: face = face.darkened(0.12)
+    var radius = minf(16.0, rect.size.y / 2.0)
+    var lift = 0.0 if active else 3.0
+    panel(Rect2(rect.position + Vector2(0, 3), rect.size), edge.darkened(0.25), radius)
+    panel(Rect2(rect.position + Vector2(0, 3 - lift), rect.size), edge, radius)
+    panel(Rect2(rect.position + Vector2(2, 5 - lift), rect.size - Vector2(4, 4)), face, maxf(3.0, radius - 2))
+    var fg = cream if primary else ink
+    if not enabled: fg = Color("8f8b7e")
+    txt(label, rect.position.x, rect.position.y + 3 - lift + rect.size.y / 2 + size_px * 0.36, size_px, fg, rect.size.x, HORIZONTAL_ALIGNMENT_CENTER)
     if enabled: buttons[id] = rect
+
+# 화면 위에 떠 있는 둥근 버튼
+func float_button(id: String, label: String, center: Vector2, radius: float, tone: Color, icon: int, enabled: bool = true) -> void:
+    var active = pressed.values().has(id)
+    var face = cream if enabled else Color(0.86, 0.84, 0.78, 0.8)
+    var edge = tone if enabled else Color(0.55, 0.54, 0.5, 0.8)
+    if active: face = face.darkened(0.1)
+    draw_circle(center + Vector2(0, 4), radius, Color(0.08, 0.1, 0.09, 0.3))
+    draw_circle(center, radius, edge)
+    draw_circle(center, radius - 3.5, face)
+    var mid = center - Vector2(0, radius * 0.16 if label != "" else 0.0)
+    var glyph = radius * 0.36
+    match icon:
+        0: icon_spark(mid, glyph)
+        1: icon_book(mid, glyph)
+        2: icon_map(mid, glyph)
+        4: icon_pack(mid, glyph)
+        _: icon_lens(mid, glyph)
+    if label != "": txt(label, center.x - radius, center.y + radius * 0.62, 9, edge, radius * 2, HORIZONTAL_ALIGNMENT_CENTER)
+    if enabled: buttons[id] = Rect2(center - Vector2(radius, radius), Vector2(radius * 2, radius * 2))
 
 func chip(text: String, rect: Rect2, color: Color = cream) -> void:
     panel(rect, color, 30)
@@ -85,7 +113,7 @@ func deck_height() -> float:
     return clampf(h * 0.33, 226, 304)
 
 func flat_bottom() -> float:
-    return h - deck_height()
+    return h
 
 func plate(rect: Rect2, border: Color, fill: Color = cream, radius: float = 16, lip: float = 3.0) -> void:
     panel(Rect2(rect.position + Vector2(2, 5), rect.size), Color(0.11, 0.07, 0.04, 0.20), radius)
@@ -171,7 +199,6 @@ func _draw() -> void:
         battle_art.draw(self)
     elif flat_backdrop():
         flat_art.draw(self, game)
-        if game.state != "explore": panel(Rect2(0, flat_bottom(), w, deck_height()), col_deck(), 0)
     match game.state:
         "arrival", "passport", "journal", "city_help", "deduction", "memory_question", "food_shop", "vista", "vista_album": tour_hud.draw(self)
         "title": draw_title()
@@ -186,11 +213,12 @@ func _draw() -> void:
         "battle_won": draw_battle_won()
         "photo": draw_photo()
         "ending": tour_hud.ending(self)
+        "puzzle": game.tour.pz.draw(self)
         "pause": draw_pause()
         "status": draw_status()
         "map": tour_hud.map_screen(self)
     tour_hud.weather(self)
-    if game.toast_time > 0 and game.state not in ["ending", "title", "pause", "dialogue", "intro", "tutorial", "battle", "battle_ready", "battle_lost", "battle_won"]:
+    if game.toast_time > 0 and game.state not in ["ending", "title", "pause", "dialogue", "intro", "tutorial", "battle", "battle_ready", "battle_lost", "battle_won", "puzzle"]:
         var y = h * 0.32
         panel(Rect2(24, y, w - 48, 72), Color("294b46ef"), 17)
         para(game.toast_text, 40, y + 28, w - 80, 15, cream, 1.55)
@@ -225,7 +253,7 @@ func draw_explore() -> void:
     # ── 위쪽 카드들 (월드를 덜 가리게 얇게) ─────────────────
     var cw = w * 0.30
     plate(Rect2(14, top, cw, 44), ink, cream, 14)
-    txt(game.city().name, 26, top + 28, 17)
+    txt(game.city().name if game.area_index == 0 else String(game.world.AREA_NAMES[game.city_index][game.area_index - 1]), 26, top + 28, 17 if game.area_index == 0 else 13)
     var coin_x = 14 + cw + 6
     var coin_w = w * 0.20
     plate(Rect2(coin_x, top, coin_w, 44), rose, cream, 14)
@@ -249,7 +277,7 @@ func draw_explore() -> void:
     var oy = top + 50
     plate(Rect2(14, oy, w - 28, 44), ink, cream, 14)
     icon_goal(Vector2(34, oy + 21), 9)
-    txt(game.tour.objective(), 52, oy + 27, 15)
+    txt(game.tour.objective() if game.area_index == 0 else ("상자와 기억 조각을 찾아보기" if game.area_index == 2 else "골목을 둘러보고 상자 찾기"), 52, oy + 27, 15)
     var done = game.tour.progress_count() if game.stage == 0 else game.stage
     var total = game.tour.progress_total() if game.stage == 0 else 4
     for i in range(mini(total, 5)):
@@ -258,7 +286,7 @@ func draw_explore() -> void:
 
     # ── 상황 칩 ─────────────────────────────────────────
     var sy = oy + 52
-    if game.city_index == 8 and game.stage == 0:
+    if false:
         var low = game.tour.low_tide()
         var remaining = (4.0 if low else 7.0) - fmod(game.game_time, 7.0)
         plate(Rect2(14, sy, 206, 36), Color("4a8a38") if low else Color("c08a4e"))
@@ -279,44 +307,50 @@ func draw_explore() -> void:
     if distance > 2 and game.world.marker and game.world.marker.visible:
         var tp = flat_art.at(game.target.x, game.target.z)
         tp.x = clampf(tp.x, 76, w - 76)
-        tp.y = clampf(tp.y, sy + 58, dy - 30)
-        plate(Rect2(tp.x - 74, tp.y - 15, 148, 30), Color("c08a4e"), Color("fff1c9"), 14, 2)
-        txt(game.target_name + " · " + str(int(distance)) + "m", tp.x - 70, tp.y + 5, 12, ink, 140, HORIZONTAL_ALIGNMENT_CENTER)
+        tp.y = clampf(tp.y, sy + 58, h - 230)
+        var tip = game.target_name + " · " + str(int(distance)) + "m"
+        var tipw = minf(w - 28, font.get_string_size(tip, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 24)
+        tp.x = clampf(tp.x, 14 + tipw / 2, w - 14 - tipw / 2)
+        plate(Rect2(tp.x - tipw / 2, tp.y - 15, tipw, 30), Color("c08a4e"), Color("fff1c9"), 14, 2)
+        txt(tip, tp.x - tipw / 2, tp.y + 5, 12, ink, tipw, HORIZONTAL_ALIGNMENT_CENTER)
 
-    # ── 조작 패널 ───────────────────────────────────────
-    panel(Rect2(0, dy, w, h - dy), Color("2a1c18"), 0)
-    panel(Rect2(0, dy, w, 4), Color("6b4c3c"), 0)
-    var deck = h - dy
-    stick_radius = clampf(deck * 0.30, 52, 74)
-    stick_reach = stick_radius * 0.62
-    stick_center = Vector2(w * 0.245, dy + deck * 0.44)
-    draw_circle(stick_center, stick_radius, Color("fff8e81e"))
-    draw_arc(stick_center, stick_radius, 0, TAU, 44, Color("fff8e872"), 3, true)
-    draw_arc(stick_center, stick_radius * 0.70, 0, TAU, 36, Color("fff8e83c"), 2, true)
-    draw_circle(stick_center + stick_delta + Vector2(2, 4), stick_radius * 0.42, Color(0.05, 0.03, 0.02, 0.45))
-    draw_circle(stick_center + stick_delta, stick_radius * 0.42, cream)
-    draw_circle(stick_center + stick_delta, stick_radius * 0.14, Color("d2c3a8"))
-    txt("바깥까지 밀면 달려요", stick_center.x - 90, dy + deck - 14, 11, Color("fff8e8b4"), 180, HORIZONTAL_ALIGNMENT_CENTER)
+    # ── 떠 있는 조작부 (월드를 가리지 않는다) ───────────────
+    var base = h - maxf(14.0, safe_bottom)
+    stick_radius = 58.0
+    stick_reach = 38.0
+    stick_center = Vector2(86, base - 84)
+    draw_circle(stick_center, stick_radius, Color(1.0, 0.97, 0.91, 0.26))
+    draw_arc(stick_center, stick_radius, 0, TAU, 44, Color(0.16, 0.29, 0.27, 0.55), 3, true)
+    draw_circle(stick_center + stick_delta + Vector2(0, 4), 25, Color(0.08, 0.1, 0.09, 0.3))
+    draw_circle(stick_center + stick_delta, 25, ink)
+    draw_circle(stick_center + stick_delta, 22, cream)
+    draw_circle(stick_center + stick_delta, 7, Color("c9bfa8"))
 
-    var bw = (w * 0.50 - 34) / 2
-    var bh = (deck - 34) / 2
-    var bx0 = w - 14 - bw * 2 - 8
-    var by0 = dy + 14
     var near_shop = game.tour.near_shop()
     var label = game.target_name if distance < 2.05 else "목표 안내"
     if game.stage == 4: label = "다시 사진"
     if near_shop and distance > 2.05: label = game.city().shop
-    if game.city_index > 0: label = game.tour.action_label()
-    deck_button("interact", label, "", Rect2(bx0, by0, bw, bh), Color("e8974d"), 0, distance < 2.05 or near_shop)
-    deck_button("status", "내 정보" + (" ●" if game.skill_points > 0 else ""), "", Rect2(bx0 + bw + 8, by0, bw, bh), Color("c85068"), 4)
-    deck_button("map", "지도", "", Rect2(bx0, by0 + bh + 6, bw, bh), Color("6f9a4e"), 2)
-    deck_button("tour_help", "여행 수첩", "", Rect2(bx0 + bw + 8, by0 + bh + 6, bw, bh), Color("4a8a9c"), 1)
+    if game.city_index > 0 and game.area_index == 0: label = game.tour.action_label()
+    var can_act = distance < 2.05 or near_shop
+    var special = game.near_label()
+    if special != "":
+        label = special; can_act = special != "둘러보기"
+    var act = Vector2(w - 64, base - 70)
+    float_button("interact", "", act, 44, Color("e8974d"), 0, true)
+    var lw = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 22
+    var chip_rect = Rect2(minf(act.x - lw / 2, w - 12 - lw), act.y - 82, lw, 28)
+    plate(chip_rect, Color("e8974d") if can_act else Color("8d8578"), cream, 12, 2)
+    txt(label, chip_rect.position.x, chip_rect.position.y + 19, 13, ink if can_act else muted, lw, HORIZONTAL_ALIGNMENT_CENTER)
+    float_button("status", "내 정보", Vector2(w - 146, base - 36), 27, Color("c85068"), 4)
+    if game.skill_points > 0: draw_circle(Vector2(w - 126, base - 56), 6, rose)
+    float_button("map", "지도", Vector2(w - 208, base - 36), 27, Color("6f9a4e"), 2)
+    float_button("tour_help", "수첩", Vector2(w - 150, base - 98), 27, Color("4a8a9c"), 1)
     var zoom_rect = Rect2(w - 98, sy, 84, 32)
     plate(zoom_rect, Color("8a7fb0"), cream, 12, 2)
     txt("넓게 보기" if not game.overview else "가까이 보기", zoom_rect.position.x, sy + 21, 12, ink, 84, HORIZONTAL_ALIGNMENT_CENTER)
     buttons["zoom"] = zoom_rect
-    if game.stage == 4: button("album", "추억 앨범", Rect2(14, dy + 10, 118, 38), false, true, 13)
-    if not game.save_ok: txt("저장 공간을 확인해 주세요.", 14, dy - 8, 10, rose, w - 28, HORIZONTAL_ALIGNMENT_CENTER)
+    if game.stage == 4: button("album", "추억 앨범", Rect2(14, base - 200, 108, 36), false, true, 13)
+    if not game.save_ok: txt("저장 공간을 확인해 주세요.", 14, sy + 52, 10, rose, w - 28, HORIZONTAL_ALIGNMENT_CENTER)
 
 func draw_dialogue() -> void:
     if game.dialogue.is_empty(): return

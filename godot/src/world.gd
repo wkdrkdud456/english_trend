@@ -11,6 +11,14 @@ var water_zones: Array[Rect2] = [Rect2(-13, 1.2, 26, 3.6)]
 var bridges: Array[Rect2] = [Rect2(-1.55, 0.9, 3.1, 4.2)]
 
 var solid: Array[Rect2] = []
+var area = 0                  # 0 = 도시 중심, 1 = 골목, 2 = 자연 구역
+var gates: Array = []         # {"x","z","to","label"} — 다른 구역으로 가는 문
+var chests: Array = []        # {"x","z","i"} — 보물 상자 (i = 도시 안에서의 번호)
+var extras: Array = []        # {"t": "shard"|"npc", "x","z"}
+const AREA_NAMES = [
+    ["몽마르트 골목", "센강 둔치"], ["기온 뒷골목", "대나무 숲"], ["시장 골목", "오아시스"], ["트라스테베레 골목", "올리브 언덕"], ["브루클린 골목", "센트럴 파크"],
+    ["어촌 골목", "빙하 호수"], ["이아 골목", "절벽 아래 해변"], ["소호 골목", "템스 강변 공원"], ["더 록스 골목", "유칼립투스 숲"], ["익선동 골목", "한강 공원"],
+]
 var flat: Array = []          # 2D 탐험 화면용 납작한 장면 목록
 var materials: Dictionary = {}
 var water_bits: Array[Node3D] = []
@@ -88,11 +96,13 @@ func group(pos: Vector3, parent: Node3D = self) -> Node3D:
     parent.add_child(n)
     return n
 
-func build(f: Font, destination: int = 0) -> void:
-    font = f; city_index = destination
-    flat.clear()
+func build(f: Font, destination: int = 0, zone: int = 0) -> void:
+    font = f; city_index = destination; area = zone
+    flat.clear(); gates.clear(); chests.clear(); extras.clear()
+    if area > 0:
+        TourWorld.new().build_area(self, city_index, area); seal_flat(); return
     if city_index > 0:
-        TourWorld.new().build(self, city_index); seal_flat(); return
+        TourWorld.new().build(self, city_index); seal_flat(); place_gates(); return
 
     box(self, Vector3(0, -0.65, 0), Vector3(27, 1.2, 29), "c8bda3")
     box(self, Vector3(0, -0.05, 0), Vector3(26.8, 0.12, 28.8), "e9dcc0")
@@ -166,6 +176,38 @@ func build(f: Font, destination: int = 0) -> void:
     merge_static_geometry()
     prepare_occluders()
     seal_flat()
+    place_gates()
+
+# 도시 중심 지도 가장자리에서 걸어갈 수 있는 자리를 찾아 두 구역으로 가는 문을 세운다
+func place_gates() -> void:
+    var Cities = preload ("res://scripts/city_data.gd")
+    var data = Cities.CITIES[city_index]
+    var busy = [data.spawn, data.boss_at, data.photo_at, data.shop_at]
+    for q in data.points: busy.append(q)
+    var offsets = [0.0, 1.5, -1.5, 3.0, -3.0, 4.5, -4.5, 6.0, -6.0, 8.0, -8.0, 10.0, -10.0]
+    for which in range(2):
+        var spots = []
+        for d in offsets:
+            if which == 0:
+                spots.append(Vector2(-11.3, d)); spots.append(Vector2(11.3, d))
+            else:
+                spots.append(Vector2(d, 11.8)); spots.append(Vector2(d, -11.8))
+        for spot in spots:
+            if not can_walk(Vector3(spot.x, 0, spot.y)): continue
+            var clear = true
+            for q in busy:
+                if Vector2(q[0], q[1]).distance_to(spot) < 2.4: clear = false
+            for gate in gates:
+                if Vector2(gate.x, gate.z).distance_to(spot) < 4.0: clear = false
+            if not clear: continue
+            gates.append({ "x": spot.x, "z": spot.y, "to": which + 1, "label": AREA_NAMES[city_index][which]})
+            flat.append({ "t": "gate", "x": spot.x, "z": spot.y, "label": AREA_NAMES[city_index][which]})
+            break
+
+func gate_to(zone: int) -> Dictionary:
+    for gate in gates:
+        if int(gate.to) == zone: return gate
+    return {}
 
 func seal_flat() -> void:
     for rect in solid:
