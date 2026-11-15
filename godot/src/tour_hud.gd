@@ -5,9 +5,11 @@ func heading(c, title: String, sub: String) -> void:
     c.txt(sub, 26, 42, 12, c.muted)
     c.txt(title, 24, 86, 29)
 
-func photo(c, texture, rect: Rect2, label: String) -> void:
+func photo(c, texture, rect: Rect2, label: String, card: int = -1) -> void:
     c.panel(rect, Color("d1ddcc"), 5)
-    if texture:
+    if card >= 0:
+        c.flat_art.postcard(c, rect, card, c.game)
+    elif texture:
         var s = texture.get_size(); var crop = s.x * rect.size.y / rect.size.x
         c.draw_texture_rect_region(texture, rect, Rect2(0, maxf(0, (s.y - crop) * 0.6), s.x, minf(s.y, crop)))
     else: c.txt(label, rect.position.x, rect.get_center().y, 26, c.muted, rect.size.x, HORIZONTAL_ALIGNMENT_CENTER)
@@ -37,7 +39,7 @@ func draw(c) -> void:
         "journal":
             var i = t.selected; var ci = g.CityData.CITIES[i]; var r = t.records[i]
             heading(c, ci.name + "의 여행 수첩", "%02d / %s" % [i + 1, ci.english])
-            var ph = minf(205, h * 0.24); photo(c, t.read_photo(i) if t.completed[i] else null, Rect2(24, 112, w - 48, ph), ci.english)
+            var ph = minf(205, h * 0.24); photo(c, null, Rect2(24, 112, w - 48, ph), ci.english, i if t.completed[i] or g.cycle > 0 else -1)
             var y = 142 + ph
             y = c.para(ci.memory if t.completed[i] else ci.hint, 26, y, w - 52, 17, c.ink, 1.5) + 13
             c.txt("만난 몬스터  %d / 3" % r.wild_seen.count(true), 26, y, 14, c.rose); y += 28
@@ -105,10 +107,10 @@ func draw(c) -> void:
                     c.button("meal_" + str(i), str(cost) + "원", Rect2(w - 118, my + 16, 94, 44), false, ok, 15)
                 if t.meal > 0: c.txt("이미 도시락을 챙겼어요.", 24, sy + 290, 13, c.rose)
             elif g.shop_tab == 1:
-                c.txt("칸마다 하나씩. 산 장비는 바로 착용돼요.", 24, sy, 12, c.muted)
-                var gy = sy + 16
+                c.tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["도구", "옷", "신발", "소품"], g.gear_slot, sy - 8, 0)
+                var gy = sy + 44
                 for entry in g.GEAR:
-                    if int(entry.cost) <= 0: continue
+                    if int(entry.cost) <= 0 or int(entry.slot) != g.gear_slot: continue
                     var id = String(entry.id)
                     var have = g.owned_gear.has(id)
                     var afford = g.coins >= int(entry.cost)
@@ -145,13 +147,13 @@ func draw(c) -> void:
 func ending(c) -> void:
     var g = c.game; var d = g.city(); var w = c.w; var h = c.h
     heading(c, "다시 기억하게 된 " + d.name, "OUR LITTLE JOURNEY / %02d" % [g.city_index + 1])
-    var ph = minf(260, h * 0.29); photo(c, g.photo, Rect2(24, 114, w - 48, ph), d.english)
+    var ph = minf(260, h * 0.29); photo(c, null, Rect2(24, 114, w - 48, ph), d.english, g.city_index)
     var y = 143 + ph; c.chip("도장 %d / 10 · 최대 체력 +3" % g.tour.completed.count(true), Rect2(24, y - 9, w - 48, 37), c.gold)
     c.para(d.memory, 26, y + 62, w - 52, 19, c.ink, 1.55)
     if g.city_index == 9: c.centered("열 도시의 끝. 우리의 내일은 이제 시작.", h - 273, 15, c.rose)
     c.button("next_city" if g.city_index < 9 else "passport", "다음 도시, " + g.CityData.CITIES[mini(9, g.city_index + 1)].name + "로 →" if g.city_index < 9 else "열 도시의 추억 돌아보기", Rect2(24, h - 228, w - 48, 62), true)
     c.button("passport" if g.city_index < 9 else "wander", "여권 · 도시별 앨범" if g.city_index < 9 else "서울에서 조금 더 걷기", Rect2(24, h - 154, w - 48, 60))
-    c.button("wander" if g.city_index < 9 else "title", "이 도시에서 조금 더 걷기" if g.city_index < 9 else "첫 화면으로", Rect2(24, h - 82, w - 48, 60), false, true, 15)
+    c.button("wander" if g.city_index < 9 else "new_cycle", "이 도시에서 조금 더 걷기" if g.city_index < 9 else str(g.cycle + 2) + "회차 여행 떠나기 · 상대가 더 강해져요", Rect2(24, h - 82, w - 48, 60), false, true, 15)
 
 func map_screen(c) -> void:
     var g = c.game; var w = c.w; var h = c.h

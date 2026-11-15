@@ -26,3 +26,8 @@ bash godot/tools/build.sh godot/out/paris-journey.apk
   `tools/scope.py` 가 이걸 잡는다. 빌드 전에 항상 통과시킬 것.
 - `var exp` 같은 내장 함수 이름은 변수로 쓰지 말 것 (`exp()` 가 가려짐).
 - Godot 실행 파일로 직접 검증하려면 `--headless --check-only` 를 쓸 수 있다.
+
+## 생성 파일 (직접 고치지 말 것)
+- `src/area_data.gd` ← `python3 -I tools/areas.py` (세부 구역 20곳 + 전설 자리, 검증 포함)
+- `src/sprite_data.gd` ← `python3 -I tools/sprites.py [PNG 출력 폴더]` (전설 괴물 10 · 랜드마크 11)
+- `audio/*.wav` ← `python3.13 -I tools/music.py` (numpy 필요. 직접 작곡한 배경음 12곡 · 효과음 14개, 빌드 때 `assets/audio/` 로 들어간다)

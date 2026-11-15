@@ -36,8 +36,16 @@ func reset_records() -> void:
     for i in range(10):
         var marks = []
         for point in CityData.CITIES[i].points: marks.append(false)
-        records.append({ "stage": 0, "collected": [false, false, false], "marks": marks, "runes": [0, 0, 0], "sequence": 0, "deliveries": 0, "carrying": false, "solved": false, "visited": false, "chests": [false, false, false, false], "shard": false, "eggs": [false, false, false], "wild_wins": 0, "wild_seen": [false, false, false], "best_combo": 0, "perfects": 0, "position": CityData.CITIES[i].spawn.duplicate()})
+        records.append({ "stage": 0, "collected": [false, false, false], "marks": marks, "runes": [0, 0, 0], "sequence": 0, "deliveries": 0, "carrying": false, "solved": false, "visited": false, "chests": [false, false, false, false], "shard": false, "eggs": [false, false, false], "legend": false, "wild_wins": 0, "wild_seen": [false, false, false], "best_combo": 0, "perfects": 0, "position": CityData.CITIES[i].spawn.duplicate()})
         completed.append(false)
+
+# 다음 회차: 이야기 진행은 처음으로, 도감에 남는 것(만남·발견·전설)은 그대로
+func next_cycle() -> void:
+    var keep = []
+    for r in records: keep.append({ "eggs": r.get("eggs", [false, false, false]), "wild_seen": r.get("wild_seen", [false, false, false]), "legend": r.get("legend", false)})
+    reset_records()
+    for i in range(10):
+        records[i].eggs = keep[i].eggs; records[i].wild_seen = keep[i].wild_seen; records[i].legend = keep[i].legend
 
 func record() -> Dictionary:
     return records[game.city_index]

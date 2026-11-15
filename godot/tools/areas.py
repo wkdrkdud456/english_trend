@@ -216,7 +216,35 @@ def check(key, a):
                 errs.append("구조물 (%.1f,%.1f) 과 (%.1f,%.1f) 겹침" % (cx, cz, t[0] + t[2] / 2, t[1] + t[3] / 2))
     return errs
 
+def pick_legend(a):
+    """자연 구역에서 전설 괴물이 잠든 자리: 문에서 갈 수 있고, 길·물건과 떨어진 넓은 빈터."""
+    sol = solids(a); step = 0.25; seen = set(); q = collections.deque()
+    g = (round(a["gate"][0] / step), round(a["gate"][1] / step)); q.append(g); seen.add(g)
+    while q:
+        cx, cz = q.popleft()
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            n = (cx + dx, cz + dz)
+            if n in seen or not walk(a, sol, n[0] * step, n[1] * step): continue
+            seen.add(n); q.append(n)
+    pts = [a["gate"], a["egg"]] + a["chests"] + ([a["shard"]] if "shard" in a else [])
+    best = None; score = -1
+    for ix in range(-20, 21):
+        for iz in range(-20, 21):
+            x, z = ix * 0.5, iz * 0.5
+            if any((round((x + ox) / step), round((z + oz) / step)) not in seen for ox in (-1.25, -0.5, 0, 0.5, 1.25) for oz in (-1.0, -0.5, 0, 0.5, 1.0)): continue
+            if any(inr(r, x, z, 0.9) for r in a["roads"]): continue
+            near = min(((x - p[0]) ** 2 + (z - p[1]) ** 2) ** 0.5 for p in pts)
+            if near < 3.0: continue
+            far = ((x - a["gate"][0]) ** 2 + (z - a["gate"][1]) ** 2) ** 0.5 + near * 0.5
+            if far > score: score = far; best = [x, z]
+    return best
+
 if __name__ == "__main__":
+    for k in sorted(A):
+        if k.endswith("_2"):
+            A[k]["legend"] = pick_legend(A[k])
+            if A[k]["legend"] is None: print("!! 전설 자리 없음:", k, A[k]["name"])
+            else: print("   전설", k, A[k]["name"], A[k]["legend"])
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     bad = 0
     for k in sorted(A):

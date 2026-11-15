@@ -196,7 +196,12 @@ func _draw() -> void:
         centered("이야기는 잠시 멈춰 있어요.", h / 2 + 40, 16, muted)
         return
     if game.state in ["battle", "battle_ready", "battle_won", "battle_lost"] or (game.state == "pause" and game.previous_state == "battle"):
+        if game.shake > 0.3 and game.effects_on:
+            draw_set_transform(Vector2(sin(game.clock_time * 91.0), cos(game.clock_time * 73.0)) * game.shake * 0.55, 0, Vector2.ONE)
         battle_art.draw(self)
+        draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+    elif game.state == "photo":
+        flat_art.postcard(self, Rect2(0, 0, w, h - 186), game.city_index, game)
     elif flat_backdrop():
         flat_art.draw(self, game)
     match game.state:
@@ -407,11 +412,11 @@ func draw_cook() -> void:
 
 func draw_battle_ready() -> void:
     var grade = game.wild_grade if game.wild_battle else 0
-    chip( (String(game.GRADES[grade].tag) + " 등급 출현!" if grade > 0 else "야생의 적이 나타났다!") if game.wild_battle else game.city().boss.name + "의 도전", Rect2(24, 30, w - 48, 38), Color(game.GRADES[grade].color).lightened(0.55) if grade > 0 else cream)
+    chip( ("전설의 괴물이 깨어났다!" if game.legend_battle else String(game.GRADES[grade].tag) + " 등급 출현!" if grade > 0 else "야생의 적이 나타났다!") if game.wild_battle else game.city().boss.name + "의 도전", Rect2(24, 30, w - 48, 38), Color(game.GRADES[grade].color).lightened(0.55) if grade > 0 else cream)
     var y = h - 430
     panel(Rect2(16, y, w - 32, 408), cream, 25)
     txt(game.wild_name() if game.wild_battle else "장동훈, 출전!", 35, y + 44, 24 if grade == 0 else 21, Color(game.GRADES[grade].color).darkened(0.25) if grade > 0 else ink)
-    para( ("평소보다 훨씬 강해요. 체력 ×" + str(game.GRADES[grade].hp) + " · 보상 ×" + str(game.GRADES[grade].gold) + "\n이기면 친구가 될 확률도 높아요.\n냄비 불리기와 퐁퐁으로 크게 한 방을 노려요." if grade > 0 else "설거지 연타는 수세미로 3연타!\n야근 버티기로 지키고, 가방에서 회복해요.\n월급 박치기는 기력 3칸과 40원을 써요.")
+    para( "도시마다 단 한 마리뿐인 전설이에요.\n이기면 반드시 친구가 되고, 기술 포인트 2개를 얻어요.\n냄비를 불려 두고 퐁퐁을 뿌린 뒤 크게 터뜨려요." if game.legend_battle else ("평소보다 훨씬 강해요. 체력 ×" + str(game.GRADES[grade].hp) + " · 보상 ×" + str(game.GRADES[grade].gold) + "\n이기면 친구가 될 확률도 높아요.\n냄비 불리기와 퐁퐁으로 크게 한 방을 노려요." if grade > 0 else "설거지 연타는 수세미로 3연타!\n야근 버티기로 지키고, 가방에서 회복해요.\n월급 박치기는 기력 3칸과 40원을 써요.")
     , 35, y + 83, w - 70, 16)
     para(game.city().rule, 35, y + 180, w - 70, 16, rose, 1.45)
     button("battle_start", "동훈, 가라!", Rect2(33, y + 271, w - 66, 60), true)
@@ -449,11 +454,12 @@ func draw_battle() -> void:
     var y = h - 308
     panel(Rect2(16, y, w - 32, 286), cream, 24)
     txt("TURN " + str(game.battle_turn) + ("  ·  나의 선택" if game.battle_phase == "choose" else "  ·  대결 중"), 32, y + 26, 11, muted)
-    txt("여행비 " + str(game.coins) + "원", w - 141, y + 26, 11, muted)
+    var wide_menu = game.battle_phase == "choose" and game.battle_menu == "fight" and game.job > 0
+    if not wide_menu: txt("여행비 " + str(game.coins) + "원", w - 141, y + 26, 11, muted)
     para(game.battle_result, 32, y + 53, w - 64, 16, ink, 1.35)
     if game.battle_phase != "choose":
         para("“" + game.battle_quote + "”", 36, y + 145, w - 72, 21, ink, 1.4)
-        centered("수세미 " + str(game.battle_volley_hits) + " / 3" if game.battle_choice == "strike" and game.battle_phase == "player" else "동훈의 차례" if game.battle_phase == "player" else "상대의 차례", y + 225, 14, muted)
+        centered("수세미 " + str(game.battle_volley_hits) + " / " + str(game.volley_total) if (game.battle_choice == "strike" or (game.battle_choice == "ult" and game.job == 1)) and game.battle_phase == "player" else "동훈의 차례" if game.battle_phase == "player" else "상대의 차례", y + 225, 14, muted)
         centered("여행비 " + str(game.coins) + "원", y + 258, 12, muted)
         return
     var bw = (w - 76) / 2
@@ -468,22 +474,27 @@ func draw_battle() -> void:
         battle_command("leave_battle", "도망간다" if game.wild_battle else "잠시 쉬기", "산책으로 돌아가기", low_right)
     elif game.battle_menu == "fight":
         var cells = [
-            ["strike", "3연타 · 기력 +1", true],
+            ["strike", str(game.strike_hits()) + "연타 · 기력 +1", true],
             ["guard", "피해 75%↓ · 체력 +" + str(game.guard_heal()), true],
-            ["soak", "기력 1 · 2턴 뒤 " + str(game.soak_damage()), game.battle_energy >= 1 and game.battle_bomb == 0],
+            ["soak", "기력 1 · " + str(game.fuse_turns()) + "턴 뒤 " + str(game.soak_damage()), game.battle_energy >= 1 and game.battle_bomb == 0],
             ["soap", "기력 1 · 피해 +" + str(int((game.soap_mul() - 1.0) * 100)) + "%", game.battle_energy >= 1],
             ["coffee", "기력 +2 · 다음 공격 ×" + str(snappedf(game.coffee_mul(), 0.1)), not game.battle_charge],
         ]
-        for i in range(5):
+        if game.job > 0: cells.append(["ult", String(game.JOBS[game.job].ult_line), game.battle_energy >= 2])
+        for i in range(cells.size()):
             var cell = Rect2(32 + (i % 2) * (bw + 12), y + 96 + int(i / 2) * 62, bw, 58)
             var id = String(cells[i][0])
-            var open = game.skill_open(id)
+            var special = id == "ult"
+            var open = special or game.skill_open(id)
             var ok = open and bool(cells[i][2])
-            button(id, "", cell, i == 0, ok)
-            var fg = cream if i == 0 else (ink if ok else muted)
-            txt(String(game.skill_of(id).name) + ("  Lv." + str(game.sk(id)) if open else ""), cell.position.x + 12, cell.position.y + 24, 15, fg)
-            txt(String(cells[i][1]) if open else "레벨 " + str(int(game.skill_of(id).need)) + "에 배워요", cell.position.x + 12, cell.position.y + 44, 10, fg if i == 0 else muted)
-        button("battle_back", "← 뒤로", Rect2(32 + bw + 12, y + 220, bw, 58), false, true, 14)
+            var strong = (i == 0 or special) and ok
+            button(id, "", cell, i == 0 or special, ok)
+            var fg = cream if strong else (ink if ok else muted)
+            var label = String(game.JOBS[game.job].ult) if special else String(game.skill_of(id).name) + ("  Lv." + str(game.sk(id)) if open else "")
+            txt(label, cell.position.x + 12, cell.position.y + 24, 15, fg)
+            txt(String(cells[i][1]) if open else "레벨 " + str(int(game.skill_of(id).need)) + "에 배워요", cell.position.x + 12, cell.position.y + 44, 10, fg if strong else muted)
+        if wide_menu: button("battle_back", "← 뒤로", Rect2(w - 32 - 84, y + 4, 84, 40), false, true, 13)
+        else: button("battle_back", "← 뒤로", Rect2(32 + bw + 12, y + 220, bw, 58), false, true, 14)
     else:
         battle_command("heal", "뽀뽀사탕", "체력 +" + str(game.candy_heal()) + " · 남은 수 " + str(game.battle_berries), Rect2(32, y + 100, w - 64, 72), true, game.battle_berries > 0 and game.health < game.PARTY_HP)
         button("battle_back", "← 다른 행동 고르기", Rect2(32, y + 190, w - 64, 60), false, true, 15)
@@ -493,9 +504,16 @@ func draw_battle_won() -> void:
     var y = h - 300
     panel(Rect2(16, y, w - 32, 278), cream, 25)
     txt("장동훈, 승리!", 34, y + 43, 26)
-    txt("여행비  +" + str(game.battle_reward) + "원", 34, y + 88, 23)
+    var grow = clampf(game.win_time / 0.8, 0, 1)
+    icon_coin(Vector2(46, y + 80), 11)
+    txt("+" + str(int(game.battle_reward * grow)) + "원", 66, y + 89, 25 + (4 if grow < 1.0 else 0), rose)
     txt("월급 박치기 " + str(game.perfects) + "회 · " + str(game.battle_turn) + "턴의 대결", 34, y + 122, 14, muted)
-    para("만남 기록에 남기고 산책을 이어가요." if game.wild_battle else game.city().boss.win, 34, y + 160, w - 68, 15)
+    para("전설을 이겼어요! 이제 함께 걷는 친구예요." if game.legend_battle else "만남 기록에 남기고 산책을 이어가요." if game.wild_battle else game.city().boss.win, 34, y + 160, w - 68, 15)
+    if game.effects_on:
+        for i in range(30):
+            var fall = fposmod(game.win_time * (120.0 + (i % 5) * 34.0) + i * 61.0, y + 40.0) - 30.0
+            var sway = fposmod(i * 97.3, w) + sin(game.win_time * 3.0 + i) * 12.0
+            draw_rect(Rect2(sway, fall, 6, 10 if i % 2 == 0 else 6), [Color("ffd84a"), Color("ff8fb0"), Color("8fd9ff"), Color("b6f09a")][i % 4])
     button("battle_continue", "보상 받고 계속하기  →", Rect2(33, y + 195, w - 66, 60), true, true, 17)
 
 func draw_battle_lost() -> void:
@@ -585,6 +603,24 @@ func item_icon(kind: String, p: Vector2, tier: int = 0) -> void:
                 draw_rect(Rect2(p.x - 15, p.y, 7, 5), glove); draw_rect(Rect2(p.x - 9, p.y + 10, 18, 4), glove.darkened(0.25))
                 if tier == 3:
                     draw_rect(Rect2(p.x + 10, p.y - 18, 3, 9), Color("fff4b0")); draw_rect(Rect2(p.x + 7, p.y - 15, 9, 3), Color("fff4b0"))
+        "slot3":
+            if tier == 0:
+                draw_rect(Rect2(p.x - 15, p.y - 6, 30, 14), Color("c9d6dc")); draw_rect(Rect2(p.x - 11, p.y - 2, 22, 8), Color("9fb4c4")); draw_rect(Rect2(p.x + 6, p.y - 14, 4, 9), Color("8f9aa5"))
+            elif tier <= 3:
+                var potc = [Color("d8d2a8"), Color("d8d2a8"), Color("4a4f58"), Color("e5b33c")][tier]
+                draw_rect(Rect2(p.x - 13, p.y - 5, 26, 16), potc); draw_rect(Rect2(p.x - 16, p.y - 8, 32, 5), potc.lightened(0.25))
+                draw_rect(Rect2(p.x - 19, p.y - 3, 4, 4), potc.darkened(0.2)); draw_rect(Rect2(p.x + 15, p.y - 3, 4, 4), potc.darkened(0.2))
+                draw_rect(Rect2(p.x - 3, p.y - 12, 6, 4), potc.darkened(0.3))
+                if tier == 3:
+                    draw_rect(Rect2(p.x + 9, p.y - 18, 3, 9), Color("fff4b0")); draw_rect(Rect2(p.x + 6, p.y - 15, 9, 3), Color("fff4b0"))
+            elif tier == 4:
+                draw_rect(Rect2(p.x - 9, p.y - 6, 18, 20), Color("7fd0a0")); draw_rect(Rect2(p.x - 4, p.y - 14, 8, 8), Color("f6f6f6")); draw_rect(Rect2(p.x - 6, p.y, 12, 6), Color("fff4b0"))
+                draw_circle(p + Vector2(12, -10), 3, Color("d6f3ff")); draw_circle(p + Vector2(16, -3), 2, Color("d6f3ff"))
+            elif tier == 5:
+                draw_rect(Rect2(p.x - 8, p.y - 10, 16, 24), Color("5a7a9a")); draw_rect(Rect2(p.x - 9, p.y - 15, 18, 6), Color("3a4a5a")); draw_rect(Rect2(p.x - 8, p.y - 2, 16, 5), Color("c9d6dc"))
+            else:
+                draw_rect(Rect2(p.x - 15, p.y - 10, 30, 20), Color("fdf6e0")); draw_rect(Rect2(p.x - 15, p.y - 10, 30, 5), Color("c8553d"))
+                for i in range(5): draw_circle(p + Vector2(-10 + i * 5, 3), 2, Color("e5b33c") if i % 2 == 0 else Color("4a8fb8"))
         "slot1":
             var cloth = [Color("9fb4c4"), Color("f3a6c0"), Color("c8553d"), Color("7a5fc0")][clampi(tier, 0, 3)]
             draw_rect(Rect2(p.x - 9, p.y - 11, 18, 24), cloth); draw_rect(Rect2(p.x - 16, p.y - 11, 8, 9), cloth); draw_rect(Rect2(p.x + 8, p.y - 11, 8, 9), cloth)
@@ -635,15 +671,62 @@ func row(rect: Rect2, title: String, line: String, tone: Color, right: String, t
     if tag != "": txt(tag, rect.end.x - 122, rect.position.y + 47, 11, muted, 110, HORIZONTAL_ALIGNMENT_RIGHT)
 
 func draw_status() -> void:
-    var top = sheet_head("장동훈", "레벨 " + str(game.level) + " · 도장 " + str(game.stamps()) + " / 10")
-    tabs(["tab_0", "tab_1", "tab_2", "tab_3", "tab_4"], ["스텟", "기술" + ("●" if game.skill_points > 0 else ""), "가방", "장비", "동행"], game.sheet_tab, top, 74)
+    var top = sheet_head("장동훈 · " + game.job_name(), "레벨 " + str(game.level) + " · 도장 " + str(game.stamps()) + " / 10" + (" · " + str(game.cycle + 1) + "회차" if game.cycle > 0 else ""))
+    tabs(["tab_0", "tab_1", "tab_2", "tab_3", "tab_4", "tab_5"], ["스텟", "기술" + ("●" if game.skill_points > 0 else ""), "가방", "장비", "동행", "도감"], 0 if game.sheet_tab == 6 else game.sheet_tab, top, 74)
     var y = top + 52
     match game.sheet_tab:
         0: status_stats(y)
         1: status_skills(y)
         2: status_bag(y)
         3: status_gear(y)
-        _: status_pets(y)
+        4: status_pets(y)
+        5: status_dex(y)
+        _: status_job(y)
+
+func status_job(y: float) -> void:
+    txt("레벨 10부터 전직할 수 있어요. 레벨 20이 되면 저절로 2차로 올라요.", 16, y + 16, 11, Color("cfc5b4"))
+    for i in range(1, 4):
+        var entry = game.JOBS[i]
+        var mine = game.job == i
+        var r = Rect2(12, y + 28 + (i - 1) * 126, w - 24, 118)
+        plate(r, Color(String(entry.color)) if mine else Color("8d8578"), cream, 15, 3)
+        panel(Rect2(r.position.x + 8, r.position.y + 10, 7, r.size.y - 24), Color(String(entry.color)), 3)
+        txt(String(entry.name), 36, r.position.y + 28, 18)
+        txt("2차 · " + String(entry.name2), w - 190, r.position.y + 27, 11, muted, 162, HORIZONTAL_ALIGNMENT_RIGHT)
+        txt(String(entry.line) + " (2차는 두 배)", 36, r.position.y + 50, 12, muted)
+        txt("고유 기술 「" + String(entry.ult) + "」", 36, r.position.y + 76, 13, rose)
+        txt(String(entry.ult_line), 36, r.position.y + 96, 11, muted)
+        if mine: txt("현재 직업", w - 130, r.position.y + 94, 13, Color("3f7a32"), 104, HORIZONTAL_ALIGNMENT_RIGHT)
+        else: button("job_" + str(i), "전직" if game.job == 0 else "변경 200원", Rect2(w - 132, r.position.y + 70, 108, 38), true, game.level >= game.JOB_LEVEL and (game.job == 0 or game.coins >= 200), 13)
+    button("tab_0", "← 스텟으로", Rect2(12, y + 28 + 3 * 126 + 4, 130, 42), false, true, 13)
+
+# 도감: 도시마다 만난 친구 셋 + 전설 하나, 숨은 발견, 기억 조각
+func status_dex(y: float) -> void:
+    var got = 0
+    for rec in game.tour.records:
+        got += rec.get("wild_seen", []).count(true) + rec.get("eggs", []).count(true) + (1 if bool(rec.get("legend", false)) else 0)
+    plate(Rect2(12, y, w - 24, 40), gold)
+    txt("수집률 " + str(int(got * 100 / 70)) + "%", 28, y + 26, 16)
+    txt("만남 30 · 전설 10 · 숨은 발견 30", w - 230, y + 25, 11, muted, 202, HORIZONTAL_ALIGNMENT_RIGHT)
+    var pitch = minf(46, (h - y - 60) / 10.0)
+    for i in range(10):
+        var rec2 = game.tour.records[i]
+        var data = game.CityData.CITIES[i]
+        var ry = y + 48 + i * pitch
+        plate(Rect2(12, ry, w - 24, pitch - 4), ink if i == game.city_index else Color("8d8578"), cream, 12, 2)
+        txt(String(data.name), 24, ry + pitch * 0.5 + 3, 13)
+        var seen = rec2.get("wild_seen", [false, false, false])
+        for k in range(4):
+            var box = Rect2(100 + k * 40, ry + 3, 34, pitch - 12)
+            var known = bool(rec2.get("legend", false)) if k == 3 else bool(seen[k])
+            panel(box, Color("f1e6cf") if known else Color("cfc6b4"), 7, Color("e0a020") if k == 3 else Color("d8c9a8"))
+            if known:
+                var art = "legend" + str(i) if k == 3 else String(data.mobs[k].art)
+                var dims = flat_art.mob_size(art)
+                flat_art.mob(self, art, Vector2(box.get_center().x, box.end.y - 3), (box.size.y - 6) / maxf(1.0, maxf(dims.x, dims.y)))
+            else: txt("?", box.position.x, box.get_center().y + 6, 15, Color("9d978a"), box.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+        txt("발견 " + str(rec2.get("eggs", []).count(true)) + "/3", w - 122, ry + pitch * 0.5 - 2, 11, rose, 98, HORIZONTAL_ALIGNMENT_RIGHT)
+        txt("기억 조각 " + ("찾음" if bool(rec2.get("shard", false)) else "—"), w - 122, ry + pitch * 0.5 + 12, 10, muted, 98, HORIZONTAL_ALIGNMENT_RIGHT)
 
 func status_skills(y: float) -> void:
     plate(Rect2(12, y, w - 24, 44), gold if game.skill_points > 0 else Color("8d8578"))
@@ -677,16 +760,20 @@ func status_stats(y: float) -> void:
     txt("체력 " + str(game.health) + " / " + str(game.PARTY_HP), 28, y + 66, 11, muted)
     var rows = [
         ["최대 체력", str(game.party_max()), "옷 +" + str(game.gear_sum("hp"))],
-        ["설거지 연타", str(game.dish_damage(0)) + " / " + str(game.dish_damage(1)) + " / " + str(game.dish_damage(2)), "도구 +" + str(game.gear_sum("atk"))],
+        ["설거지 연타", str(game.dish_damage(0)) + " / " + str(game.dish_damage(1)) + " / " + str(game.dish_damage(2)), "도구 +" + str(game.gear_sum("atk")) + " · 치명타 " + str(int(game.crit_rate() * 100)) + "%"],
+        ["냄비 불리기", str(game.soak_damage()), String(game.slot_gear(3).name) + " · " + str(game.fuse_turns()) + "턴 뒤 폭발"],
         ["월급 박치기", str(game.salary_damage()), "기력 3 · 40원"],
         ["야근 버티기 회복", str(game.guard_heal()), "뽀뽀사탕 " + str(game.candy_heal()) + " · 가방 " + str(game.bag_count("candy")) + "개"],
         ["이동 속도", str(int(game.speed_mul() * 100)) + "%", String(game.slot_gear(2).name) + " · 기념품 " + str(game.souvenirs()) + " / 10"],
     ]
+    var can_job = game.level >= game.JOB_LEVEL
+    row(Rect2(12, y + 84, w - 24, 52), game.job_name(), (String(game.JOBS[game.job].line) + (" ×2" if game.job_rank() == 2 else "") if game.job > 0 else ("전직해서 고유 기술을 배워요" if can_job else "레벨 " + str(game.JOB_LEVEL) + "에 전직할 수 있어요")), Color(String(game.JOBS[game.job].color)), "", "")
+    button("job_open", "전직" if game.job == 0 else "변경", Rect2(w - 96, y + 91, 72, 38), game.job == 0 and can_job, can_job, 13)
     for i in range(rows.size()):
-        row(Rect2(12, y + 88 + i * 64, w - 24, 58), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")
-    var ly = y + 88 + rows.size() * 64
-    if game.pet_team.is_empty(): row(Rect2(12, ly, w - 24, 58), "동행 없음", "잔디밭에서 몬스터를 이기면 친구가 돼요", Color("9d978a"), "", "")
-    else: row(Rect2(12, ly, w - 24, 58), "동행 " + str(game.pet_team.size()) + " / " + str(game.TEAM_MAX), "기력 +" + str(game.pet_bonus("energy")) + " · 설거지 +" + str(game.pet_bonus("dish")) + " · 회복 +" + str(game.pet_bonus("care")), rose, "", "")
+        row(Rect2(12, y + 140 + i * 56, w - 24, 52), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")
+    var ly = y + 140 + rows.size() * 56
+    if game.pet_team.is_empty(): row(Rect2(12, ly, w - 24, 52), "동행 없음", "잔디밭에서 몬스터를 이기면 친구가 돼요", Color("9d978a"), "", "")
+    else: row(Rect2(12, ly, w - 24, 52), "동행 " + str(game.pet_team.size()) + " / " + str(game.TEAM_MAX), "기력 +" + str(game.pet_bonus("energy")) + " · 설거지 +" + str(game.pet_bonus("dish")) + " · 회복 +" + str(game.pet_bonus("care")), rose, "", "")
 
 func status_bag(y: float) -> void:
     txt("대결과 여행에 쓰는 물건이에요. 상점에서 더 살 수 있어요.", 16, y + 16, 11, Color("cfc5b4"))
@@ -706,26 +793,24 @@ func status_bag(y: float) -> void:
     txt("도시락: " + ["없음", "뽀뽀사탕 1개 추가", "기력 1칸으로 시작", "사탕 회복 +4"][clampi(game.tour.meal, 0, 3)], 16, ny + 42, 11, Color("cfc5b4"))
 
 func status_gear(y: float) -> void:
-    txt("칸마다 하나씩 착용해요. 효과는 바로 적용돼요.", 16, y + 16, 11, Color("cfc5b4"))
-    var cursor = y + 20
-    for slot in range(3):
-        txt(game.SLOT_NAME[slot], 18, cursor + 16, 12, gold)
-        cursor += 24
-        for entry in game.GEAR:
-            if int(entry.slot) != slot: continue
-            var id = String(entry.id)
-            if not game.owned_gear.has(id): continue
-            var on = String(game.equipped[slot]) == id
-            var r = Rect2(12, cursor, w - 24, 44)
-            plate(r, Color("4a8a38") if on else Color("8d8578"), cream, 14, 3)
-            gear_icon(entry, Vector2(40, cursor + 21))
-            txt(String(entry.name), 70, cursor + 20, 15)
-            txt(String(entry.line), 70, cursor + 37, 10, muted)
-            if on: txt("착용 중", w - 104, cursor + 27, 12, Color("3f7a32"), 80, HORIZONTAL_ALIGNMENT_RIGHT)
-            else: button("equip_" + id, "착용", Rect2(w - 92, cursor + 4, 68, 36), false, true, 12)
-            cursor += 48
-        cursor += 6
-    txt("새 장비는 도시의 앨리 가게에서 팔아요.", 16, minf(cursor + 14, h - 30), 11, Color("cfc5b4"))
+    tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["도구", "옷", "신발", "소품"], game.gear_slot, y, 0)
+    var slot = game.gear_slot
+    txt(String(game.SLOT_NAME[slot]) + " — 하나만 착용해요. 효과는 바로 적용돼요.", 16, y + 62, 11, Color("cfc5b4"))
+    var cursor = y + 72
+    for entry in game.GEAR:
+        if int(entry.slot) != slot: continue
+        var id = String(entry.id)
+        if not game.owned_gear.has(id): continue
+        var on = String(game.equipped[slot]) == id
+        var r = Rect2(12, cursor, w - 24, 50)
+        plate(r, Color("4a8a38") if on else Color("8d8578"), cream, 14, 3)
+        gear_icon(entry, Vector2(40, cursor + 24))
+        txt(String(entry.name), 70, cursor + 22, 15)
+        txt(String(entry.line), 70, cursor + 40, 10, muted)
+        if on: txt("착용 중", w - 104, cursor + 30, 12, Color("3f7a32"), 80, HORIZONTAL_ALIGNMENT_RIGHT)
+        else: button("equip_" + id, "착용", Rect2(w - 92, cursor + 6, 68, 38), false, true, 12)
+        cursor += 56
+    txt("새 장비는 도시의 앨리 가게에서 팔아요.", 16, cursor + 16, 11, Color("cfc5b4"))
 
 func status_pets(y: float) -> void:
     if game.pets.is_empty():
@@ -745,10 +830,10 @@ func status_pets(y: float) -> void:
         flat_art.mob(self, game.pet_art(p), Vector2(43, r.position.y + 44), 34.0 / maxf(1.0, maxf(flat_art.mob_size(game.pet_art(p)).x, flat_art.mob_size(game.pet_art(p)).y)))
         txt(game.pet_name(p), 74, r.position.y + 24, 15)
         if grade > 0: txt(String(game.GRADES[grade].tag), 74 + font.get_string_size(game.pet_name(p), HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 6, r.position.y + 24, 11, Color(game.GRADES[grade].color))
-        txt(String(game.PET_ROLE[int(p.i)].tag) + " +" + str(game.pet_power(p)) + " · 친밀도 " + str(p.lv) + "/5", 74, r.position.y + 43, 11, muted)
+        txt(String(game.PET_ROLE[int(p.i)].tag) + " +" + str(game.pet_power(p)) + (" · 모든 능력" if int(p.i) == 3 else " · 친밀도 " + str(p.lv) + "/5"), 74, r.position.y + 43, 11, muted)
         if on: txt("동행 중", w - 96, r.position.y + 33, 13, rose, 72, HORIZONTAL_ALIGNMENT_RIGHT)
         buttons["petpick_" + str(i)] = r
-    txt("모은 친구 " + str(game.pets.size()) + " / 30", 16, y + 34 + shown * 60, 11, Color("cfc5b4"))
+    txt("모은 친구 " + str(game.pets.size()) + " / 40", 16, y + 34 + shown * 60, 11, Color("cfc5b4"))
 
 func draw_map() -> void:
     panel(Rect2(0, 0, w, h), Color("294b4670"), 0)

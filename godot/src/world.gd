@@ -16,6 +16,7 @@ var gates: Array = []         # {"x","z","to","label"} — 다른 구역으로 �
 var chests: Array = []        # {"x","z","i"} — 보물 상자 (i = 도시 안에서의 번호)
 var extras: Array = []
 var zones: Array = []         # {"r": Rect2, "c": 색} — 광장·모래사장 같은 바닥
+var legend: Dictionary = {}   # {"x","z"} — 전설의 괴물이 잠든 자리 (자연 구역)
 var eggs: Array = []          # {"x","z","i"} — 숨은 발견        # {"t": "shard"|"npc", "x","z"}
 const AREA_NAMES = [
     ["몽마르트 골목", "센강 둔치"], ["기온 뒷골목", "대나무 숲"], ["시장 골목", "오아시스"], ["트라스테베레 골목", "올리브 언덕"], ["브루클린 골목", "센트럴 파크"],
@@ -225,6 +226,7 @@ func gate_to(zone: int) -> Dictionary:
 
 func seal_flat() -> void:
     for rect in solid:
+        if rect.size.x < 0.5: continue
         var mid = rect.get_center()
         var known = false
         for d in flat:

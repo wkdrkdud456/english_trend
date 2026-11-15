@@ -132,30 +132,83 @@ func pyramid(x: float, z: float, s: float) -> void:
     w.solid.append(Rect2(x - s / 2, z - s / 2, s, s))
     w.register_occluder(g, AABB(p - Vector3(s / 2, 0, s / 2), Vector3(s, 3.6, s)))
 
+func mark(art: String, x: float, z: float, wide: float, front: float) -> void:
+    w.flat.append({ "t": "landmark", "art": art, "x": x, "z": z, "ww": wide, "front": front})
+
+# 걸어 다니는 데 방해가 안 되는 빈자리인가 (길·물·건물·임무 지점과 떨어져 있어야 한다)
+func free_spot(x: float, z: float, sx: float, sz: float, near_road: bool) -> bool:
+    if absf(x) > 10.2 or absf(z) > 10.6: return false
+    var body = Rect2(x - sx / 2, z - sz / 2, sx, sz).grow(0.75)
+    for rect in w.solid:
+        if rect.intersects(body): return false
+    for rect in w.roads:
+        if rect.intersects(body.grow(-0.45)): return false
+    for rect in w.water_zones:
+        if rect.intersects(body): return false
+    var busy = [data.spawn, data.boss_at, data.photo_at, data.shop_at]
+    for q in data.points: busy.append(q)
+    for q in busy:
+        if Vector2(q[0] - x, q[1] - z).length() < 2.4: return false
+    if not near_road: return true
+    for rect in w.roads:
+        if rect.grow(2.0).has_point(Vector2(x, z)): return true
+    return false
+
+# 도시마다 다른 거리 소품을 길가의 빈자리에 놓는다
+func street_decor(list: Array) -> void:
+    var n = 0
+    for item in list:
+        var kind = String(item[0])
+        var size = AreaData.SOLID.get(kind, [0.6, 0.6])
+        for tries in range(80):
+            n += 1
+            var x = roundf((-10.0 + fmod(n * 7.31 + index * 3.7, 20.0)) * 2.0) / 2.0
+            var z = roundf((-10.4 + fmod(n * 4.87 + index * 1.9, 20.8)) * 2.0) / 2.0
+            if not free_spot(x, z, float(size[0]), float(size[1]), true): continue
+            if kind == "lamp" or kind == "bench": w.flat.append({ "t": kind, "x": x, "z": z})
+            else: w.flat.append({ "t": "decor", "kind": kind, "x": x, "z": z, "tint": String(item[1])})
+            w.solid.append(Rect2(x - float(size[0]) / 2, z - float(size[1]) / 2, float(size[0]), float(size[1])))
+            break
+
+const STREET = {
+    1: [["lantern", ""], ["lantern", ""], ["lantern", ""], ["lantern", ""], ["bush", ""], ["bush", ""], ["bench", ""], ["stall", "c85068"], ["lantern", ""], ["bush", ""]],
+    2: [["stall", "c85068"], ["stall", "e5b33c"], ["camel", "c9a66b"], ["rock", "b9a57c"], ["tent", "4a8fb8"], ["lantern", ""], ["rock", "b9a57c"], ["stall", "8a5fc0"], ["camel", "c9a66b"], ["lantern", ""]],
+    3: [["column", ""], ["column", ""], ["fountain", ""], ["bush", ""], ["bench", ""], ["lamp", ""], ["column", ""], ["stall", "c85068"], ["bush", ""], ["lamp", ""], ["column", ""]],
+    4: [["lamp", ""], ["lamp", ""], ["bench", ""], ["bus", "e5b33c"], ["stall", "c85068"], ["lamp", ""], ["bush", ""], ["bench", ""], ["lamp", ""], ["stall", "e5b33c"]],
+    5: [["ice", ""], ["rock", "9aa8b4"], ["lamp", ""], ["ice", ""], ["rock", "9aa8b4"], ["bench", ""], ["ice", ""], ["lamp", ""], ["rock", "9aa8b4"]],
+    6: [["parasol", "3f7fc0"], ["bush", ""], ["parasol", "c85068"], ["bench", ""], ["lamp", ""], ["parasol", "e5b33c"], ["bush", ""], ["bench", ""], ["bush", ""]],
+    7: [["phonebox", ""], ["lamp", ""], ["bench", ""], ["bus", "c8323c"], ["lamp", ""], ["phonebox", ""], ["bush", ""], ["lamp", ""], ["bench", ""], ["lamp", ""]],
+    8: [["parasol", "f2a65a"], ["bush", ""], ["stall", "74bcb7"], ["bench", ""], ["parasol", "3f7fc0"], ["bush", ""], ["lamp", ""], ["bush", ""], ["parasol", "c85068"]],
+    9: [["lantern", ""], ["stall", "e8974d"], ["bench", ""], ["bush", ""], ["lantern", ""], ["stall", "c85068"], ["lamp", ""], ["bush", ""], ["lantern", ""], ["bench", ""]],
+}
+
 func landmark() -> void:
     match index:
         1:
-            for z in [-5, -7, -9]: torii(0, z)
+            for z in [-5, -7, -9]:
+                torii(0, z); w.flat.append({ "t": "decor", "kind": "torii", "x": 0.0, "z": float(z), "tint": ""})
             house(0, -11.3, 4, 1.5, 2, "c6ae86", "5e4a3b", "kyoto")
+            w.flat.pop_back(); mark("lm_pagoda", 0, -11.3, 3.8, 0.75)
         2:
             pyramid(-6, -8.8, 5.4); pyramid(6, -9.2, 4.5)
             var g = w.group(at(0, -10)); w.box(g, Vector3(0, 0.6, 0), Vector3(2.4, 1.2, 2), "cba86b")
             w.ball(g, Vector3(0, 1.8, 0.5), 0.8, "dfbc77")
             w.box(g, Vector3(0, 2.4, 0.3), Vector3(1.8, 0.3, 1.2), "6c8a9a")
             w.solid.append(Rect2(-1.3, -11.1, 2.6, 2.2))
+            mark("lm_pyramid", -6, -8.8, 5.4, 2.7); mark("lm_pyramid", 6, -9.2, 4.5, 2.25); mark("lm_sphinx", 0, -10, 2.8, 1.1)
         3:
             var g = w.group(at(0, -8.5)); w.register_occluder(g, AABB(Vector3(-5, 0, -11.8), Vector3(10, 4.5, 4.3)))
             for i in range(15):
                 var a = PI + i * PI / 14; var p = Vector3(cos(a) * 5, 0, sin(a) * 2.9)
                 w.box(g, p + Vector3(0, 1.9, 0), Vector3(0.45, 3.8, 0.5), "d7c49b")
                 for y in [1.4, 2.8, 3.8]: w.box(g, p + Vector3(0, y, 0), Vector3(1.1, 0.25, 0.6), "eddfbd")
-            w.solid.append(Rect2(-5.3, -12, 10.6, 3.9))
+            w.solid.append(Rect2(-5.3, -12, 10.6, 3.9)); mark("lm_colosseum", 0, -10.05, 10.6, 1.95)
         4:
             var g = w.group(at(7, -10)); w.box(g, Vector3(0, 0.6, 0), Vector3(2, 1.2, 2), "c3c5b2")
             w.tube(g, Vector3(0, 2, 0), 0.6, 2, "6f9a8d", 0.3); w.ball(g, Vector3(0, 3.35, 0), 0.4, "83ad9b")
             w.beam(g, Vector3(0.25, 2.8, 0), Vector3(0.85, 4.4, 0), 0.18, "83ad9b")
             w.tube(g, Vector3(0.85, 4.65, 0), 0.16, 0.6, "d8b067"); w.ball(g, Vector3(0.85, 5, 0), 0.24, "f2cd80")
-            w.solid.append(Rect2(5.9, -11.1, 2.2, 2.2))
+            w.solid.append(Rect2(5.9, -11.1, 2.2, 2.2)); mark("lm_liberty", 7, -10, 2.4, 1.1)
         5:
 
             for band in range(3):
@@ -164,8 +217,14 @@ func landmark() -> void:
                     var ribbon = w.box(w, Vector3(x, y, -11.8 - band * 0.3), Vector3(1.65, 0.35, 0.05), ["81c7ba", "9caacb", "b4d5b5"][band])
                     ribbon.rotation.z = cos(i * 0.4 + band) * 0.13
             for x in [-10, -7, 7, 10]: w.tube(w, at(x, -10) + Vector3(0, 1.2, 0), 1.5, 2.4, "c5dce9", 0.3)
+            for spot in [Vector2(-6.5, -9.4), Vector2(6.5, -9.4), Vector2(-9, -9), Vector2(9, -9.5), Vector2(-4.5, 9.4), Vector2(4.5, 9.4)]:
+                if not free_spot(spot.x, spot.y, 3.4, 1.6, false): continue
+                w.solid.append(Rect2(spot.x - 1.7, spot.y - 0.8, 3.4, 1.6)); mark("lm_church", spot.x, spot.y, 3.4, 0.8)
+                break
         6:
             house(0, -10, 3.2, 2.8, 2.4, "fcf8ee", "5688b6", "dome")
+            w.flat.pop_back(); mark("lm_dome", 0, -10, 3.6, 1.4)
+            w.flat.append({ "t": "decor", "kind": "windmill", "x": -7.0, "z": -6.0, "tint": "5688b6"})
             var g = w.group(at(-7, -6)); w.tube(g, Vector3(0, 1.5, 0), 0.65, 3, "f9f2df", 0.45)
             var rotor = w.group(Vector3(0, 2.8, 0.55), g); rotor.set_meta("moving", true); w.decor_movers.append(rotor)
             for i in range(4):
@@ -179,20 +238,20 @@ func landmark() -> void:
             w.box(g, Vector3(0, 5.65, 1.14), Vector3(0.07, 0.6, 0.03), "566264")
             w.box(g, Vector3(0.22, 5.45, 1.14), Vector3(0.5, 0.07, 0.03), "566264")
             w.tube(g, Vector3(0, 6.6, 0), 1.3, 1.2, "586373", 0.05)
-            w.solid.append(Rect2(4.8, -12.2, 2.4, 2.4))
+            w.solid.append(Rect2(4.8, -12.2, 2.4, 2.4)); mark("lm_bigben", 6, -11, 2.4, 1.2)
         8:
             var g = w.group(at(-5, -10)); w.register_occluder(g, AABB(Vector3(-9, 0, -12), Vector3(8, 4, 4)))
             w.box(g, Vector3(0, 0.3, 0), Vector3(7, 0.6, 3.4), "d3c6a9")
             for i in range(4):
                 var sail = w.smooth_shape(g, Vector3(-2.4 + i * 1.5, 1.5, 0), Vector3(1.4, 3.4 - i * 0.2, 2.7), "f6f0d9")
                 sail.rotation.z = -0.3 + i * 0.12
-            w.solid.append(Rect2(-8.7, -11.9, 7.4, 3.8))
+            w.solid.append(Rect2(-8.7, -11.9, 7.4, 3.8)); mark("lm_opera", -5, -10, 7.4, 1.9)
         9:
             var g = w.group(at(0, -10)); w.register_occluder(g, AABB(Vector3(-1.5, 0, -11.5), Vector3(3, 7.6, 3)))
             w.tube(g, Vector3(0, 2.9, 0), 0.24, 5.8, "dddcd0", 0.18)
             w.tube(g, Vector3(0, 5.3, 0), 1.2, 0.7, "c8d2ce", 0.95)
             w.tube(g, Vector3(0, 6.6, 0), 0.08, 2, "c4817e")
-            w.solid.append(Rect2(-1, -11, 2, 2))
+            w.solid.append(Rect2(-1, -11, 2, 2)); mark("lm_ntower", 0, -10, 2.4, 1.0)
 
 func mission_props() -> void:
     for i in range(data.points.size()):
@@ -292,6 +351,7 @@ func build(world: Node3D, city: int) -> void:
             for p in [ [-8, -10], [8, -10], [-9, 10], [8, 10]]: house(p[0], p[1], 3.6, 2.5, 2, "d5c4a7", "68747b", "hanok")
             for p in [ [-11, -4], [11, -4], [-4, 10], [4, 10]]: tree(p[0], p[1], "cherry")
     landmark()
+    if STREET.has(index): street_decor(STREET[index])
     for x in range(-11, 12, 2):
         for z in range(-11, 12, 2):
             var point = at(x + 0.23, z + 0.18)
@@ -354,6 +414,9 @@ func build_area(world: Node3D, city: int, zone: int) -> void:
     if plan.has("npc"): w.extras.append({ "t": "npc", "x": float(plan.npc[0]), "z": float(plan.npc[1])})
     if plan.has("shard"): w.extras.append({ "t": "shard", "x": float(plan.shard[0]), "z": float(plan.shard[1])})
     w.eggs.append({ "x": float(plan.egg[0]), "z": float(plan.egg[1]), "i": zone})
+    if plan.has("legend"):
+        w.legend = { "x": float(plan.legend[0]), "z": float(plan.legend[1])}
+        w.flat.append({ "t": "legend", "x": w.legend.x, "z": w.legend.z, "art": "legend" + str(city)})
     for chest in w.chests: w.flat.append({ "t": "chest", "x": chest.x, "z": chest.z, "i": chest.i})
     for extra in w.extras: w.flat.append({ "t": String(extra.t), "x": extra.x, "z": extra.z})
     for egg in w.eggs: w.flat.append({ "t": "egg", "x": egg.x, "z": egg.z, "i": egg.i})

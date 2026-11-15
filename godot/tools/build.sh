@@ -41,6 +41,10 @@ for it in zin.infolist():
     zo.writestr(zi, zin.read(n))
 for b, d in sorted(gd.items()):
     zo.writestr('assets/scripts/%s.gd' % b, d)
+adir = os.path.join(os.path.dirname(gdir), 'audio')
+if os.path.isdir(adir):
+    for f in sorted(os.listdir(adir)):
+        if f.endswith('.wav'): zo.writestr('assets/audio/' + f, open(os.path.join(adir, f), 'rb').read())
 zo.close()
 PY
 

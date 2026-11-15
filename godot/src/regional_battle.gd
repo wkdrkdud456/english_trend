@@ -1,11 +1,13 @@
 extends RefCounted
 const Pixels = preload ("res://scripts/legacy_pixels.gd")
+const Sprites = preload ("res://scripts/sprite_data.gd")
 var tiles: Dictionary = {}
 
 func box(c, x, y, w, h, color) -> void:
     c.draw_rect(Rect2(roundf(x), roundf(y), w, h), Color(color))
 
 func art_id(g) -> String:
+    if g.legend_battle: return "legend" + str(g.city_index)
     return g.city().mobs[g.wild_index].art if g.wild_battle else g.city().boss.art
 
 func melee(g) -> bool:
@@ -15,7 +17,7 @@ func sprite(c, foot: Vector2, hit: bool) -> void:
     var id = art_id(c.game)
     if not tiles.has(id):
         var cells = {}; var minp = Vector2(999, 999); var maxp = Vector2(-999, -999)
-        for part in Pixels.PARTS[id]:
+        for part in (Sprites.PARTS[id] if Sprites.PARTS.has(id) else Pixels.PARTS[id]):
             for x in range(part[0], part[0] + part[2]):
                 for y in range(part[1], part[1] + part[3]):
                     var p = Vector2i(x, y); cells[p] = part[4]; minp = minp.min(Vector2(p)); maxp = maxp.max(Vector2(p) + Vector2.ONE)

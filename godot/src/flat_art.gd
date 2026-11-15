@@ -4,6 +4,8 @@ extends RefCounted
 # 좌표는 3D 월드의 (x, z)를 그대로 쓰기 때문에 이동/충돌 로직은 건드리지 않는다.
 
 const Pixels = preload ("res://scripts/legacy_pixels.gd")
+const Sprites = preload ("res://scripts/sprite_data.gd")
+const CARD_ART = ["lm_eiffel", "lm_pagoda", "lm_pyramid", "lm_colosseum", "lm_liberty", "lm_church", "lm_dome", "lm_bigben", "lm_opera", "lm_ntower"]
 var bounds: Dictionary = {}
 
 # C = 모자 또는 머리, G = 손(장갑), T = 상의, D = 하의, E = 신발
@@ -123,21 +125,90 @@ func sprite(c: Control, rows: Array, foot: Vector2, s: float, palette: Dictionar
             run_key = key
             run_start = xx
 
+func has_art(art: String) -> bool:
+    return Sprites.PARTS.has(art) or Pixels.PARTS.has(art)
+
+func parts_of(art: String) -> Array:
+    return Sprites.PARTS[art] if Sprites.PARTS.has(art) else Pixels.PARTS[art]
+
 func mob_size(art: String) -> Vector2:
     if not bounds.has(art):
         var lo = Vector2(999, 999); var hi = Vector2(-999, -999)
-        for part in Pixels.PARTS[art]:
+        for part in parts_of(art):
             lo = lo.min(Vector2(part[0], part[1])); hi = hi.max(Vector2(part[0] + part[2], part[1] + part[3]))
         bounds[art] = [lo, hi]
     return bounds[art][1] - bounds[art][0]
 
-func mob(c: Control, art: String, foot: Vector2, s: float) -> void:
-    if not Pixels.PARTS.has(art): return
+func mob(c: Control, art: String, foot: Vector2, s: float, dim: float = 0.0) -> void:
+    if not has_art(art): return
     var size = mob_size(art)
     var lo = bounds[art][0]
     var o = Vector2(roundf(foot.x - size.x * s / 2.0), roundf(foot.y - size.y * s))
-    for part in Pixels.PARTS[art]:
-        c.draw_rect(Rect2(o + (Vector2(part[0], part[1]) - lo) * s, Vector2(part[2], part[3]) * s), Color(part[4]))
+    var grey = Color("6b7480")
+    for part in parts_of(art):
+        c.draw_rect(Rect2(o + (Vector2(part[0], part[1]) - lo) * s, Vector2(part[2], part[3]) * s + Vector2(0.6, 0.6)), Color(part[4]).lerp(grey, dim) if dim > 0.0 else Color(part[4]))
+
+# 도시의 상징 건물 — 그림 데이터로 그린다
+func landmark(c: Control, d: Dictionary) -> void:
+    var art = String(d.art)
+    var foot = at(d.x, d.z + float(d.get("front", 0.0)))
+    var s = float(d.ww) * u / maxf(1.0, mob_size(art).x)
+    shadow(c, foot, float(d.ww) * u * 0.9, 8 * k)
+    mob(c, art, foot, s)
+
+# 자연 구역 깊은 곳의 전설 — 도시를 마치기 전에는 잠들어 있다
+func legend(c: Control, d: Dictionary, g) -> void:
+    var foot = at(d.x, d.z)
+    var s = u * 0.07
+    var awake = bool(g.tour.completed[g.city_index]) or g.cycle > 0
+    shadow(c, foot, 30 * s, 8 * s)
+    if awake:
+        for i in range(8):
+            var spin = g.clock_time * 1.3 + i * TAU / 8.0
+            block(c, foot.x + cos(spin) * 20 * s - 3, foot.y - 14 * s + sin(spin) * 9 * s - 3, 6, 6, Color("ffd84a"))
+        mob(c, String(d.art), foot - Vector2(0, absf(sin(g.clock_time * 2.2)) * 3.0), s)
+    else:
+        mob(c, String(d.art), foot, s, 0.72)
+        var drift = fmod(g.clock_time * 0.6, 1.0)
+        c.txt("z", foot.x + 14 * s, foot.y - 30 * s - drift * 14, 13, Color(0.2, 0.23, 0.25, 1.0 - drift))
+        c.txt("Z", foot.x + 20 * s, foot.y - 36 * s - drift * 18, 17, Color(0.2, 0.23, 0.25, 1.0 - drift))
+
+# 추억 사진: 랜드마크 앞에 둘이 나란히 선 엽서 한 장
+func postcard(c: Control, rect: Rect2, city: int, g) -> void:
+    var tones = g.CityData.CITIES[clampi(city, 0, 9)].pal
+    var sky = Color("cfe3ea") if city == 0 else Color(String(tones.sky))
+    var land = Color(String(tones.g0))
+    c.draw_rect(rect, sky)
+    c.draw_rect(Rect2(rect.position, Vector2(rect.size.x, rect.size.y * 0.3)), sky.lightened(0.12))
+    var sun_at = rect.position + Vector2(rect.size.x * 0.82, rect.size.y * 0.2)
+    var sun_r = rect.size.y * 0.06
+    c.draw_rect(Rect2(sun_at - Vector2(sun_r, sun_r), Vector2(sun_r, sun_r) * 2.0), Color(1, 0.95, 0.75, 0.9))
+    for i in range(3):
+        var cx = rect.position.x + rect.size.x * (0.12 + i * 0.3) + sin(g.clock_time * 0.2 + i) * 6.0
+        var cy = rect.position.y + rect.size.y * (0.14 + (i % 2) * 0.1)
+        var cw = rect.size.x * 0.16
+        c.draw_rect(Rect2(cx, cy, cw, rect.size.y * 0.035), Color(1, 1, 1, 0.75)); c.draw_rect(Rect2(cx + cw * 0.2, cy - rect.size.y * 0.02, cw * 0.5, rect.size.y * 0.03), Color(1, 1, 1, 0.75))
+    var horizon = rect.position.y + rect.size.y * 0.7
+    c.draw_rect(Rect2(rect.position.x, horizon, rect.size.x, rect.end.y - horizon), land)
+    c.draw_rect(Rect2(rect.position.x, horizon, rect.size.x, maxf(2, rect.size.y * 0.012)), land.darkened(0.18))
+    var art = CARD_ART[clampi(city, 0, 9)]
+    var dims = mob_size(art)
+    var s = minf(rect.size.y * 0.58 / dims.y, rect.size.x * 0.84 / dims.x)
+    mob(c, art, Vector2(rect.get_center().x, horizon + rect.size.y * 0.02), s)
+    var ps = maxf(2.0, floorf(rect.size.y * 0.3 / 20.0))
+    var feet = rect.end.y - rect.size.y * 0.05
+    var mid = rect.get_center().x
+    sprite(c, GIRL, Vector2(mid - 8 * ps, feet), ps, g.look(true))
+    sprite(c, BOY, Vector2(mid + 8 * ps, feet), ps, g.look(false))
+    var hp = Vector2(mid, feet - 22 * ps - absf(sin(g.clock_time * 2.4)) * ps * 2)
+    for q in [Vector2(-2, -1), Vector2(1, -1), Vector2(-2, 0), Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(-1, 1), Vector2(0, 1)]:
+        c.draw_rect(Rect2(hp + q * ps, Vector2(ps, ps)), Color("e8548c"))
+    for n in range(mini(g.pet_team.size(), 3)):
+        var friend = g.pets[int(g.pet_team[n])]
+        var fa = g.pet_art(friend)
+        var fs = ps * 12.0 / maxf(1.0, maxf(mob_size(fa).x, mob_size(fa).y))
+        mob(c, fa, Vector2(mid + (-22 - n * 13) * ps if n != 1 else mid + 22 * ps, feet), fs)
+
 
 func shadow(c: Control, foot: Vector2, w: float, h: float = 6.0) -> void:
     block(c, foot.x - w / 2, foot.y - h / 2, w, h, shade)
@@ -675,6 +746,9 @@ func draw(c: Control, g) -> void:
             "lamp": lamp(c, d)
             "flower": flowerbed(c, d)
             "bench": bench(c, d)
+            "landmark": landmark(c, d)
+            "legend":
+                if not bool(g.tour.record().get("legend", false)): legend(c, d, g)
             "tower": tower(c, d)
             "monument": monument(c, d)
             "shop": shop(c, d)
@@ -694,7 +768,7 @@ func draw(c: Control, g) -> void:
             "rival":
                 var rf = at(d.x, d.z)
                 var art = String(g.city().boss.art)
-                if Pixels.PARTS.has(art):
+                if has_art(art):
                     shadow(c, rf, 22 * u * 0.07, 6)
                     mob(c, art, rf - Vector2(0, absf(sin(g.clock_time * 2.0)) * 2.0), u * 0.07)
                     c.txt(String(g.city().boss.name), rf.x - 60, rf.y - mob_size(art).y * u * 0.07 - 8, 12, out, 120, HORIZONTAL_ALIGNMENT_CENTER)
