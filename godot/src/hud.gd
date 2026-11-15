@@ -412,11 +412,11 @@ func draw_cook() -> void:
 
 func draw_battle_ready() -> void:
     var grade = game.wild_grade if game.wild_battle else 0
-    chip( ("전설의 괴물이 깨어났다!" if game.legend_battle else String(game.GRADES[grade].tag) + " 등급 출현!" if grade > 0 else "야생의 적이 나타났다!") if game.wild_battle else game.city().boss.name + "의 도전", Rect2(24, 30, w - 48, 38), Color(game.GRADES[grade].color).lightened(0.55) if grade > 0 else cream)
+    chip( ("도전의 탑 " + str(game.tower_floor) + "층" + (" · 수호자!" if game.legend_battle else "") if game.tower_battle else "전설의 괴물이 깨어났다!" if game.legend_battle else String(game.GRADES[grade].tag) + " 등급 출현!" if grade > 0 else "야생의 적이 나타났다!") if game.wild_battle else game.city().boss.name + "의 도전", Rect2(24, 30, w - 48, 38), Color(game.GRADES[grade].color).lightened(0.55) if grade > 0 else cream)
     var y = h - 430
     panel(Rect2(16, y, w - 32, 408), cream, 25)
     txt(game.wild_name() if game.wild_battle else "장동훈, 출전!", 35, y + 44, 24 if grade == 0 else 21, Color(game.GRADES[grade].color).darkened(0.25) if grade > 0 else ink)
-    para( "도시마다 단 한 마리뿐인 전설이에요.\n이기면 반드시 친구가 되고, 기술 포인트 2개를 얻어요.\n냄비를 불려 두고 퐁퐁을 뿌린 뒤 크게 터뜨려요." if game.legend_battle else ("평소보다 훨씬 강해요. 체력 ×" + str(game.GRADES[grade].hp) + " · 보상 ×" + str(game.GRADES[grade].gold) + "\n이기면 친구가 될 확률도 높아요.\n냄비 불리기와 퐁퐁으로 크게 한 방을 노려요." if grade > 0 else "설거지 연타는 수세미로 3연타!\n야근 버티기로 지키고, 가방에서 회복해요.\n월급 박치기는 기력 3칸과 40원을 써요.")
+    para( "층마다 상대가 강해져요. 5층마다 수호자가 지켜요.\n체력은 층마다 가득 차지만 뽀뽀사탕은 돌아오지 않아요.\n지면 그 층에 다시 도전하거나 내려올 수 있어요. 최고 기록 " + str(game.tower_best) + "층" if game.tower_battle else "도시마다 단 한 마리뿐인 전설이에요.\n이기면 반드시 친구가 되고, 기술 포인트 2개를 얻어요.\n냄비를 불려 두고 퐁퐁을 뿌린 뒤 크게 터뜨려요." if game.legend_battle else ("평소보다 훨씬 강해요. 체력 ×" + str(game.GRADES[grade].hp) + " · 보상 ×" + str(game.GRADES[grade].gold) + "\n이기면 친구가 될 확률도 높아요.\n냄비 불리기와 퐁퐁으로 크게 한 방을 노려요." if grade > 0 else "설거지 연타는 수세미로 3연타!\n야근 버티기로 지키고, 가방에서 회복해요.\n월급 박치기는 기력 3칸과 40원을 써요.")
     , 35, y + 83, w - 70, 16)
     para(game.city().rule, 35, y + 180, w - 70, 16, rose, 1.45)
     button("battle_start", "동훈, 가라!", Rect2(33, y + 271, w - 66, 60), true)
@@ -508,13 +508,13 @@ func draw_battle_won() -> void:
     icon_coin(Vector2(46, y + 80), 11)
     txt("+" + str(int(game.battle_reward * grow)) + "원", 66, y + 89, 25 + (4 if grow < 1.0 else 0), rose)
     txt("월급 박치기 " + str(game.perfects) + "회 · " + str(game.battle_turn) + "턴의 대결", 34, y + 122, 14, muted)
-    para("전설을 이겼어요! 이제 함께 걷는 친구예요." if game.legend_battle else "만남 기록에 남기고 산책을 이어가요." if game.wild_battle else game.city().boss.win, 34, y + 160, w - 68, 15)
+    para("다음 층이 기다려요. 계속 올라갈까요?" if game.tower_battle else "전설을 이겼어요! 이제 함께 걷는 친구예요." if game.legend_battle else "만남 기록에 남기고 산책을 이어가요." if game.wild_battle else game.city().boss.win, 34, y + 160, w - 68, 15)
     if game.effects_on:
         for i in range(30):
             var fall = fposmod(game.win_time * (120.0 + (i % 5) * 34.0) + i * 61.0, y + 40.0) - 30.0
             var sway = fposmod(i * 97.3, w) + sin(game.win_time * 3.0 + i) * 12.0
             draw_rect(Rect2(sway, fall, 6, 10 if i % 2 == 0 else 6), [Color("ffd84a"), Color("ff8fb0"), Color("8fd9ff"), Color("b6f09a")][i % 4])
-    button("battle_continue", "보상 받고 계속하기  →", Rect2(33, y + 195, w - 66, 60), true, true, 17)
+    button("battle_continue", "보상 받고 다음 층으로  →" if game.tower_battle else "보상 받고 계속하기  →", Rect2(33, y + 195, w - 66, 60), true, true, 17)
 
 func draw_battle_lost() -> void:
     panel(Rect2(0, 0, w, h), Color("294b4666"), 0)
@@ -570,7 +570,9 @@ func draw_pause() -> void:
     button("sound", "소리  " + ("켜짐" if game.sound_on else "꺼짐"), Rect2(40, y + 183, w - 80, 49))
     button("effects", "화면 효과  " + ("켜짐" if game.effects_on else "간소화"), Rect2(40, y + 243, w - 80, 49), false, true, 15)
     button("reset", "열 도시의 진행을 모두 지울까요?" if game.reset_confirm else "처음부터 다시 시작", Rect2(40, y + 303, w - 80, 49), false, true, 14)
-    para("왼손 이동 · 오른손 행동\n키보드 WASD / 방향키 · E 행동 · Esc 쉬기\n전투는 버튼 선택 / 요리는 1·2·3", 40, y + 389, w - 80, 12, muted, 1.8)
+    var open = game.previous_state == "explore" and game.stamps() + game.cycle >= 1
+    button("tower_start", "도전의 탑  ·  최고 " + str(game.tower_best) + "층" if game.stamps() + game.cycle >= 1 else "도전의 탑  ·  첫 도장을 찍으면 열려요", Rect2(40, y + 363, w - 80, 49), false, open, 14)
+    para("왼손 이동 · 오른손 행동\n키보드 WASD / 방향키 · E 행동 · Esc 쉬기\n전투는 버튼 선택 / 요리는 1·2·3", 40, y + 436, w - 80, 12, muted, 1.8)
 
 # 물건 그림: 소모품은 id, 장비는 칸(slot)과 단계(tier)로 고른다
 func item_icon(kind: String, p: Vector2, tier: int = 0) -> void:
@@ -768,7 +770,7 @@ func status_stats(y: float) -> void:
     ]
     var can_job = game.level >= game.JOB_LEVEL
     row(Rect2(12, y + 84, w - 24, 52), game.job_name(), (String(game.JOBS[game.job].line) + (" ×2" if game.job_rank() == 2 else "") if game.job > 0 else ("전직해서 고유 기술을 배워요" if can_job else "레벨 " + str(game.JOB_LEVEL) + "에 전직할 수 있어요")), Color(String(game.JOBS[game.job].color)), "", "")
-    button("job_open", "전직" if game.job == 0 else "변경", Rect2(w - 96, y + 91, 72, 38), game.job == 0 and can_job, can_job, 13)
+    button("openjobs", "전직" if game.job == 0 else "변경", Rect2(w - 96, y + 91, 72, 38), game.job == 0 and can_job, can_job, 13)
     for i in range(rows.size()):
         row(Rect2(12, y + 140 + i * 56, w - 24, 52), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")
     var ly = y + 140 + rows.size() * 56
@@ -819,12 +821,18 @@ func status_pets(y: float) -> void:
         txt("초록 잔디를 걸으면 야생 친구를 만나요. 이기면 따라올 수도 있어요.", 28, y + 76, 11, muted)
         return
     txt("세 친구까지 함께 걸어요 (" + str(game.pet_team.size()) + " / " + str(game.TEAM_MAX) + "). 눌러서 넣고 빼요.", 16, y + 16, 11, Color("cfc5b4"))
-    var shown = mini(game.pets.size(), 9)
-    for i in range(shown):
+    # 한 화면에 들어가는 만큼만 보여 주고 쪽을 넘긴다
+    var per = clampi(int((h - y - 110) / 60.0), 3, 9)
+    var pages = maxi(1, int(ceil(game.pets.size() / float(per))))
+    game.pet_page = clampi(game.pet_page, 0, pages - 1)
+    var first = game.pet_page * per
+    var shown = mini(game.pets.size() - first, per)
+    for n in range(shown):
+        var i = first + n
         var p = game.pets[i]
         var on = game.pet_team.has(i)
         var grade = int(p.get("g", 0))
-        var r = Rect2(12, y + 28 + i * 60, w - 24, 54)
+        var r = Rect2(12, y + 28 + n * 60, w - 24, 54)
         plate(r, rose if on else Color("8d8578"), cream, 15, 3)
         panel(Rect2(22, r.position.y + 6, 42, 42), Color("f1e6cf"), 10, Color(game.GRADES[grade].color))
         flat_art.mob(self, game.pet_art(p), Vector2(43, r.position.y + 44), 34.0 / maxf(1.0, maxf(flat_art.mob_size(game.pet_art(p)).x, flat_art.mob_size(game.pet_art(p)).y)))
@@ -833,7 +841,12 @@ func status_pets(y: float) -> void:
         txt(String(game.PET_ROLE[int(p.i)].tag) + " +" + str(game.pet_power(p)) + (" · 모든 능력" if int(p.i) == 3 else " · 친밀도 " + str(p.lv) + "/5"), 74, r.position.y + 43, 11, muted)
         if on: txt("동행 중", w - 96, r.position.y + 33, 13, rose, 72, HORIZONTAL_ALIGNMENT_RIGHT)
         buttons["petpick_" + str(i)] = r
-    txt("모은 친구 " + str(game.pets.size()) + " / 40", 16, y + 34 + shown * 60, 11, Color("cfc5b4"))
+    var fy = y + 30 + shown * 60
+    txt("모은 친구 " + str(game.pets.size()) + " / 40", 16, fy + 26, 11, Color("cfc5b4"))
+    if pages > 1:
+        button("petpage_prev", "←", Rect2(w - 196, fy, 52, 42), false, game.pet_page > 0, 15)
+        txt(str(game.pet_page + 1) + " / " + str(pages), w - 140, fy + 27, 13, cream, 68, HORIZONTAL_ALIGNMENT_CENTER)
+        button("petpage_next", "→", Rect2(w - 68, fy, 52, 42), false, game.pet_page < pages - 1, 15)
 
 func draw_map() -> void:
     panel(Rect2(0, 0, w, h), Color("294b4670"), 0)

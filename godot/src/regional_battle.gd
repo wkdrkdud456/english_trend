@@ -7,7 +7,8 @@ func box(c, x, y, w, h, color) -> void:
     c.draw_rect(Rect2(roundf(x), roundf(y), w, h), Color(color))
 
 func art_id(g) -> String:
-    if g.legend_battle: return "legend" + str(g.city_index)
+    if g.legend_battle: return "legend" + str(g.foe_city())
+    if g.tower_battle: return String(g.CityData.CITIES[g.foe_city()].mobs[g.wild_index].art)
     return g.city().mobs[g.wild_index].art if g.wild_battle else g.city().boss.art
 
 func melee(g) -> bool:

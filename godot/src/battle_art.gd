@@ -248,7 +248,7 @@ func draw(c: Control) -> void:
         c.txt(String(g.GRADES[g.wild_grade].tag), foe.x - 40, foe.y + 28, 13, Color("fff8e8"), 80, HORIZONTAL_ALIGNMENT_CENTER)
     if g.state != "battle_won":
         var flash = foe_hit and fx_age < 0.1 and g.effects_on
-        if g.city_index > 0 or g.legend_battle: regional.sprite(c, foe, flash)
+        if g.city_index > 0 or g.legend_battle or g.tower_battle: regional.sprite(c, foe, flash)
         elif g.wild_battle:
             var enemy_palette = { "O": "35434e", "G": "94a7b5", "L": "c6d4d8", "D": "62778c", "P": "72878b", "B": "c7934d", "Y": "fae1a7", "R": "cc7382", "W": "fff6e4", "E": "35434e"}
             if g.wild_index == 0: enemy_palette["L"] = "d1cddc"

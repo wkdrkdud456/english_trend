@@ -55,9 +55,9 @@ const GEAR = [
     { "id": "s2", "slot": 2, "tier": 2, "name": "아버님 등산화", "line": "이동 속도 +22% · 회복 +2", "cost": 480, "atk": 0, "hp": 0, "heal": 2, "spd": 22},
     { "id": "s3", "slot": 2, "tier": 3, "name": "날개 달린 크록스", "line": "이동 속도 +35% · 최대 체력 +6", "cost": 1100, "atk": 0, "hp": 6, "heal": 0, "spd": 35},
     { "id": "k0", "slot": 3, "tier": 0, "name": "빈 싱크대", "line": "아직 소품이 없어요", "cost": 0},
-    { "id": "k1", "slot": 3, "tier": 1, "name": "양은 냄비", "line": "냄비 불리기 피해 +25%", "cost": 180, "soak": 25},
-    { "id": "k2", "slot": 3, "tier": 2, "name": "무쇠 가마솥", "line": "냄비 불리기 +50% · 최대 체력 +6", "cost": 520, "soak": 50, "hp": 6},
-    { "id": "k3", "slot": 3, "tier": 3, "name": "전설의 압력밥솥", "line": "냄비 불리기 +90% · 한 턴 만에 터져요", "cost": 1150, "soak": 90, "fuse": 1},
+    { "id": "k1", "slot": 3, "tier": 1, "name": "양은 냄비", "line": "냄비 불리기 피해 +15%", "cost": 180, "soak": 15},
+    { "id": "k2", "slot": 3, "tier": 2, "name": "무쇠 가마솥", "line": "냄비 불리기 +30% · 최대 체력 +6", "cost": 520, "soak": 30, "hp": 6},
+    { "id": "k3", "slot": 3, "tier": 3, "name": "전설의 압력밥솥", "line": "냄비 불리기 +50% · 한 턴 만에 터져요", "cost": 1150, "soak": 50, "fuse": 1},
     { "id": "k4", "slot": 3, "tier": 4, "name": "대용량 퐁퐁", "line": "퐁퐁 효과 +20% · 한 턴 더 미끄러워요", "cost": 320, "soap": 20},
     { "id": "k5", "slot": 3, "tier": 5, "name": "보온 텀블러", "line": "대결을 기력 +1칸으로 시작", "cost": 360, "en": 1},
     { "id": "k6", "slot": 3, "tier": 6, "name": "행운의 로또 용지", "line": "치명타 확률 +15%", "cost": 450, "crit": 15},
@@ -69,7 +69,7 @@ const JOB_LEVEL = 10
 const JOBS = [
     { "name": "평범한 남편", "name2": "평범한 남편", "line": "", "ult": "", "ult_line": "", "color": "788277"},
     { "name": "설거지 장인", "name2": "식기세척의 신", "line": "설거지 한 대마다 +1 · 치명타 +10%", "ult": "식기세척기 풀가동", "ult_line": "기력 2 · 수세미 5연타", "color": "3f8fd0"},
-    { "name": "불림술사", "name2": "가마솥 대마법사", "line": "냄비 불리기 피해 +25%", "ult": "압력솥 대폭발", "ult_line": "기력 2 · 지금 바로 터뜨린다", "color": "8a5fc0"},
+    { "name": "불림술사", "name2": "가마솥 대마법사", "line": "냄비 불리기 피해 +15%", "ult": "압력솥 대폭발", "ult_line": "기력 2 · 지금 바로 터뜨린다", "color": "8a5fc0"},
     { "name": "야근 기사", "name2": "칼퇴의 수호자", "line": "최대 체력 +15 · 버티기 회복 +3", "ult": "칼퇴 선언", "ult_line": "기력 2 · 반격을 막고 되돌려준다", "color": "c9951a"},
 ]
 var job = 0
@@ -89,6 +89,10 @@ const LEGENDS = [
     { "name": "광화문의 해태", "attack": "정의의 박치기", "line": "“약속을 미룬 자, 내 앞을 지나갈 수 없다.”"},
 ]
 var legend_battle = false
+var tower_battle = false        # 도전의 탑: 끝없이 강해지는 연속 대결
+var tower_floor = 1
+var tower_best = 0
+var pet_page = 0
 var cycle = 0                   # 몇 회차인가 (0 = 첫 여행)
 # ── 소리 ───────────────────────────────────────────────
 var bgm: AudioStreamPlayer
@@ -452,16 +456,16 @@ func power_stamps() -> int:
     return tour.completed.count(true) + cycle * 10
 
 func dish_base(hit: int) -> int:
-    return [3, 3, 2, 2, 2][clampi(hit, 0, 4)] + int(power_stamps() / 3) + int((level - 1) / 4) + pet_bonus("dish") + gear_sum("atk") + int(sk("strike") / 2) + (job_rank() if job == 1 else 0)
+    return [3, 3, 2, 2, 2][clampi(hit, 0, 4)] + int(power_stamps() / 3) + int((level - 1) / 4) + int((pet_bonus("dish") + 1) / 2) + gear_sum("atk") + int(sk("strike") / 2) + (job_rank() if job == 1 else 0)
 
 func guard_heal() -> int:
     return 3 + int(power_stamps() / 3) + pet_bonus("care") + (sk("guard") - 1) + (3 * job_rank() if job == 3 else 0)
 
 func soak_damage() -> int:
-    return int((dish_base(0) + dish_base(1) + dish_base(2)) * (3.0 + 0.2 * (sk("soak") - 1)) * (1.0 + gear_sum("soak") / 100.0 + (0.25 * job_rank() if job == 2 else 0.0)))
+    return int((dish_base(0) + dish_base(1) + dish_base(2)) * (1.8 + 0.13 * (sk("soak") - 1)) * (1.0 + gear_sum("soak") / 100.0 + (0.15 * job_rank() if job == 2 else 0.0)))
 
 func soap_mul() -> float:
-    return 1.5 + 0.05 * (sk("soap") - 1) + gear_sum("soap") / 100.0
+    return 1.4 + 0.04 * (sk("soap") - 1) + gear_sum("soap") / 100.0
 
 func coffee_mul() -> float:
     return 2.0 + 0.1 * (sk("coffee") - 1)
@@ -469,8 +473,11 @@ func coffee_mul() -> float:
 # 퐁퐁·커피 효과를 얹는다
 func amp(damage: int) -> int:
     var value = float(damage)
-    if battle_vuln > 0: value *= soap_mul()
-    if battle_charge: value *= coffee_mul()
+    # 퐁퐁과 커피는 곱하지 않고 더한다 (둘을 겹쳐도 한 방에 끝나지 않게)
+    var boost = 1.0
+    if battle_vuln > 0: boost += soap_mul() - 1.0
+    if battle_charge: boost += coffee_mul() - 1.0
+    value *= boost
     return maxi(1, int(round(value)))
 
 func pet() -> Dictionary:
@@ -484,7 +491,7 @@ func pet_kind() -> int:
 
 func pet_power(p: Dictionary) -> int:
     if int(p.i) == 3: return 3
-    return 1 + int((int(p.lv) - 1) / 2) + int(p.get("g", 0))
+    return 1 + (1 if int(p.lv) >= 3 else 0) + (1 if int(p.get("g", 0)) >= 2 else 0)
 
 func pet_bonus(key: String) -> int:
     var total = 0
@@ -531,7 +538,13 @@ func skill_up(id: String) -> void:
     else:
         sfx("good"); toast(String(skill_of(id).name) + " Lv." + str(sk(id)) + "!  " + skill_line(id))
 
+# 지금 싸우는 상대가 어느 도시의 친구인가 (탑에서는 층마다 다른 도시)
+func foe_city() -> int:
+    return (tower_floor - 1) % 10 if tower_battle else city_index
+
 func wild_name() -> String:
+    if tower_battle:
+        return str(tower_floor) + "층 · " + String(LEGENDS[foe_city()].name if legend_battle else CityData.CITIES[foe_city()].mobs[wild_index].name)
     if legend_battle: return String(LEGENDS[city_index].name)
     return String(GRADES[wild_grade].prefix) + String(WILD_NAMES[wild_index])
 
@@ -1123,7 +1136,10 @@ func action(id: String) -> void:
                 battle_menu = { "fight_menu": "fight", "bag_menu": "bag", "battle_back": "main"}[id]
         "strike", "guard", "heal", "team", "soak", "soap", "coffee", "ult": choose_battle(id)
         "new_cycle": start_cycle()
-        "job_open": sheet_tab = 6; sfx("click")
+        "openjobs": sheet_tab = 6; sfx("click")
+        "petpage_prev": pet_page = maxi(0, pet_page - 1); sfx("click")
+        "petpage_next": pet_page += 1; sfx("click")
+        "tower_start": start_tower()
         "battle_continue": claim_battle_win()
         "retry": begin_battle()
         "leave_battle":
@@ -1166,9 +1182,13 @@ func begin_battle() -> void:
     if not wild_battle and state not in ["battle", "battle_lost", "battle_won"]:
         battle_return = hero.position; partner_return = partner.position
     PARTY_HP = party_max()
-    state = "battle"; battle_max_hp = int((30 + city_index * 12 + wild_index * 3) * float(GRADES[wild_grade].hp)) if wild_battle else 70 + city_index * 34
-    if legend_battle: battle_max_hp = int((90 + city_index * 40) * 1.6)
-    battle_max_hp = int(battle_max_hp * cycle_mul(0.8))
+    state = "battle"
+    # 도시가 넘어갈 때마다 체력 약 1.3배 — 레벨과 장비를 같이 올려야 따라갈 수 있다
+    var boss_hp = 120.0 * pow(1.31, city_index)
+    if tower_battle: battle_max_hp = int(60.0 * pow(1.14, tower_floor) * (1.6 if legend_battle else 1.0))
+    elif legend_battle: battle_max_hp = int(boss_hp * 1.7 * cycle_mul(0.8))
+    elif wild_battle: battle_max_hp = int((34 + wild_index * 4) * pow(1.3, city_index) * float(GRADES[wild_grade].hp) * cycle_mul(0.8))
+    else: battle_max_hp = int(boss_hp * cycle_mul(0.8))
     battle_bomb = 0; battle_vuln = 0; battle_charge = false; battle_reflect = false; pops.clear(); shake = 0
     battle_hp = battle_max_hp; health = PARTY_HP; perfects = 0; battle_hits = 0
     battle_turn = 1; battle_energy = mini(3, pet_bonus("energy") + next_energy + gear_sum("en")); battle_berries = bag_count("candy"); battle_guard = false
@@ -1194,7 +1214,7 @@ func enemy_heavy() -> bool:
 
 func enemy_attack_name() -> String:
     if legend_battle:
-        var move = String(LEGENDS[city_index].attack)
+        var move = String(LEGENDS[foe_city()].attack)
         return { "brace": "웅크리기 · 다음 피해 절반", "rest": "숨 고르기 · 반격 없음"}.get(battle_intent, ("분노의 " if enemy_heavy() else "") + move)
     if city_index == 0:
         if enemy_heavy(): return ["유령의 단체 야유", "빵 지키기 돌진", "보이지 않는 벽 밀기"][wild_index] if wild_battle else "바게트 풀스윙"
@@ -1204,9 +1224,11 @@ func enemy_attack_name() -> String:
 
 func enemy_damage() -> int:
     if battle_intent in ["brace", "rest"]: return 0
-    var base = ( (10 + wild_index if wild_battle else 12) + int(city_index * 2.2)) if enemy_heavy() else ( (5 + wild_index if wild_battle else 6) + int(city_index * 1.3))
-    if legend_battle: base = int(round((13 + city_index * 2.4 if enemy_heavy() else 7 + city_index * 1.5) * 1.15))
-    elif wild_battle: base = int(round(base * float(GRADES[wild_grade].atk)))
+    var grow = pow(1.15, city_index)
+    if tower_battle: return int(round((10.0 if enemy_heavy() else 5.0) * pow(1.07, tower_floor) * (1.25 if legend_battle else 1.0)))
+    var base = int(round((13.0 if enemy_heavy() else 6.0) * grow))
+    if legend_battle: base = int(round(base * 1.2))
+    elif wild_battle: base = int(round((10.0 + wild_index if enemy_heavy() else 5.0 + wild_index * 0.5) * grow * float(GRADES[wild_grade].atk)))
     return int(round(base * cycle_mul(0.35)))
 
 func choose_battle(choice: String) -> void:
@@ -1408,10 +1430,39 @@ func win_battle() -> void:
     battle_reward = int((15 + city_index * 4 + perfects * 5) * float(GRADES[wild_grade].gold)) if wild_battle else (80 + city_index * 20 + perfects * 10)
     if legend_battle: battle_reward = 300 + city_index * 80
     battle_reward = int(battle_reward * cycle_mul(0.5))
+    if tower_battle: battle_reward = 20 + tower_floor * 10
     state = "battle_won"; battle_phase = "done"; sfx("win"); win_time = 0
+
+func start_tower() -> void:
+    if state != "pause" or previous_state != "explore" or stamps() + cycle < 1: return
+    state = "explore"; tower_floor = 1
+    next_floor()
+
+func next_floor() -> void:
+    meet_wild()
+    tower_battle = true
+    legend_battle = tower_floor % 5 == 0
+    wild_index = (tower_floor * 7) % 3
+    wild_grade = 3 if legend_battle else (1 if tower_floor % 5 == 4 else 0)
+    if legend_battle: sfx("roar")
+
+# 한 층을 이기면 바로 다음 층 — 5층마다 수호자가 나오고 처음 넘으면 기술 포인트를 준다
+func finish_floor() -> void:
+    coins += battle_reward
+    var note = str(tower_floor) + "층 돌파! +" + str(battle_reward) + "원"
+    if tower_floor > tower_best:
+        tower_best = tower_floor
+        if tower_floor % 5 == 0:
+            skill_points += 1; note += " · 최고 기록! 기술 포인트 +1"
+    gain_exp(10 + tower_floor * 3)
+    tower_floor += 1
+    hero.position = battle_return; partner.position = partner_return
+    next_floor(); save_progress(); toast(note)
 
 func claim_battle_win() -> void:
     if state != "battle_won": return
+    if tower_battle:
+        finish_floor(); return
     if wild_battle: finish_wild_battle(); return
     coins += battle_reward; stage = 3
     skill_points += 1
@@ -1470,7 +1521,7 @@ func meet_wild(legend: bool = false) -> void:
 func restore_from_wild() -> void:
     rival.visible = false; rival = story_rival
     hero.position = battle_return; partner.position = partner_return
-    perfects = story_perfects; wild_battle = false; wild_grade = 0; legend_battle = false
+    perfects = story_perfects; wild_battle = false; wild_grade = 0; legend_battle = false; tower_battle = false
     encounter_grace = 1.8; grass_steps = 0; encounter_at = randf_range(2.8, 5.0)
     follow_path = battle_follow_path.duplicate(); follow_anchor = battle_follow_anchor
     state = "explore"; update_target(); set_camera(1, true)
@@ -1654,7 +1705,7 @@ func save_progress() -> void:
     if state in ["intro", "tutorial"]: return
     if not ui_ready or (state == "title" and not has_save): return
     tour.store_current()
-    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "cycle": cycle}
+    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "cycle": cycle, "tower_best": tower_best}
     var temp = SAVE_FILE + ".tmp"; var file = FileAccess.open(temp, FileAccess.WRITE)
     save_ok = file != null
     if not file: return
@@ -1693,6 +1744,7 @@ func load_progress() -> void:
     coins = maxi(0, int(data.get("coins", 0))); game_time = maxf(0, float(data.get("time", 0)))
     level = clampi(int(data.get("level", 1)), 1, LEVEL_MAX); xp = maxi(0, int(data.get("xp", 0)))
     next_energy = clampi(int(data.get("next_energy", 0)), 0, 3)
+    tower_best = maxi(0, int(data.get("tower_best", 0)))
     job = clampi(int(data.get("job", 0)), 0, 3); cycle = clampi(int(data.get("cycle", 0)), 0, 99)
     owned_gear = ["g0", "a0", "s0", "k0"]
     var saved_gear = data.get("owned_gear", [])
@@ -1796,7 +1848,7 @@ func restart() -> void:
     skill_points = 0; wild_grade = 0; area_index = 0
     for entry in SKILLS: skill_lv[entry.id] = 1
     owned_gear = ["g0", "a0", "s0", "k0"]; equipped = ["g0", "a0", "s0", "k0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
-    job = 0; cycle = 0; legend_battle = false; gear_slot = 0
+    job = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]
     grass_steps = 0; encounter_grace = 1.5; encounter_at = 3.2
