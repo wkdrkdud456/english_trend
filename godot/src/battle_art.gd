@@ -275,6 +275,20 @@ func draw(c: Control) -> void:
             for i in range(3 + cf): block(c, boy.x - 22 + i * (44.0 / (2 + cf)), boy.y - 142 - fmod(g.clock_time * (22 + cf * 6) + i * 7, 16 + cf * 6), 5, 9 + cf * 2, ["c98b4b", "e8974d", "ff7a2a", "ffd84a"][cf])
     props.draw(c, boy, foe)
     if g.city_index > 0: regional.effects(c, boy, foe)
+    # 직업 기술 컷인: 화면을 가로지르는 띠에 기술 이름이 미끄러져 들어온다
+    if phase == "player" and g.battle_choice == "ult" and g.job > 0 and t < 0.6:
+        var tint = Color(String(g.JOBS[g.job].color))
+        var open = clampf(t / 0.12, 0, 1) * clampf((0.6 - t) / 0.12, 0, 1)
+        var band = 78.0 * open
+        var by = 236.0
+        c.draw_rect(Rect2(0, by - band / 2.0, c.w, band), Color(tint.darkened(0.35), 0.92))
+        c.draw_rect(Rect2(0, by - band / 2.0, c.w, 4), Color("fff4cd")); c.draw_rect(Rect2(0, by + band / 2.0 - 4, c.w, 4), Color("fff4cd"))
+        if g.effects_on:
+            for i in range(9): c.draw_rect(Rect2(fposmod(c.w - t * 1400.0 + i * 97.0, c.w + 80.0) - 80.0, by - band / 2.0 + 8 + (i * 13) % maxi(1, int(band) - 16), 60, 3), Color(1, 1, 1, 0.35))
+        if open > 0.6:
+            var slide = lerpf(c.w, 0.0, clampf(t / 0.2, 0, 1))
+            c.txt(String(g.ult_info().name), slide, by + 6, 30, Color("fff8e8"), c.w, HORIZONTAL_ALIGNMENT_CENTER)
+            c.txt(g.job_name() + " · " + str(g.ult_index + 1) + "차 기술", slide, by + 28, 12, Color("fff4cd"), c.w, HORIZONTAL_ALIGNMENT_CENTER)
     # 떠오르는 숫자
     for one in g.pops:
         var base = foe - Vector2(0, 118) if one.side == "enemy" else boy - Vector2(-34, 150)
