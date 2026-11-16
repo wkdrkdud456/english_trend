@@ -156,6 +156,47 @@ func landmark(c: Control, d: Dictionary) -> void:
     shadow(c, foot, float(d.ww) * u * 0.9, 8 * k)
     mob(c, art, foot, s)
 
+# 탈것 한 척: 도시마다 빌려주는 그릇이 다르다 (곰솥 · 가마솥 · 양철 욕조 · 아이스박스)
+func vessel(c: Control, mid: Vector2, s: float, g, front_only: bool) -> void:
+    var body = Color(["9aa4ad", "3d4248", "9aa4ad", "9aa4ad", "9aa4ad", "9aa4ad", "9aa4ad", "c9d2d6", "4a8fd0", "9aa4ad"][g.city_index])
+    var rim = body.lightened(0.35)
+    if not front_only:
+        block(c, mid.x - 30 * s, mid.y - 20 * s, 60 * s, 8 * s, out); block(c, mid.x - 28 * s, mid.y - 18 * s, 56 * s, 5 * s, body.darkened(0.3))
+    block(c, mid.x - 30 * s, mid.y - 12 * s, 60 * s, 22 * s, out)
+    block(c, mid.x - 28 * s, mid.y - 10 * s, 56 * s, 18 * s, body)
+    block(c, mid.x - 28 * s, mid.y - 10 * s, 56 * s, 4 * s, rim)
+    block(c, mid.x - 24 * s, mid.y + 4 * s, 48 * s, 4 * s, body.darkened(0.2))
+    block(c, mid.x - 36 * s, mid.y - 8 * s, 7 * s, 6 * s, out); block(c, mid.x + 29 * s, mid.y - 8 * s, 7 * s, 6 * s, out)
+    if g.city_index == 8: block(c, mid.x - 28 * s, mid.y - 2 * s, 56 * s, 4 * s, Color("f4f8fa"))
+
+# 나루터: 말뚝과 팻말. 탈것을 빌렸으면 물가에 매여 있다.
+func dock(c: Control, d: Dictionary, g) -> void:
+    var p = at(d.x, d.z)
+    for side in [-1, 1]:
+        block(c, p.x + side * 16 * k - 3 * k, p.y - 16 * k, 6 * k, 18 * k, out); block(c, p.x + side * 16 * k - 2 * k, p.y - 15 * k, 4 * k, 16 * k, Color("8a6a4c"))
+    block(c, p.x - 18 * k, p.y - 2 * k, 36 * k, 5 * k, out); block(c, p.x - 17 * k, p.y - 1 * k, 34 * k, 3 * k, Color("b08a5c"))
+    if g.errand() >= 3 and g.state != "ride":
+        vessel(c, p + Vector2(0, -22 * k), k * 0.55, g, false)
+    else:
+        block(c, p.x - 9 * k, p.y - 30 * k, 18 * k, 12 * k, out); block(c, p.x - 8 * k, p.y - 29 * k, 16 * k, 10 * k, Color("f1e6cf"))
+        c.txt("?", p.x - 9 * k, p.y - 20 * k, int(9 * k), out, 18 * k, HORIZONTAL_ALIGNMENT_CENTER)
+
+# 둘이 한 그릇에 타고 물을 건넌다
+func ride(c: Control, d: Dictionary, g, girl_look: Dictionary, boy_look: Dictionary) -> void:
+    var p = at(d.x, d.z)
+    var bob = sin(g.clock_time * 5.0) * 2.0 * k
+    var s = maxf(2.0, roundf(u * 0.075))
+    for i in range(4):
+        var wide = (40 + i * 16 + fmod(g.clock_time * 30.0, 16.0)) * k
+        block(c, p.x - wide / 2.0, p.y + (4 + i * 3) * k, wide, 2 * k, Color(1, 1, 1, 0.5 - i * 0.1))
+    vessel(c, p + Vector2(0, bob), k * 1.15, g, false)
+    sprite(c, GIRL, p + Vector2(-9 * s, bob + 2 * k), s, girl_look)
+    sprite(c, BOY, p + Vector2(9 * s, bob + 2 * k), s, boy_look)
+    vessel(c, p + Vector2(0, bob), k * 1.15, g, true)
+    # 동훈이 국자로 젓는다
+    var paddle = p + Vector2(34 * k, bob - 6 * k + sin(g.clock_time * 7.0) * 5 * k)
+    block(c, paddle.x, paddle.y, 3 * k, 22 * k, Color("8a6a4c")); block(c, paddle.x - 3 * k, paddle.y + 20 * k, 9 * k, 7 * k, Color("c9d2d6"))
+
 # 자연 구역 깊은 곳의 전설 — 도시를 마치기 전에는 잠들어 있다
 func legend(c: Control, d: Dictionary, g) -> void:
     var foot = at(d.x, d.z)
@@ -725,9 +766,12 @@ func draw(c: Control, g) -> void:
         for i in range(g.world.mission_nodes.size()):
             var m = g.world.mission_nodes[i]
             items.append({ "t": "prop", "x": m.position.x, "z": m.position.z, "done": g.tour.point_done(i)})
-    items.append({ "t": "boy", "x": g.partner.position.x, "z": g.partner.position.z})
-    items.append({ "t": "girl", "x": g.hero.position.x, "z": g.hero.position.z})
-    for n in range(mini(g.pet_spots.size(), g.pet_team.size())):
+    var riding = g.state == "ride"
+    if riding: items.append({ "t": "ride", "x": g.hero.position.x, "z": g.hero.position.z})
+    else:
+        items.append({ "t": "boy", "x": g.partner.position.x, "z": g.partner.position.z})
+        items.append({ "t": "girl", "x": g.hero.position.x, "z": g.hero.position.z})
+    for n in range(0 if riding else mini(g.pet_spots.size(), g.pet_team.size())):
         var friend = g.pets[int(g.pet_team[n])]
         var fg = int(friend.get("g", 0))
         items.append({ "t": "pet", "x": g.pet_spots[n].x, "z": g.pet_spots[n].z, "art": g.pet_art(friend), "grade": fg, "tone": g.GRADES[fg].color})
@@ -747,6 +791,10 @@ func draw(c: Control, g) -> void:
             "flower": flowerbed(c, d)
             "bench": bench(c, d)
             "landmark": landmark(c, d)
+            "dock": dock(c, d, g)
+            "lost":
+                if g.errand() == 1: pickup(c, d, g.clock_time)
+            "ride": ride(c, d, g, girl_look, boy_look)
             "legend":
                 if not bool(g.tour.record().get("legend", false)): legend(c, d, g)
             "tower": tower(c, d)
@@ -774,3 +822,8 @@ func draw(c: Control, g) -> void:
                     c.txt(String(g.city().boss.name), rf.x - 60, rf.y - mob_size(art).y * u * 0.07 - 8, 12, out, 120, HORIZONTAL_ALIGNMENT_CENTER)
                 else:
                     person(c, rf, false, boy_look)
+    # 2회차는 노을, 3회차부터는 밤 — 같은 도시도 다른 시간에 걷는다
+    if g.cycle == 1: c.draw_rect(view, Color(1.0, 0.5, 0.2, 0.13))
+    elif g.cycle >= 2:
+        c.draw_rect(view, Color(0.06, 0.1, 0.34, 0.3))
+        for i in range(22): c.draw_rect(Rect2(fposmod(i * 97.3, view.size.x), fposmod(i * 61.7 + sin(g.clock_time * 0.7 + i) * 3.0, view.size.y * 0.5), 2, 2), Color(1, 1, 0.85, 0.5 + 0.4 * sin(g.clock_time * 2.0 + i)))

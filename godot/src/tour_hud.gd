@@ -107,10 +107,10 @@ func draw(c) -> void:
                     c.button("meal_" + str(i), str(cost) + "원", Rect2(w - 118, my + 16, 94, 44), false, ok, 15)
                 if t.meal > 0: c.txt("이미 도시락을 챙겼어요.", 24, sy + 290, 13, c.rose)
             elif g.shop_tab == 1:
-                c.tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["도구", "옷", "신발", "소품"], g.gear_slot, sy - 8, 0)
+                c.tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["무기", "옷", "신발", "소품"], g.gear_slot, sy - 8, 0)
                 var gy = sy + 44
                 for entry in g.GEAR:
-                    if int(entry.cost) <= 0 or int(entry.slot) != g.gear_slot: continue
+                    if int(entry.cost) <= 0 or int(entry.slot) != g.gear_slot or int(entry.get("cycle", 0)) > g.cycle: continue
                     var id = String(entry.id)
                     var have = g.owned_gear.has(id)
                     var afford = g.coins >= int(entry.cost)
@@ -123,6 +123,14 @@ func draw(c) -> void:
                     gy += 64
             else:
                 c.txt("가방에 넣어 두고 필요할 때 써요.", 24, sy, 12, c.muted)
+                var zy = sy + 16 + g.ITEMS.size() * 74
+                c.plate(Rect2(16, zy, w - 32, 66), c.ink if g.coins >= 150 else Color("b4ada0"), c.cream, 15, 3)
+                c.draw_colored_polygon(PackedVector2Array([Vector2(48, zy + 16), Vector2(62, zy + 32), Vector2(48, zy + 50), Vector2(34, zy + 32)]), Color("7fd0e8"))
+                c.draw_colored_polygon(PackedVector2Array([Vector2(48, zy + 16), Vector2(55, zy + 32), Vector2(48, zy + 50)]), Color("b8ecf8"))
+                c.txt("강화석", 80, zy + 28, 17)
+                c.txt("장비 강화에 써요 (내 정보 → 장비)", 80, zy + 50, 11, c.muted)
+                c.txt("보유 " + str(g.stones), w - 196, zy + 32, 12, c.muted, 70, HORIZONTAL_ALIGNMENT_RIGHT)
+                c.button("buystone", "150원", Rect2(w - 118, zy + 13, 94, 42), false, g.coins >= 150, 14)
                 for i in range(g.ITEMS.size()):
                     var entry2 = g.ITEMS[i]
                     var iid = String(entry2.id)

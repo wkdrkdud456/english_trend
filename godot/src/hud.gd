@@ -99,7 +99,7 @@ func progress(rect: Rect2, value: float, color: Color = gold) -> void:
     panel(rect, Color("e3e6d6"), 8)
     if value > 0: panel(Rect2(rect.position, Vector2(maxf(8, rect.size.x * clampf(value, 0, 1)), rect.size.y)), color, 8)
 
-const FLAT_STATES = ["explore", "dialogue", "cook", "food_shop", "status", "city_help", "map", "title", "intro", "arrival"]
+const FLAT_STATES = ["ride", "explore", "dialogue", "cook", "food_shop", "status", "city_help", "map", "title", "intro", "arrival"]
 
 func flat_backdrop() -> bool:
     if not game or not game.world or game.world.flat.is_empty(): return false
@@ -210,6 +210,9 @@ func _draw() -> void:
         "intro": draw_intro()
         "tutorial": draw_tutorial()
         "explore": draw_explore()
+        "ride":
+            plate(Rect2(40, safe_top + 10, w - 80, 46), ink, cream, 14)
+            txt(String(game.ERRANDS[game.city_index].tool) + "을(를) 타고 건너는 중…", 40, safe_top + 39, 16, ink, w - 80, HORIZONTAL_ALIGNMENT_CENTER)
         "dialogue": draw_dialogue()
         "cook": draw_cook()
         "battle_ready": draw_battle_ready()
@@ -432,7 +435,8 @@ func draw_battle() -> void:
     panel(Rect2(18, 24, w - 108, 104), cream, 19)
     var grade = game.wild_grade if game.wild_battle else 0
     txt( (String(game.GRADES[grade].tag) + " 등급" if grade > 0 else "WILD ENCOUNTER") if game.wild_battle else game.city().english + " / RIVAL", 32, 48, 11, Color(game.GRADES[grade].color) if grade > 0 else muted)
-    txt(game.foe_name(), 32, 75, 21 if grade == 0 else 18)
+    txt(game.foe_title(), 32, 75, 21 if grade == 0 and game.battle_trait == "" else 17)
+    if game.battle_trait != "": txt(String(game.TRAITS[game.battle_trait].line), 150, 115, 11, rose)
     progress(Rect2(32, 87, w - 136, 9), float(game.battle_hp) / game.battle_max_hp, rose)
     txt("HP  " + str(game.battle_hp) + " / " + str(game.battle_max_hp), 32, 115, 12, muted)
     button("pause", "Ⅱ", Rect2(w - 78, 28, 60, 60))
@@ -652,7 +656,7 @@ func item_icon(kind: String, p: Vector2, tier: int = 0) -> void:
                 draw_rect(Rect2(p.x - 20, p.y - 6, 7, 4), cream); draw_rect(Rect2(p.x - 22, p.y - 11, 8, 4), cream)
 
 func gear_icon(entry: Dictionary, p: Vector2) -> void:
-    item_icon("slot" + str(int(entry.slot)), p, int(entry.tier))
+    item_icon(String(entry.get("icon", "slot" + str(int(entry.slot)))), p, int(entry.tier))
 
 func sheet_head(title: String, sub: String) -> float:
     panel(Rect2(0, 0, w, h), Color("1d1512e8"), 0)
@@ -780,7 +784,7 @@ func status_stats(y: float) -> void:
     var rows = [
         ["최대 체력", str(game.party_max()), "옷 +" + str(game.gear_sum("hp"))],
         ["설거지 연타", str(game.dish_damage(0)) + " / " + str(game.dish_damage(1)) + " / " + str(game.dish_damage(2)), "도구 +" + str(game.gear_sum("atk")) + " · 치명타 " + str(int(game.crit_rate() * 100)) + "%"],
-        ["냄비 불리기", str(game.soak_damage()), String(game.slot_gear(3).name) + " · " + str(game.fuse_turns()) + "턴 뒤 폭발"],
+        ["냄비 불리기", str(game.soak_damage()), "무기 +" + str(game.gear_sum("soak")) + "% · " + str(game.fuse_turns()) + "턴 뒤 폭발"],
         ["월급 박치기", str(game.salary_damage()), "기력 3 · 40원"],
         ["야근 버티기 회복", str(game.guard_heal()), "뽀뽀사탕 " + str(game.candy_heal()) + " · 가방 " + str(game.bag_count("candy")) + "개"],
         ["이동 속도", str(int(game.speed_mul() * 100)) + "%", String(game.slot_gear(2).name) + " · 기념품 " + str(game.souvenirs()) + " / 10"],
@@ -792,7 +796,7 @@ func status_stats(y: float) -> void:
         row(Rect2(12, y + 140 + i * 56, w - 24, 52), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")
     var ly = y + 140 + rows.size() * 56
     if game.pet_team.is_empty(): row(Rect2(12, ly, w - 24, 52), "동행 없음", "잔디밭에서 몬스터를 이기면 친구가 돼요", Color("9d978a"), "", "")
-    else: row(Rect2(12, ly, w - 24, 52), "동행 " + str(game.pet_team.size()) + " / " + str(game.TEAM_MAX), "기력 +" + str(game.pet_bonus("energy")) + " · 설거지 +" + str(game.pet_bonus("dish")) + " · 회복 +" + str(game.pet_bonus("care")), rose, "", "")
+    else: row(Rect2(12, ly, w - 24, 52), "동행 " + str(game.pet_team.size()) + " / " + str(game.team_max()), "기력 +" + str(game.pet_bonus("energy")) + " · 설거지 +" + str(game.pet_bonus("dish")) + " · 회복 +" + str(game.pet_bonus("care")), rose, "", "")
 
 func status_bag(y: float) -> void:
     txt("대결과 여행에 쓰는 물건이에요. 상점에서 더 살 수 있어요.", 16, y + 16, 11, Color("cfc5b4"))
@@ -812,24 +816,29 @@ func status_bag(y: float) -> void:
     txt("도시락: " + ["없음", "뽀뽀사탕 1개 추가", "기력 1칸으로 시작", "사탕 회복 +4"][clampi(game.tour.meal, 0, 3)], 16, ny + 42, 11, Color("cfc5b4"))
 
 func status_gear(y: float) -> void:
-    tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["도구", "옷", "신발", "소품"], game.gear_slot, y, 0)
+    tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["무기", "옷", "신발", "소품"], game.gear_slot, y, 0)
     var slot = game.gear_slot
-    txt(String(game.SLOT_NAME[slot]) + " — 하나만 착용해요. 효과는 바로 적용돼요.", 16, y + 62, 11, Color("cfc5b4"))
+    txt(String(game.SLOT_NAME[slot]) + " — 하나만 착용", 16, y + 62, 11, Color("cfc5b4"))
+    txt("강화석 " + str(game.stones) + "개 · 한 단계마다 효과 +20%", w - 236, y + 62, 11, gold, 220, HORIZONTAL_ALIGNMENT_RIGHT)
     var cursor = y + 72
     for entry in game.GEAR:
         if int(entry.slot) != slot: continue
         var id = String(entry.id)
         if not game.owned_gear.has(id): continue
         var on = String(game.equipped[slot]) == id
-        var r = Rect2(12, cursor, w - 24, 50)
+        var lv = game.enhance_lv(id)
+        var r = Rect2(12, cursor, w - 24, 52)
         plate(r, Color("4a8a38") if on else Color("8d8578"), cream, 14, 3)
-        gear_icon(entry, Vector2(40, cursor + 24))
-        txt(String(entry.name), 70, cursor + 22, 15)
-        txt(String(entry.line), 70, cursor + 40, 10, muted)
-        if on: txt("착용 중", w - 104, cursor + 30, 12, Color("3f7a32"), 80, HORIZONTAL_ALIGNMENT_RIGHT)
-        else: button("equip_" + id, "착용", Rect2(w - 92, cursor + 6, 68, 38), false, true, 12)
+        gear_icon(entry, Vector2(40, cursor + 25))
+        txt(String(entry.name) + (" +" + str(lv) if lv > 0 else ""), 70, cursor + 19, 14, rose if lv > 0 else ink)
+        txt(String(entry.line), 70, cursor + 33, 10, muted)
+        if lv >= game.ENHANCE_MAX: txt("강화 완료", 70, cursor + 46, 10, Color("3f7a32"))
+        else: txt(str(game.enhance_cost(id)) + "원 · 강화석 " + str(game.enhance_stones(id)) + " · 성공 " + str(game.ENHANCE_RATE[lv]) + "%", 70, cursor + 46, 10, rose)
+        button("enh_" + id, "강화", Rect2(w - 150, cursor + 7, 58, 36), true, lv < game.ENHANCE_MAX and game.coins >= game.enhance_cost(id) and game.stones >= game.enhance_stones(id), 12)
+        if on: txt("착용 중", w - 88, cursor + 30, 11, Color("3f7a32"), 64, HORIZONTAL_ALIGNMENT_CENTER)
+        else: button("equip_" + id, "착용", Rect2(w - 88, cursor + 7, 64, 36), false, true, 12)
         cursor += 56
-    txt("새 장비는 도시의 앨리 가게에서 팔아요.", 16, cursor + 16, 11, Color("cfc5b4"))
+    txt("새 장비와 강화석은 도시의 앨리 가게에서 팔아요.", 16, cursor + 14, 11, Color("cfc5b4"))
 
 func status_pets(y: float) -> void:
     if game.pets.is_empty():
@@ -837,7 +846,7 @@ func status_pets(y: float) -> void:
         txt("아직 동행이 없어요", 28, y + 52, 17)
         txt("초록 잔디를 걸으면 야생 친구를 만나요. 이기면 따라올 수도 있어요.", 28, y + 76, 11, muted)
         return
-    txt("세 친구까지 함께 걸어요 (" + str(game.pet_team.size()) + " / " + str(game.TEAM_MAX) + "). 눌러서 넣고 빼요.", 16, y + 16, 11, Color("cfc5b4"))
+    txt("도장을 모으면 칸이 늘어요 (" + str(game.pet_team.size()) + " / " + str(game.team_max()) + "). 눌러서 넣고 빼요.", 16, y + 16, 11, Color("cfc5b4"))
     # 한 화면에 들어가는 만큼만 보여 주고 쪽을 넘긴다
     var per = clampi(int((h - y - 110) / 60.0), 3, 9)
     var pages = maxi(1, int(ceil(game.pets.size() / float(per))))

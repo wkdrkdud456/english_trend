@@ -22,7 +22,7 @@ A["0_1"] = dict(name="몽마르트 골목", gate=GATE_ALLEY,
   decor=[["easel", 4.6, 3.0, ""], ["easel", 6.4, 4.4, ""], ["easel", 8.2, 3.0, ""], ["windmill", 8.6, -8.0, "c85068"], ["lamp", -3, -2, ""], ["lamp", 3, -2, ""], ["bench", 6.4, 2.2, ""]],
   chests=[[-10.6, -10.4], [10.6, 10.8]], npc=[2.3, -3.0], egg=[-11.3, 5.0])
 A["0_2"] = dict(name="센강 둔치", gate=GATE_PARK, zones=[],
-  roads=[[-1, -12, 2, 7.6], [-11, -5.4, 22, 2], [-11, 3.4, 22, 2], [-1, 5.4, 2, 3]], water=[[-13.4, -3, 26.8, 6]], bridges=[[-7, -3.4, 2, 6.8], [5, -3.4, 2, 6.8]],
+  roads=[[-1, -12, 2, 7.6], [-11, -5.4, 22, 2], [-11, 3.4, 22, 2], [-1, 5.4, 2, 3]], water=[[-13.4, -3, 26.8, 6]], bridges=[], ferry=[[-6, -3.7], [-6, 3.8]],
   houses=[H(0, 10, 6, 3, "cfc8b8", "8f8a80", "노트르담", spire=True)],
   trees=[[-11, -10, "tree"], [-6, -10, "tree"], [6, -10, "tree"], [11, -9.5, "tree"], [-9, 8, "tree"], [9, 7.5, "tree"], [-6, 11, "tree"], [6.5, 11, "tree"]],
   decor=[["stall", -9, -6.6, "3f6a4c"], ["stall", -4.5, -6.6, "3f6a4c"], ["stall", 3.5, -6.6, "3f6a4c"], ["stall", 8, -6.6, "3f6a4c"], ["boat", -10, 0, "c85068"], ["boat", 0, -0.5, "4a8fb8"], ["boat", 9.5, 0.8, "e5b33c"],
@@ -37,7 +37,7 @@ A["1_1"] = dict(name="기온 뒷골목", gate=GATE_ALLEY, zones=[],
   decor=[["torii", -8.6, -4.4, ""], ["lantern", -4.0, -1.6, ""], ["lantern", 2.0, -1.6, ""], ["lantern", 8.0, 1.6, ""], ["lantern", -4.0, 1.6, ""]],
   chests=[[-8.6, 3.4], [3.8, -9.8]], npc=[-8.2, 1.9], egg=[9.6, -9.4])
 A["1_2"] = dict(name="대나무 숲", gate=GATE_PARK, zones=[],
-  roads=[[-1, -12, 2, 5.6], [-6, -8, 5, 1.6], [-6, -8, 1.6, 10], [-6, 0.4, 12.6, 1.6], [5, 0.4, 1.6, 6], [5, 9, 1.6, 2.6]], water=[[-13.4, 6, 26.8, 3]], bridges=[[4.8, 5.6, 2, 3.8]],
+  roads=[[-1, -12, 2, 5.6], [-6, -8, 5, 1.6], [-6, -8, 1.6, 10], [-6, 0.4, 12.6, 1.6], [5, 0.4, 1.6, 6], [5, 9, 1.6, 2.6]], water=[[-13.4, 6, 26.8, 3]], bridges=[], ferry=[[5.8, 5.5], [5.8, 9.6]],
   houses=[H(9.8, -10.2, 2.6, 2, "c6ae86", "5e4a3b", "다실")],
   trees=[[x, z, "bamboo"] for x, z in [(-3, -10), (2.4, -9), (-7.6, -9.6), (-2.8, -5), (-7.8, -5.5), (-3, -2.5), (-7.8, -2), (-7.8, 1.6), (-3, 3.4), (0, 3.6), (3, 3.6), (0, -1), (3, -1), (7.8, -0.8), (8, 3), (2.8, -4.5),
          (6, -5), (9.5, -7.4), (10.6, -3), (10.6, 4), (-10.6, -8), (-10.6, 0), (-10.6, 4.4), (-9, 10.6), (-3, 10.6), (10, 10.8)]],
@@ -133,7 +133,7 @@ A["7_1"] = dict(name="소호 골목", gate=GATE_ALLEY, zones=[],
   decor=[["phonebox", -4.9, 1.7, ""], ["phonebox", 5.7, 1.7, ""], ["phonebox", 1.4, 5.4, ""], ["bus", 8.2, 2.1 - 0.2, "c8323a"], ["torii", 4.1, 7.6, ""], ["lamp", 0.4, -1.7, ""], ["lamp", -8.6, -1.7, ""]],
   chests=[[1, -5], [-10.8, 9.4]], npc=[1.5, 2.2], egg=[10.9, 8])
 A["7_2"] = dict(name="템스 강변 공원", gate=GATE_PARK, zones=[],
-  roads=[[-1, -12, 2, 10.4], [-11, -3.6, 22, 1.6], [-11, 4, 22, 1.6], [6, 5.6, 1.6, 5.4]], water=[[-13.4, -1.5, 26.8, 5]], bridges=[[-1.3, -2, 2.6, 6]],
+  roads=[[-1, -12, 2, 10.4], [-11, -3.6, 22, 1.6], [-11, 4, 22, 1.6], [6, 5.6, 1.6, 5.4]], water=[[-13.4, -1.5, 26.8, 5]], bridges=[], ferry=[[0, -2.1], [0, 4.1]],
   houses=[H(8.6, -8, 2.4, 2.4, "cdbf9c", "586373", "빅벤", spire=True), H(4, -8.2, 5, 2.6, "cdbf9c", "586373")],
   trees=[[x, z, "tree"] for x, z in [(-11, -9), (-7.5, -9.5), (-4, -8.5), (-11, 7.5), (-2.6, 9.5), (2.6, 10.6), (10.6, 7.8), (10.8, -5.2)]],
   decor=[["wheel", -6, 8.4, ""], ["boat", -8, 1, "c8323a"], ["boat", 7, 0.5, "4a8fb8"], ["bench", -6, -4.6, ""], ["bench", 5, -4.6, ""], ["lamp", -9, -4.4, ""], ["lamp", 9, -4.4, ""], ["lamp", -3.5, 6.2, ""], ["lamp", 3.5, 6.2, ""]],
@@ -149,7 +149,7 @@ A["8_1"] = dict(name="더 록스 골목", gate=GATE_ALLEY,
   decor=[["stall", -4, -3.6, "e8974d"], ["stall", -0.8, -3.6, "4a8fb8"], ["stall", 2.4, -3.6, "5fa55a"], ["arch", -4, -10.4, ""], ["arch", 0, -10.4, ""], ["arch", 4, -10.4, ""], ["boat", -9, -11, "fcf8ee"], ["boat", 9, -10.5, "c85068"]],
   chests=[[-10.8, 2.6], [7.4, 9.6]], npc=[-0.8, -1.9], egg=[-10.6, -7.9])
 A["8_2"] = dict(name="유칼립투스 숲", gate=GATE_PARK, zones=[],
-  roads=[[-1, -12, 2, 6], [-1, -7.6, 9, 1.6], [6.4, -7.6, 1.6, 8.4], [-8, -0.8, 16, 1.6], [-8, -0.8, 1.6, 9.2], [-8, 6.8, 12, 1.6]], water=[[-13.4, 2.6, 26.8, 1.4]], bridges=[[-8.2, 2.2, 2, 2.2]],
+  roads=[[-1, -12, 2, 6], [-1, -7.6, 9, 1.6], [6.4, -7.6, 1.6, 8.4], [-8, -0.8, 16, 1.6], [-8, -0.8, 1.6, 9.2], [-8, 6.8, 12, 1.6]], water=[[-13.4, 2.6, 26.8, 1.4]], bridges=[], ferry=[[-7.2, 2.0], [-7.2, 4.6]],
   houses=[],
   trees=[[x, z, "tree"] for x, z in [(-10.5, -10), (-6, -10.5), (-4, -4.5), (3, -10.4), (3.5, -4), (10.6, -4), (10.8, 1.4), (-10.8, -3), (-4.5, 1.9), (1.5, 1.9), (5.5, 1.8), (-11, 6.5), (-4.5, 5.4),
          (1, 5.6), (6, 5.6), (10.5, 6.5), (-10.6, 10.8), (-3, 10.6), (6.5, 10.4), (10.6, 10.6)]],
@@ -204,6 +204,19 @@ def check(key, a):
             n = (cx + dx, cz + dz)
             if n in seen or not walk(a, sol, n[0] * step, n[1] * step): continue
             seen.add(n); q.append(n)
+    if "ferry" in a:
+        for f in a["ferry"]:
+            if not walk(a, sol, f[0], f[1]): errs.append("나루터 (%s,%s) 걸을 수 없음" % (f[0], f[1]))
+        other = (round(a["ferry"][1][0] / step), round(a["ferry"][1][1] / step))
+        if (round(a["ferry"][0][0] / step), round(a["ferry"][0][1] / step)) not in seen: errs.append("나루터 북쪽에 갈 수 없음")
+        if other in seen: errs.append("나루터 없이도 건너갈 수 있음")
+        seen.add(other); q.append(other)
+        while q:
+            cx, cz = q.popleft()
+            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                n2 = (cx + dx, cz + dz)
+                if n2 in seen or not walk(a, sol, n2[0] * step, n2[1] * step): continue
+                seen.add(n2); q.append(n2)
     for n, p in pts.items():
         if (round(p[0] / step), round(p[1] / step)) not in seen: errs.append("%s (%s,%s) 문에서 갈 수 없음" % (n, p[0], p[1]))
     for i, s in enumerate(sol):
@@ -216,23 +229,26 @@ def check(key, a):
                 errs.append("구조물 (%.1f,%.1f) 과 (%.1f,%.1f) 겹침" % (cx, cz, t[0] + t[2] / 2, t[1] + t[3] / 2))
     return errs
 
-def pick_legend(a):
+def pick_legend(a, small=False):
     """자연 구역에서 전설 괴물이 잠든 자리: 문에서 갈 수 있고, 길·물건과 떨어진 넓은 빈터."""
     sol = solids(a); step = 0.25; seen = set(); q = collections.deque()
     g = (round(a["gate"][0] / step), round(a["gate"][1] / step)); q.append(g); seen.add(g)
+    if "ferry" in a:
+        g2 = (round(a["ferry"][1][0] / step), round(a["ferry"][1][1] / step)); q.append(g2); seen.add(g2)
     while q:
         cx, cz = q.popleft()
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             n = (cx + dx, cz + dz)
             if n in seen or not walk(a, sol, n[0] * step, n[1] * step): continue
             seen.add(n); q.append(n)
-    pts = [a["gate"], a["egg"]] + a["chests"] + ([a["shard"]] if "shard" in a else [])
+    pts = [a["gate"], a["egg"]] + a["chests"] + ([a["shard"]] if "shard" in a else []) + ([a["npc"]] if "npc" in a else []) + a.get("ferry", [])
+    reach = (-0.5, 0, 0.5) if small else (-1.25, -0.5, 0, 0.5, 1.25)
     best = None; score = -1
     for ix in range(-20, 21):
         for iz in range(-20, 21):
             x, z = ix * 0.5, iz * 0.5
-            if any((round((x + ox) / step), round((z + oz) / step)) not in seen for ox in (-1.25, -0.5, 0, 0.5, 1.25) for oz in (-1.0, -0.5, 0, 0.5, 1.0)): continue
-            if any(inr(r, x, z, 0.9) for r in a["roads"]): continue
+            if any((round((x + ox) / step), round((z + oz) / step)) not in seen for ox in reach for oz in reach): continue
+            if not small and any(inr(r, x, z, 0.9) for r in a["roads"]): continue
             near = min(((x - p[0]) ** 2 + (z - p[1]) ** 2) ** 0.5 for p in pts)
             if near < 3.0: continue
             far = ((x - a["gate"][0]) ** 2 + (z - a["gate"][1]) ** 2) ** 0.5 + near * 0.5
@@ -245,6 +261,10 @@ if __name__ == "__main__":
             A[k]["legend"] = pick_legend(A[k])
             if A[k]["legend"] is None: print("!! 전설 자리 없음:", k, A[k]["name"])
             else: print("   전설", k, A[k]["name"], A[k]["legend"])
+        else:
+            A[k]["lost"] = pick_legend(A[k], True)
+            if A[k]["lost"] is None: print("!! 잃어버린 물건 자리 없음:", k)
+            else: print("   분실물", k, A[k]["name"], A[k]["lost"])
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     bad = 0
     for k in sorted(A):

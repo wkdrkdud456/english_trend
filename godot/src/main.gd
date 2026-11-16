@@ -30,7 +30,6 @@ var pet_active = -1          # (구버전 세이브 호환용)
 var pet_team: Array = []      # 함께 걷는 친구들 — pets 의 인덱스, 최대 3
 var pet_spots: Array = []     # 2D 화면에서 각 친구의 위치
 var trail: Array = []         # 동훈이 지나온 길 (친구들이 따라 걷는다)
-const TEAM_MAX = 3
 var pet_node: Node3D = null
 var pet_path: Array = []
 # 몸통은 세 가지(유령형/짐승형/마임형)뿐이라 종류별로 역할을 나눈다
@@ -55,14 +54,32 @@ const GEAR = [
     { "id": "s2", "slot": 2, "tier": 2, "name": "아버님 등산화", "line": "이동 속도 +22% · 회복 +2", "cost": 480, "atk": 0, "hp": 0, "heal": 2, "spd": 22},
     { "id": "s3", "slot": 2, "tier": 3, "name": "날개 달린 크록스", "line": "이동 속도 +35% · 최대 체력 +6", "cost": 1100, "atk": 0, "hp": 6, "heal": 0, "spd": 35},
     { "id": "k0", "slot": 3, "tier": 0, "name": "빈 싱크대", "line": "아직 소품이 없어요", "cost": 0},
-    { "id": "k1", "slot": 3, "tier": 1, "name": "양은 냄비", "line": "냄비 불리기 피해 +15%", "cost": 180, "soak": 15},
-    { "id": "k2", "slot": 3, "tier": 2, "name": "무쇠 가마솥", "line": "냄비 불리기 +30% · 최대 체력 +6", "cost": 520, "soak": 30, "hp": 6},
-    { "id": "k3", "slot": 3, "tier": 3, "name": "전설의 압력밥솥", "line": "냄비 불리기 +50% · 한 턴 만에 터져요", "cost": 1150, "soak": 50, "fuse": 1},
+    { "id": "k1", "slot": 0, "icon": "slot3", "tier": 1, "name": "양은 냄비", "line": "냄비 불리기 피해 +15%", "cost": 180, "soak": 15},
+    { "id": "k2", "slot": 0, "icon": "slot3", "tier": 2, "name": "무쇠 가마솥", "line": "냄비 불리기 +30% · 최대 체력 +6", "cost": 520, "soak": 30, "hp": 6},
+    { "id": "k3", "slot": 0, "icon": "slot3", "tier": 3, "name": "전설의 압력밥솥", "line": "냄비 불리기 +50% · 한 턴 만에 터져요", "cost": 1150, "soak": 50, "fuse": 1},
     { "id": "k4", "slot": 3, "tier": 4, "name": "대용량 퐁퐁", "line": "퐁퐁 효과 +20% · 한 턴 더 미끄러워요", "cost": 320, "soap": 20},
     { "id": "k5", "slot": 3, "tier": 5, "name": "보온 텀블러", "line": "대결을 기력 +1칸으로 시작", "cost": 360, "en": 1},
     { "id": "k6", "slot": 3, "tier": 6, "name": "행운의 로또 용지", "line": "치명타 확률 +15%", "cost": 450, "crit": 15},
+    { "id": "g4", "slot": 0, "tier": 3, "cycle": 1, "name": "신화의 수세미", "line": "설거지 연타 +7 · 2회차 전용", "cost": 2600, "atk": 7},
+    { "id": "k7", "slot": 0, "icon": "slot3", "tier": 3, "cycle": 1, "name": "신화의 무쇠솥", "line": "냄비 불리기 +80% · 한 턴 만에 폭발 · 2회차 전용", "cost": 2800, "soak": 80, "fuse": 1},
+    { "id": "a4", "slot": 1, "tier": 3, "cycle": 1, "name": "신화의 앞치마", "line": "최대 체력 +55 · 회복 +5 · 2회차 전용", "cost": 2600, "hp": 55, "heal": 5},
+    { "id": "s4", "slot": 2, "tier": 3, "cycle": 1, "name": "구름 슬리퍼", "line": "이동 속도 +45% · 최대 체력 +12 · 2회차 전용", "cost": 2400, "spd": 45, "hp": 12},
 ]
-const SLOT_NAME = ["설거지 도구", "옷", "신발", "부엌 소품"]
+const SLOT_NAME = ["무기 (수세미 · 냄비)", "옷", "신발", "부엌 소품"]
+# ── 강화: 여행비와 강화석으로 장비를 +5 까지 올린다 (한 단계마다 효과 +20%) ──
+const ENHANCE_MAX = 5
+const ENHANCE_RATE = [100, 90, 75, 60, 45]
+var gear_lv: Dictionary = {}
+var stones = 0
+# ── 2회차부터 상대에게 붙는 특성 ──
+const TRAITS = {
+    "": { "name": "", "line": ""},
+    "hard": { "name": "단단한 ", "line": "단단함: 수세미 피해 40% 감소 — 냄비로 터뜨려요"},
+    "lid": { "name": "뚜껑 덮은 ", "line": "뚜껑: 냄비 폭발 40% 감소 — 수세미로 두드려요"},
+    "rage": { "name": "성난 ", "line": "분노: 체력이 절반 아래면 피해 +40%"},
+    "regen": { "name": "되살아나는 ", "line": "재생: 턴마다 체력 4% 회복"},
+}
+var battle_trait = ""
 var gear_slot = 0               # 장비 화면에서 보고 있는 칸
 # ── 전직 ───────────────────────────────────────────────
 const JOB_LEVEL = 10
@@ -118,6 +135,23 @@ const LEGENDS = [
     { "name": "광화문의 해태", "attack": "정의의 박치기", "line": "“약속을 미룬 자, 내 앞을 지나갈 수 없다.”"},
 ]
 var legend_battle = false
+# ── 심부름: 골목 주민의 물건을 찾아 주면 자연 구역에서 쓸 도구를 빌려준다 ──
+# ride = true 인 도시는 그 도구를 타고 강을 건넌다
+const ERRANDS = [
+    { "who": "골목의 화가", "lost": "붓통", "tool": "곰솥", "ride": true, "ask": "붓통을 골목 어딘가에 떨어뜨렸지 뭐예요. 찾아 주면 국 끓이던 곰솥을 빌려드릴게요. 센강은 그걸 타고 건너는 거랍니다.", "use": ""},
+    { "who": "찻집 할머니", "lost": "찻잔", "tool": "큰 가마솥", "ride": true, "ask": "아끼는 찻잔이 안 보여요. 찾아 주면 가마솥을 내줄게요. 대나무 숲 개울은 다리가 떠내려가서 그걸 타야 건너요.", "use": ""},
+    { "who": "향신료 상인", "lost": "저울추", "tool": "지렛대", "ride": false, "ask": "저울추가 굴러가 버렸소. 찾아 주면 지렛대를 빌려주리다. 오아시스의 돌은 맨손으론 못 들지.", "use": "지렛대를 끼워 돌을 들어 올렸다. 눌려 있던 종이가 나왔다!"},
+    { "who": "젤라또 가게 주인", "lost": "젤라또 스쿱", "tool": "사다리", "ride": false, "ask": "스쿱이 없어서 장사를 못 해요. 찾아 주면 사다리를 빌려줄게요. 올리브 나무는 높아서 그냥은 안 닿아요.", "use": "사다리를 세우고 올라가 가지에 걸린 종이를 떼어 냈다!"},
+    { "who": "핫도그 아저씨", "lost": "머스터드 통", "tool": "긴 집게", "ride": false, "ask": "머스터드 통을 어디 뒀더라… 찾아 주면 긴 집게를 빌려주지. 벤치 밑은 손이 안 들어가.", "use": "긴 집게를 벤치 밑으로 밀어 넣어 구겨진 종이를 꺼냈다!"},
+    { "who": "어부", "lost": "털장갑", "tool": "끓는 주전자", "ride": false, "ask": "털장갑 한 짝이 없어졌어. 찾아 주면 주전자에 물을 끓여 주지. 얼어붙은 건 녹여야 떼지.", "use": "끓는 물을 조금씩 부었다. 얼음이 녹으며 종이가 떨어졌다!"},
+    { "who": "당나귀 몰이꾼", "lost": "당나귀 방울", "tool": "뜰채", "ride": false, "ask": "당나귀 방울이 떨어졌어. 찾아 주면 뜰채를 빌려줄게. 파도에 떠다니는 건 그걸로 건져야 해.", "use": "뜰채를 뻗어 파도에 떠밀리던 유리병을 건져 올렸다!"},
+    { "who": "펍 주인", "lost": "병따개", "tool": "양철 욕조", "ride": true, "ask": "병따개가 없으면 가게를 못 열어. 찾아 주면 뒷마당 양철 욕조를 빌려주지. 템스강은 그걸 타고 건너.", "use": ""},
+    { "who": "서핑 가게 점원", "lost": "서핑 왁스", "tool": "아이스박스", "ride": true, "ask": "왁스를 잃어버렸어요. 찾아 주면 큰 아이스박스를 빌려드릴게요. 숲 개울은 그걸 타면 건너요.", "use": ""},
+    { "who": "분식집 이모", "lost": "국자", "tool": "보관함 열쇠", "ride": false, "ask": "국자가 어디 갔나 몰라. 찾아 주면 공원 분실물 보관함 열쇠를 줄게. 벤치에 있던 메모지는 누가 거기 넣어 놨대.", "use": "보관함을 열자 병원 메모지 한 장이 나왔다!"},
+]
+var ride_t = -1.0               # 0~1: 강을 건너는 중
+var ride_from = Vector3.ZERO
+var ride_to = Vector3.ZERO
 var tower_battle = false        # 도전의 탑: 끝없이 강해지는 연속 대결
 var tower_floor = 1
 var tower_best = 0
@@ -419,8 +453,41 @@ func gear_of(id: String) -> Dictionary:
 
 func gear_sum(key: String) -> int:
     var total = 0
-    for id in equipped: total += int(gear_of(id).get(key, 0))
+    for id in equipped:
+        var base = int(gear_of(id).get(key, 0))
+        # 강화 한 단계마다 +20% (기력·도화선 같은 개수형 효과는 그대로)
+        total += base if key in ["fuse", "en"] else int(ceil(base * (1.0 + 0.2 * enhance_lv(String(id)))))
     return total
+
+func enhance_lv(id: String) -> int:
+    return clampi(int(gear_lv.get(id, 0)), 0, ENHANCE_MAX)
+
+func enhance_cost(id: String) -> int:
+    return (enhance_lv(id) + 1) * 120 + int(gear_of(id).tier) * 60
+
+func enhance_stones(id: String) -> int:
+    return enhance_lv(id) + 1
+
+func enhance(id: String) -> void:
+    if not owned_gear.has(id) or enhance_lv(id) >= ENHANCE_MAX: return
+    if coins < enhance_cost(id): toast("강화하려면 " + str(enhance_cost(id)) + "원이 필요해요."); return
+    if stones < enhance_stones(id): toast("강화석이 " + str(enhance_stones(id) - stones) + "개 모자라요. 등급 높은 상대나 도전의 탑에서 얻어요."); return
+    var chance = ENHANCE_RATE[enhance_lv(id)]
+    coins -= enhance_cost(id); stones -= enhance_stones(id)
+    if randi_range(1, 100) <= chance:
+        gear_lv[id] = enhance_lv(id) + 1
+        sfx("job"); flash = 0.5
+        toast(String(gear_of(id).name) + " +" + str(enhance_lv(id)) + " 강화 성공!  효과 +" + str(enhance_lv(id) * 20) + "%")
+    else:
+        sfx("bad"); toast("강화 실패… 장비는 그대로예요. (성공 확률 " + str(chance) + "%)")
+    PARTY_HP = party_max(); health = mini(health, PARTY_HP); save_progress()
+
+func gain_stones(n: int) -> void:
+    if n > 0: stones = mini(999, stones + n)
+
+# 동행 칸: 도장을 모을수록 늘어난다 (3칸 → 최대 6칸)
+func team_max() -> int:
+    return mini(6, 3 + int(power_stamps() / 5) + (1 if cycle >= 2 else 0))
 
 func slot_gear(slot: int) -> Dictionary:
     return gear_of(String(equipped[clampi(slot, 0, 3)]))
@@ -592,6 +659,9 @@ func skill_up(id: String) -> void:
 func foe_city() -> int:
     return (tower_floor - 1) % 10 if tower_battle else city_index
 
+func foe_title() -> String:
+    return String(TRAITS[battle_trait].name) + foe_name()
+
 func wild_name() -> String:
     if tower_battle:
         return str(tower_floor) + "층 · " + String(LEGENDS[foe_city()].name if legend_battle else CityData.CITIES[foe_city()].mobs[wild_index].name)
@@ -648,6 +718,7 @@ func dish_damage(hit: int) -> int:
     var value = dish_base(hit)
     if battle_fog and hit < 2: value = maxi(1, value - 1)
     if battle_enemy_guard: value = maxi(1, int(ceil(value * 0.5)))
+    if battle_trait == "hard": value = maxi(1, int(ceil(value * 0.6)))
     return amp(value)
 
 func salary_damage() -> int:
@@ -657,10 +728,18 @@ func candy_heal() -> int:
     return 16 + power_stamps() + (level - 1) + pet_bonus("care") * 3 + gear_sum("heal") * 2 + (4 if battle_food == 3 else 0)
 
 func refresh_intent() -> void:
-    if city_index == 0: battle_intent = "heavy" if battle_turn % 3 == 0 else "attack"; return
+    if city_index == 0:
+        battle_intent = "heavy" if battle_turn % 3 == 0 else "attack"; spot_pot(); return
     var pattern = city().pattern
     var offset = 1 if not wild_battle and city_index in [4, 9] and battle_hp <= battle_max_hp / 2 else 0
     battle_intent = pattern[ (battle_turn - 1 + offset) % pattern.size()]
+    spot_pot()
+
+# 강한 상대는 불려 둔 냄비를 보면 엎으려 든다. 버티면 막을 수 있다.
+func spot_pot() -> void:
+    if battle_bomb <= 0 or battle_turn % 2 != 0: return
+    if wild_battle and wild_grade == 0 and not legend_battle and cycle == 0: return
+    battle_intent = "kick"
 
 func notify_web_ready() -> void:
     await RenderingServer.frame_post_draw
@@ -702,6 +781,8 @@ func _process(dt: float) -> void:
         check_encounter(Vector2(before.x, before.z).distance_to(Vector2(hero.position.x, hero.position.z)))
         save_clock += dt
         if save_clock > 6: save_clock = 0; save_progress()
+    elif state == "ride":
+        ride_tick(dt)
     elif state == "puzzle":
         tour.pz.tick(dt)
     elif state == "cook":
@@ -896,6 +977,9 @@ func update_target() -> void:
     if need_shard():
         var gate = world.gate_to(2)
         target = Vector3(gate.x, 0, gate.z); target_name = String(gate.label) + "에서 기억 조각 찾기"
+        if errand() < 3 and not world.gate_to(1).is_empty():
+            gate = world.gate_to(1)
+            target = Vector3(gate.x, 0, gate.z); target_name = String(gate.label) + "에서 " + String(ERRANDS[city_index].tool) + " 빌리기"
         world.marker.position = target + Vector3(0, 0.2, 0)
 
 # 라이벌에게 도전하려면 자연 구역의 기억 조각이 필요하다
@@ -911,9 +995,23 @@ func side_target() -> void:
         var spot = Vector3(chest.x, 0, chest.z)
         if hero.position.distance_to(spot) < best:
             best = hero.position.distance_to(spot); target = spot; target_name = "보물 상자"
+    var info = ERRANDS[city_index]
     for extra in world.extras:
         if String(extra.t) == "shard" and not bool(rec.shard):
             target = Vector3(extra.x, 0, extra.z); target_name = "기억 조각"
+            if errand() < 3:
+                var out = world.gate_to(0)
+                target = Vector3(out.x, 0, out.z); target_name = String(world.AREA_NAMES[city_index][0]) + "에서 " + String(info.tool) + " 빌려 오기"
+            elif world.ferry.size() == 2:
+                # 강 건너편에 있으면 먼저 나루터로
+                var mid_z = (float(world.ferry[0].z) + float(world.ferry[1].z)) / 2.0
+                if (hero.position.z < mid_z) != (float(extra.z) < mid_z):
+                    var dock = world.ferry[0] if absf(hero.position.z - float(world.ferry[0].z)) < absf(hero.position.z - float(world.ferry[1].z)) else world.ferry[1]
+                    target = Vector3(dock.x, 0, dock.z); target_name = "나루터에서 " + String(info.tool) + " 타기"
+        if String(extra.t) == "npc" and errand() in [0, 2]:
+            target = Vector3(extra.x, 0, extra.z); target_name = String(info.who) + ("에게 말 걸기" if errand() == 0 else "에게 " + String(info.lost) + " 돌려주기")
+    if errand() == 1 and not world.lost.is_empty():
+        target = Vector3(world.lost.x, 0, world.lost.z); target_name = "잃어버린 " + String(info.lost) + " 찾기"
     if target_name == "":
         var back = world.gate_to(0)
         target = Vector3(back.x, 0, back.z); target_name = String(back.label)
@@ -948,6 +1046,61 @@ func find_egg(egg: Dictionary) -> void:
     save_progress()
     show_dialogue( [ ["숨은 발견 · " + String(EGGS[city_index][i][0]), String(EGGS[city_index][i][1])], ["소현", prize]], "explore")
 
+func errand() -> int:
+    return int(tour.record().get("errand", 0))
+
+# 지금 서 있는 쪽에서 가장 가까운 나루터 번호 (-1 = 근처에 없음)
+func near_dock() -> int:
+    for i in range(world.ferry.size()):
+        if hero.position.distance_to(Vector3(world.ferry[i].x, hero.position.y, world.ferry[i].z)) < 1.9: return i
+    return -1
+
+func near_lost() -> bool:
+    return errand() == 1 and not world.lost.is_empty() and hero.position.distance_to(Vector3(world.lost.x, hero.position.y, world.lost.z)) < 1.7
+
+func start_ride(from_dock: int) -> void:
+    var info = ERRANDS[city_index]
+    if errand() < 3:
+        sfx("bad"); toast("다리가 없어서 건널 수 없어요. " + String(world.AREA_NAMES[city_index][0]) + "의 " + String(info.who) + "에게 방법을 물어봐요."); return
+    var a = world.ferry[from_dock]
+    var b = world.ferry[1 - from_dock]
+    ride_from = Vector3(a.x, 0.1, a.z); ride_to = Vector3(b.x, 0.1, b.z)
+    ride_t = 0.0; state = "ride"; joystick = Vector2.ZERO; hud.release_all(); move_vel = Vector3.ZERO; look_lead = Vector2.ZERO
+    sfx("good"); toast_time = 0
+
+func ride_tick(dt: float) -> void:
+    ride_t += dt / 2.6
+    var ease = clampf(ride_t, 0, 1)
+    ease = ease * ease * (3.0 - 2.0 * ease)
+    hero.position = ride_from.lerp(ride_to, ease); partner.position = hero.position
+    if int(ride_t * 9.0) != int((ride_t - dt / 2.6) * 9.0): sfx("step", 0.6)
+    if ride_t < 1.0: return
+    ride_t = -1.0; state = "explore"
+    var inward = (ride_to - ride_from).normalized() * 1.2
+    hero.position = ride_to + inward if world.can_walk(ride_to + inward) else ride_to
+    partner.position = hero.position
+    for offset in [Vector3(0.8, 0, 0), Vector3(-0.8, 0, 0), Vector3(0, 0, 0.8), Vector3(0, 0, -0.8)]:
+        if world.can_walk(hero.position + offset):
+            partner.position = hero.position + offset; break
+    reset_follow_path(); spawn_pet(); encounter_grace = 4.0; update_target()
+    toast(String(ERRANDS[city_index].tool) + "에서 내렸어요. 돌아갈 때도 나루터에서 타면 돼요.")
+
+# 골목 주민과의 심부름 대화. 끝났으면 false 를 돌려줘 평소 대화를 한다.
+func errand_talk() -> bool:
+    var info = ERRANDS[city_index]
+    var rec = tour.record()
+    match errand():
+        0:
+            rec["errand"] = 1; save_progress()
+            show_dialogue( [ [String(info.who), String(info.ask)], ["소현", "우리가 찾아볼게요! 반짝이는 데를 살펴보자."]], "explore")
+        1:
+            show_dialogue( [ [String(info.who), String(info.lost) + "은(는) 아직인가요? 이 골목 구석 어딘가에서 반짝일 거예요."]], "explore")
+        2:
+            rec["errand"] = 3; coins += 50 + city_index * 20; sfx("chest"); save_progress()
+            show_dialogue( [ [String(info.who), "오, 내 " + String(info.lost) + "! 고마워요. 약속대로 " + String(info.tool) + "을(를) 빌려줄게요. 수고비도 조금 넣었어요."], ["동훈", String(info.tool) + "… 이걸 들고 다니라고?"], ["소현", String(world.AREA_NAMES[city_index][1]) + "에 가서 써 보자!"]], "explore")
+        _: return false
+    return true
+
 func near_legend() -> bool:
     if world.legend.is_empty() or bool(tour.record().get("legend", false)): return false
     return hero.position.distance_to(Vector3(world.legend.x, hero.position.y, world.legend.z)) < 2.3
@@ -980,6 +1133,8 @@ func near_label() -> String:
     if not gate.is_empty(): return String(gate.label) + " 가기"
     if not near_egg().is_empty(): return "살펴보기"
     if near_legend(): return "전설 깨우기"
+    if near_lost(): return String(ERRANDS[city_index].lost) + " 줍기"
+    if near_dock() >= 0: return String(ERRANDS[city_index].tool) + " 타고 건너기" if errand() >= 3 else "건널 방법 찾기"
     if area_index == 0: return ""
     var rec = tour.record()
     for chest in world.chests:
@@ -1026,15 +1181,21 @@ func side_interact() -> void:
             2:
                 coins += 90 + city_index * 30; toast("상자에서 여행비 " + str(90 + city_index * 30) + "원을 찾았어요!")
             _:
-                skill_points += 1; toast("낡은 요령 수첩을 찾았어요!  기술 포인트 +1")
+                skill_points += 1; gain_stones(2); toast("낡은 요령 수첩과 강화석 2개를 찾았어요!  기술 포인트 +1")
         update_target(); save_progress(); return
     for extra in world.extras:
         if hero.position.distance_to(Vector3(extra.x, hero.position.y, extra.z)) > 1.9: continue
         if String(extra.t) == "npc":
-            show_dialogue(NPC_TALK[city_index], "explore"); return
+            if not errand_talk(): show_dialogue(NPC_TALK[city_index], "explore")
+            return
         if not bool(rec.shard):
+            var info = ERRANDS[city_index]
+            if not bool(info.ride) and errand() < 3:
+                sfx("bad"); toast("맨손으로는 꺼낼 수 없어요. " + String(world.AREA_NAMES[city_index][0]) + "의 " + String(info.who) + "에게 도구를 빌려 와요."); return
             rec.shard = true; chime(1318); save_progress()
-            show_dialogue(SHARDS[city_index], "explore"); return
+            var lines = SHARDS[city_index].duplicate()
+            if not bool(info.ride): lines.insert(0, ["소현", String(info.use)])
+            show_dialogue(lines, "explore"); return
     toast("금색 표시를 따라가 보세요. 이곳 풀숲의 친구들은 중심가보다 강해요.")
 
 func update_main_target() -> void:
@@ -1078,6 +1239,11 @@ func interact() -> void:
         find_egg(found); return
     if near_legend():
         wake_legend(); return
+    if near_lost():
+        tour.record()["errand"] = 2; sfx("egg"); burst(hero.position + Vector3(0, 0.8, 0), "fffbe0", 12); save_progress(); update_target()
+        toast(String(ERRANDS[city_index].lost) + "을(를) 찾았어요! " + String(ERRANDS[city_index].who) + "에게 돌려주러 가요."); return
+    if near_dock() >= 0:
+        start_ride(near_dock()); return
     if area_index > 0:
         side_interact(); return
     if city_index > 0:
@@ -1127,6 +1293,13 @@ func action(id: String) -> void:
         shop_tab = clampi(int(id.trim_prefix("shoptab_")), 0, 2); sfx("click"); return
     if id.begins_with("equip_"):
         equip_gear(String(id.trim_prefix("equip_"))); return
+    if id.begins_with("enh_"):
+        enhance(String(id.trim_prefix("enh_"))); return
+    if id == "buystone":
+        if coins < 150: toast("강화석은 150원이에요.")
+        else:
+            coins -= 150; gain_stones(1); sfx("coin"); save_progress(); toast("강화석 구입!  보유 " + str(stones) + "개")
+        return
     if id.begins_with("buygear_"):
         buy_gear(String(id.trim_prefix("buygear_"))); return
     if id.begins_with("buyitem_"):
@@ -1252,6 +1425,10 @@ func begin_battle() -> void:
     state = "battle"
     # 도시가 넘어갈 때마다 체력 약 1.3배 — 레벨과 장비를 같이 올려야 따라갈 수 있다
     var boss_hp = 120.0 * pow(1.31, city_index)
+    # 2회차부터(탑은 10층부터) 상대마다 특성이 하나 붙는다
+    battle_trait = ""
+    if (cycle >= 1 and (wild_grade >= 1 or not wild_battle or legend_battle)) or (tower_battle and tower_floor >= 10):
+        battle_trait = ["hard", "lid", "rage", "regen"][(city_index + wild_index + tower_floor + (0 if wild_battle else 2)) % 4 if not wild_battle or tower_battle else randi_range(0, 3)]
     if tower_battle: battle_max_hp = int(60.0 * pow(1.14, tower_floor) * (1.6 if legend_battle else 1.0))
     elif legend_battle: battle_max_hp = int(boss_hp * 1.7 * cycle_mul(0.8))
     elif wild_battle: battle_max_hp = int((34 + wild_index * 4) * pow(1.3, city_index) * float(GRADES[wild_grade].hp) * cycle_mul(0.8))
@@ -1280,6 +1457,7 @@ func enemy_heavy() -> bool:
     return battle_intent in ["heavy", "wave", "rush"]
 
 func enemy_attack_name() -> String:
+    if battle_intent == "kick": return "냄비 엎기 · 폭발 절반 (버티면 막아요)"
     if legend_battle:
         var move = String(LEGENDS[foe_city()].attack)
         return { "brace": "웅크리기 · 다음 피해 절반", "rest": "숨 고르기 · 반격 없음"}.get(battle_intent, ("분노의 " if enemy_heavy() else "") + move)
@@ -1294,6 +1472,7 @@ func enemy_damage() -> int:
     var grow = pow(1.15, city_index)
     if tower_battle: return int(round((10.0 if enemy_heavy() else 5.0) * pow(1.07, tower_floor) * (1.25 if legend_battle else 1.0)))
     var base = int(round((13.0 if enemy_heavy() else 6.0) * grow))
+    if battle_trait == "rage" and battle_hp * 2 < battle_max_hp: base = int(round(base * 1.4))
     if legend_battle: base = int(round(base * 1.2))
     elif wild_battle: base = int(round((10.0 + wild_index if enemy_heavy() else 5.0 + wild_index * 0.5) * grow * float(GRADES[wild_grade].atk)))
     return int(round(base * cycle_mul(0.35)))
@@ -1462,6 +1641,8 @@ func battle_tick(dt: float) -> void:
             elif battle_intent == "sand": damage += 2
             if not battle_guard and battle_intent in ["chill", "gust"]: battle_energy = maxi(0, battle_energy - 1)
             if not battle_guard and battle_intent == "mist": battle_fog = true
+            var spilled = battle_intent == "kick" and battle_bomb > 0 and not battle_guard
+            if spilled: bomb_mul *= 0.5
             var back = 0
             if battle_reflect:
                 back = int(enemy_damage() * (1.0 + 0.5 * job_rank())) + guard_heal(); damage = 0
@@ -1472,6 +1653,9 @@ func battle_tick(dt: float) -> void:
                 battle_impact("reflect", "enemy", back)
             elif battle_intent == "brace": battle_result = "상대가 방어 자세! 다음 피해 절반 · 월급 박치기는 방어를 뚫어요."
             elif battle_intent == "rest": battle_result = "상대가 숨을 골랐어요. 이번에는 반격이 없어요."
+            elif battle_intent == "kick":
+                battle_result = ("냄비를 엎었다! 폭발이 절반으로 줄어요 · " if spilled else ("냄비를 지켜 냈어요! " if battle_bomb > 0 else "허공을 걷어찼어요 · ")) + str(damage) + " 피해"
+                battle_impact("guard" if battle_guard else "regional", "party", damage)
             else:
                 battle_result = ("잘 막았어요! " if battle_guard else "상대의 반격! ") + str(damage) + " 피해" + (" · 기력 −1" if not battle_guard and battle_intent in ["chill", "gust"] else " · 다음 설거지 −2" if battle_fog else "")
                 battle_impact("guard" if battle_guard else ("regional" if city_index > 0 else ( ["haunt", "peck", "wall"][wild_index] if wild_battle else "baguette")), "party", damage)
@@ -1489,7 +1673,7 @@ func battle_tick(dt: float) -> void:
         if battle_bomb > 0:
             battle_bomb -= 1
             if battle_bomb == 0:
-                var blast = int(soak_damage() * bomb_mul)
+                var blast = int(soak_damage() * bomb_mul * (0.6 if battle_trait == "lid" else 1.0))
                 bomb_mul = 1.0
                 if job == 2 and job_rank() >= 2: battle_energy = mini(3, battle_energy + 1)
                 if battle_vuln > 0: blast = int(round(blast * soap_mul()))
@@ -1505,6 +1689,7 @@ func battle_tick(dt: float) -> void:
 
 func next_turn() -> void:
     battle_turn += 1; battle_guard = false; battle_phase = "choose"; battle_phase_time = 0; refresh_intent()
+    if battle_trait == "regen" and battle_hp > 0: battle_hp = mini(battle_max_hp, battle_hp + maxi(1, int(battle_max_hp * 0.04)))
     if job == 3 and job_rank() >= 3 and health < PARTY_HP: health = mini(PARTY_HP, health + maxi(1, int(ceil(PARTY_HP * 0.03))))
     battle_result = "상대가 힘을 모아요. 방어할까요?" if enemy_heavy() else "다음 행동을 골라주세요."
     if battle_bomb == 1: battle_result += " (냄비는 다음 턴에 터져요)"
@@ -1538,6 +1723,7 @@ func finish_floor() -> void:
         if tower_floor % 5 == 0:
             skill_points += 1; note += " · 최고 기록! 기술 포인트 +1"
     gain_exp(10 + tower_floor * 3)
+    gain_stones(3 if legend_battle else 1)
     tower_floor += 1
     hero.position = battle_return; partner.position = partner_return
     next_floor(); save_progress(); toast(note)
@@ -1548,7 +1734,7 @@ func claim_battle_win() -> void:
         finish_floor(); return
     if wild_battle: finish_wild_battle(); return
     coins += battle_reward; stage = 3
-    skill_points += 1
+    skill_points += 1; gain_stones(3)
     gain_exp(40 + city_index * 12 + perfects * 4)
     hero.position = battle_return; partner.position = partner_return; reset_follow_path()
     rival.position = tour.v(city().boss_at)
@@ -1625,6 +1811,7 @@ func finish_wild_battle() -> void:
     toast(name + "와의 대결 승리! +" + str(reward) + "원" + (" · 첫 만남!" if first else ""))
     gain_exp(bonus_xp)
     if caught_grade >= 2 and bag_count("candy") < 9: bag_add("candy", 1)
+    gain_stones(caught_grade)
     befriend(caught_city, caught_index, name, caught_grade)
     tour.wild_victory()
     save_progress()
@@ -1638,8 +1825,8 @@ func finish_legend() -> void:
     restore_from_wild()
     tour.record()["legend"] = true
     pets.append({ "c": c, "i": 3, "lv": 5, "g": 3})
-    if pet_team.size() < TEAM_MAX: pet_team.append(pets.size() - 1)
-    spawn_pet(); skill_points += 2
+    if pet_team.size() < team_max(): pet_team.append(pets.size() - 1)
+    spawn_pet(); skill_points += 2; gain_stones(5)
     burst(hero.position + Vector3(0, 0.8, 0), "ffd84a", 24); flash = 0.8
     gain_exp(120 + c * 30)
     PARTY_HP = party_max(); save_progress()
@@ -1663,7 +1850,7 @@ func befriend(c: int, i: int, name: String, grade: int = 0) -> void:
         return
     if randf() > 0.3 + perfects * 0.06 + grade * 0.2: return
     pets.append({ "c": c, "i": i, "lv": 1, "g": grade})
-    if pet_team.size() < TEAM_MAX: pet_team.append(pets.size() - 1)
+    if pet_team.size() < team_max(): pet_team.append(pets.size() - 1)
     spawn_pet()
     chime(1318)
     toast(name + "이(가) 따라오기로 했어요! " + String(PET_ROLE[i].desc))
@@ -1788,7 +1975,7 @@ func save_progress() -> void:
     if state in ["intro", "tutorial"]: return
     if not ui_ready or (state == "title" and not has_save): return
     tour.store_current()
-    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "cycle": cycle, "tower_best": tower_best}
+    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones}
     var temp = SAVE_FILE + ".tmp"; var file = FileAccess.open(temp, FileAccess.WRITE)
     save_ok = file != null
     if not file: return
@@ -1828,6 +2015,10 @@ func load_progress() -> void:
     level = clampi(int(data.get("level", 1)), 1, LEVEL_MAX); xp = maxi(0, int(data.get("xp", 0)))
     next_energy = clampi(int(data.get("next_energy", 0)), 0, 3)
     tower_best = maxi(0, int(data.get("tower_best", 0)))
+    stones = clampi(int(data.get("stones", 0)), 0, 999); gear_lv = {}
+    var saved_lv = data.get("gear_lv", {})
+    if saved_lv is Dictionary:
+        for key in saved_lv: gear_lv[String(key)] = clampi(int(saved_lv[key]), 0, ENHANCE_MAX)
     job = clampi(int(data.get("job", 0)), 0, 3); cycle = clampi(int(data.get("cycle", 0)), 0, 99)
     owned_gear = ["g0", "a0", "s0", "k0"]
     var saved_gear = data.get("owned_gear", [])
@@ -1860,7 +2051,7 @@ func load_progress() -> void:
     if saved_team is Array:
         for index in saved_team:
             var k = int(index)
-            if k >= 0 and k < pets.size() and not pet_team.has(k) and pet_team.size() < TEAM_MAX: pet_team.append(k)
+            if k >= 0 and k < pets.size() and not pet_team.has(k) and pet_team.size() < team_max(): pet_team.append(k)
     elif pet_active >= 0: pet_team.append(pet_active)
     skill_points = clampi(int(data.get("skill_points", maxi(0, level - 1) if not data.has("skill_lv") else 0)), 0, 99)
     var saved_skills = data.get("skill_lv", {})
@@ -1919,10 +2110,10 @@ func pick_pet(index: int) -> void:
     if index < 0 or index >= pets.size(): return
     if pet_team.has(index):
         pet_team.erase(index); toast(pet_name(pets[index]) + "는 쉬기로 했어요.")
-    elif pet_team.size() >= TEAM_MAX:
+    elif pet_team.size() >= team_max():
         toast("세 친구까지만 함께 걸을 수 있어요. 먼저 한 친구를 쉬게 해주세요."); return
     else:
-        pet_team.append(index); toast(pet_name(pets[index]) + "와 함께 걸어요. (" + str(pet_team.size()) + " / " + str(TEAM_MAX) + ")")
+        pet_team.append(index); toast(pet_name(pets[index]) + "와 함께 걸어요. (" + str(pet_team.size()) + " / " + str(team_max()) + ")")
     spawn_pet(); PARTY_HP = party_max(); chime(640); save_progress()
 
 func restart() -> void:
@@ -1931,7 +2122,7 @@ func restart() -> void:
     skill_points = 0; wild_grade = 0; area_index = 0
     for entry in SKILLS: skill_lv[entry.id] = 1
     owned_gear = ["g0", "a0", "s0", "k0"]; equipped = ["g0", "a0", "s0", "k0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
-    job = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0
+    job = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0; gear_lv = {}; stones = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]
     grass_steps = 0; encounter_grace = 6.0; encounter_at = 11.0

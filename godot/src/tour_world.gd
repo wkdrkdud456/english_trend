@@ -414,6 +414,13 @@ func build_area(world: Node3D, city: int, zone: int) -> void:
     if plan.has("npc"): w.extras.append({ "t": "npc", "x": float(plan.npc[0]), "z": float(plan.npc[1])})
     if plan.has("shard"): w.extras.append({ "t": "shard", "x": float(plan.shard[0]), "z": float(plan.shard[1])})
     w.eggs.append({ "x": float(plan.egg[0]), "z": float(plan.egg[1]), "i": zone})
+    if plan.has("ferry"):
+        for f in plan.ferry:
+            w.ferry.append({ "x": float(f[0]), "z": float(f[1])})
+            w.flat.append({ "t": "dock", "x": float(f[0]), "z": float(f[1])})
+    if plan.has("lost"):
+        w.lost = { "x": float(plan.lost[0]), "z": float(plan.lost[1])}
+        w.flat.append({ "t": "lost", "x": w.lost.x, "z": w.lost.z})
     if plan.has("legend"):
         w.legend = { "x": float(plan.legend[0]), "z": float(plan.legend[1])}
         w.flat.append({ "t": "legend", "x": w.legend.x, "z": w.legend.z, "art": "legend" + str(city)})

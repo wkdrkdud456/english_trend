@@ -16,6 +16,8 @@ var gates: Array = []         # {"x","z","to","label"} — 다른 구역으로 �
 var chests: Array = []        # {"x","z","i"} — 보물 상자 (i = 도시 안에서의 번호)
 var extras: Array = []
 var zones: Array = []         # {"r": Rect2, "c": 색} — 광장·모래사장 같은 바닥
+var ferry: Array = []            # 나루터 두 곳 [{"x","z"}, {"x","z"}] — 탈것이 있어야 건넌다
+var lost: Dictionary = {}        # 골목 주민이 잃어버린 물건이 떨어진 자리
 var legend: Dictionary = {}   # {"x","z"} — 전설의 괴물이 잠든 자리 (자연 구역)
 var eggs: Array = []          # {"x","z","i"} — 숨은 발견        # {"t": "shard"|"npc", "x","z"}
 const AREA_NAMES = [
