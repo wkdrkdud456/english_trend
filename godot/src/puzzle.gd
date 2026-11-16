@@ -5,6 +5,7 @@ extends RefCounted
 # simon  : 불이 켜진 순서를 외워서 따라 누른다
 # match  : 같은 그림 두 장을 찾는다. 실수 한도를 넘으면 다시 섞인다
 # timing : 움직이는 표시가 구간 안에 있을 때 누른다
+# slide  : 16칸 중 한 칸이 비어 있다. 조각을 밀어 큰 그림을 맞춘다
 
 var game
 var kind = ""
@@ -53,6 +54,11 @@ var zone_w = 0.26
 var hits = 0
 var need = 3
 
+# slide
+var board: Array = []            # 자리마다 놓인 조각 번호 (15 = 빈칸)
+var pic: Array = []              # 그림을 이루는 사각형들 [Rect2(0~1 좌표), Color]
+var show_numbers = true
+
 const SYM_COLOR = ["e5b33c", "4a8fb8", "c8553d", "5fa55a", "8a5fc0", "d977a8", "3aa39a", "8a6a4c"]
 const PAD_COLOR = ["c8553d", "4a8fb8", "e5b33c", "5fa55a"]
 
@@ -89,6 +95,25 @@ func start(k: String, level: int, heading: String, guide: String) -> void:
             var pairs = 8 if level >= 2 else 6
             miss_limit = [9, 8, 10, 9][level]
             shuffle_cards(pairs)
+        "slide":
+            board = []
+            for i in range(16): board.append(i)
+            build_picture(level)
+            # 맞춰진 상태에서 거꾸로 밀어 섞으면 반드시 풀 수 있다
+            var blank = 15
+            var last = -1
+            var count = [24, 44, 70, 90][level]
+            for step in range(count):
+                var options = []
+                for d in [-4, 4, -1, 1]:
+                    var to = blank + d
+                    if to < 0 or to > 15 or to == last: continue
+                    if absi(d) == 1 and int(to / 4) != int(blank / 4): continue
+                    options.append(to)
+                var pick2 = options[randi_range(0, options.size() - 1)]
+                board[blank] = board[pick2]; board[pick2] = 15; last = blank; blank = pick2
+            if slide_done():
+                board[15] = board[14]; board[14] = 15
         "timing":
             need = [3, 4, 5, 6][level]; hits = 0
             speed = 0.75 + level * 0.12; zone_w = 0.28 - level * 0.02
@@ -102,6 +127,32 @@ func flip(i: int) -> void:
         var cy = y + d.y
         if cx < 0 or cy < 0 or cx >= n or cy >= n: continue
         cells[cy * n + cx] = not cells[cy * n + cx]
+
+# 맞출 그림: 하늘과 땅 위에 그 도시의 랜드마크(둘째 판은 전설의 괴물)
+func build_picture(level: int) -> void:
+    pic = []
+    var art_tool = game.hud.flat_art
+    var tones = game.city().pal
+    var sky = Color("cfe3ea") if game.city_index == 0 else Color(String(tones.sky))
+    var land = Color(String(tones.g0))
+    pic.append([Rect2(0, 0, 1, 0.74), sky]); pic.append([Rect2(0, 0, 1, 0.22), sky.lightened(0.14)])
+    pic.append([Rect2(0.72, 0.08, 0.14, 0.14), Color("fff0b8")])
+    pic.append([Rect2(0.08, 0.14, 0.24, 0.05), Color(1, 1, 1, 0.8)]); pic.append([Rect2(0.14, 0.1, 0.12, 0.05), Color(1, 1, 1, 0.8)])
+    pic.append([Rect2(0, 0.74, 1, 0.26), land]); pic.append([Rect2(0, 0.74, 1, 0.03), land.darkened(0.18)])
+    pic.append([Rect2(0.06, 0.86, 0.2, 0.04), land.darkened(0.1)]); pic.append([Rect2(0.62, 0.9, 0.28, 0.04), land.lightened(0.12)])
+    var art = "legend" + str(game.city_index) if level == 1 else String(art_tool.CARD_ART[game.city_index])
+    var dims = art_tool.mob_size(art)
+    var lo = art_tool.bounds[art][0]
+    var s = minf(0.8 / dims.x, 0.72 / dims.y)
+    var ox = 0.5 - dims.x * s / 2.0
+    var oy = 0.84 - dims.y * s
+    for part in art_tool.parts_of(art):
+        pic.append([Rect2(ox + (float(part[0]) - lo.x) * s, oy + (float(part[1]) - lo.y) * s, float(part[2]) * s + 0.002, float(part[3]) * s + 0.002), Color(String(part[4]))])
+
+func slide_done() -> bool:
+    for i in range(16):
+        if int(board[i]) != i: return false
+    return true
 
 func new_secret() -> void:
     secret = []; guess = []; history = []
@@ -165,6 +216,17 @@ func press(id: String) -> void:
             if i < 0 or i >= cells.size(): return
             flip(i); moves += 1; game.chime(520 + (i % 3) * 60)
             if not cells.has(false): win("모두 밝혀졌어요!  " + str(moves) + "번 만에 성공")
+        "slide":
+            if id == "numbers":
+                show_numbers = not show_numbers; return
+            var at2 = int(id)
+            if at2 < 0 or at2 > 15: return
+            var hole = board.find(15)
+            var same_row = int(at2 / 4) == int(hole / 4) and absi(at2 - hole) == 1
+            if not same_row and absi(at2 - hole) != 4:
+                game.sfx("bad"); return
+            board[hole] = board[at2]; board[at2] = 15; moves += 1; game.sfx("click")
+            if slide_done(): win("그림이 완성됐어요!  " + str(moves) + "번 움직였어요")
         "code":
             if id == "back":
                 if not guess.is_empty(): guess.pop_back()
@@ -250,6 +312,7 @@ func draw(c) -> void:
         "code": draw_code(c, w, h)
         "simon": draw_simon(c, w, h)
         "match": draw_match(c, w, h)
+        "slide": draw_slide(c, w, h)
         _: draw_timing(c, w, h)
     if message != "": c.txt(message, 24, h - 108, 14, c.rose, w - 48, HORIZONTAL_ALIGNMENT_CENTER)
     if solved:
@@ -273,6 +336,39 @@ func draw_lights(c, w: float, h: float) -> void:
     c.txt("누른 횟수 " + str(moves), 24, by + 24, 14, c.muted)
     c.txt("누르면 자신과 위·아래·양옆이 함께 바뀌어요", 24, by + 46, 12, c.muted)
     if not solved: c.button("pz_reset", "처음으로", Rect2(w - 132, by, 108, 44), false, true, 13)
+
+# 그림의 src 부분(0~1 좌표)을 dest 사각형에 그린다
+func draw_piece(c, src: Rect2, dest: Rect2) -> void:
+    var scale = dest.size / src.size
+    for entry in pic:
+        var cut = src.intersection(entry[0])
+        if cut.size.x <= 0.0 or cut.size.y <= 0.0: continue
+        c.draw_rect(Rect2(dest.position + (cut.position - src.position) * scale, cut.size * scale + Vector2(0.5, 0.5)), entry[1])
+
+func draw_slide(c, w: float, h: float) -> void:
+    var size = minf(w - 48.0, h - 420.0)
+    var x0 = (w - size) / 2.0
+    var y0 = 168.0
+    var cell = size / 4.0
+    c.plate(Rect2(x0 - 6, y0 - 6, size + 12, size + 12), c.ink, Color("3a4a48"), 12, 4)
+    for i in range(16):
+        var tile = int(board[i])
+        if tile == 15 and not solved: continue
+        var r = Rect2(x0 + (i % 4) * cell, y0 + int(i / 4) * cell, cell, cell)
+        var inner = Rect2(r.position + Vector2(1.5, 1.5), r.size - Vector2(3, 3)) if not solved else r
+        draw_piece(c, Rect2((tile % 4) / 4.0, int(tile / 4) / 4.0, 0.25, 0.25), inner)
+        if show_numbers and not solved:
+            c.panel(Rect2(r.position.x + 4, r.position.y + 4, 22, 20), Color(0.12, 0.2, 0.19, 0.75), 6)
+            c.txt(str(tile + 1), r.position.x + 4, r.position.y + 19, 12, c.cream, 22, HORIZONTAL_ALIGNMENT_CENTER)
+        if not solved: c.buttons["pz_" + str(i)] = r
+    var by = y0 + size + 16
+    # 완성 그림 보기
+    c.plate(Rect2(24, by, 96, 96), c.ink, c.cream, 10, 3)
+    draw_piece(c, Rect2(0, 0, 1, 1), Rect2(29, by + 5, 86, 86))
+    c.txt("이 그림을 맞춰요", 134, by + 22, 14, c.ink)
+    c.txt("빈칸 옆의 조각을 누르면 밀려요", 134, by + 44, 12, c.muted)
+    c.txt("움직인 횟수 " + str(moves), 134, by + 66, 12, c.muted)
+    if not solved: c.button("pz_numbers", "번호 끄기" if show_numbers else "번호 켜기", Rect2(w - 132, by + 52, 108, 42), false, true, 12)
 
 func draw_code(c, w: float, h: float) -> void:
     var y = 172.0

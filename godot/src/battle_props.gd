@@ -80,7 +80,7 @@ func draw(c: Control, boy: Vector2, foe: Vector2) -> void:
     var hand = boy + Vector2(27, -48)
     var target = foe + Vector2(0, -55)
     var ult = g.battle_choice == "ult"
-    var volley = g.battle_choice == "strike" or (ult and g.job == 1)
+    var volley = g.battle_choice == "strike" or g.ult_kind() == "volley"
     var tr = 3 if ult else g.tier(g.battle_choice) if g.battle_choice in ["strike", "guard", "team", "soak", "soap", "coffee"] else 0
     if phase == "player" and (volley or g.battle_choice == "team"):
 
@@ -116,11 +116,14 @@ func draw(c: Control, boy: Vector2, foe: Vector2) -> void:
             if tr >= 2 and t > 0.12 and t < 0.5:
                 for i in range(5): spark(c, hand.lerp(target, clampf((t - 0.12) / 0.38, 0, 1)) + Vector2(-12 - i * 13, sin(i * 2.1 + t * 20) * 14), 8, "ffd84a")
             if t < 0.5: c.txt("−40원", boy.x + 46, boy.y - 125, 18, Color("9e4f4b"))
-        elif ult and g.job == 2 and t < 0.5:
+        elif g.ult_kind() == "blast" and g.job == 2 and t < 0.5:
             # 하늘에서 압력솥이 떨어진다
             var drop = clampf(t / 0.5, 0, 1)
             pot(c, Vector2(target.x, lerpf(target.y - 260, target.y + 20, drop * drop)), 1.5 + g.job_rank() * 0.2, 2 if g.job_rank() < 2 else 3)
-        elif ult and g.job == 3:
+        elif g.ult_kind() == "blast" and t < 0.5:
+            # 스팀 살균: 뜨거운 김이 아래에서 솟는다
+            for i in range(7): box(c, target + Vector2(-48 + i * 16, 40 - t * 240 - (i % 3) * 22), Vector2(10, 30), "f4fbff" if i % 2 == 0 else "cfe9f2")
+        elif g.ult_kind() == "ward":
             c.panel(Rect2(boy.x - 52, boy.y - 190, 104, 34), Color("c9951a"), 6)
             c.txt("18:00 칼퇴", boy.x - 52, boy.y - 166, 17, Color("fff8e8"), 104, HORIZONTAL_ALIGNMENT_CENTER)
     if active and g.battle_guard:

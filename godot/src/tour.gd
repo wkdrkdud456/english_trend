@@ -179,7 +179,7 @@ func interact_mission() -> void:
     match city().kind:
         "lantern":
             if r.marks[i]: game.toast("이미 환하게 켜진 등불이에요."); return
-            open_puzzle("lights", r.marks.count(true), i, city().labels[i], "등불 격자를 모두 밝혀요"); return
+            open_puzzle("slide", r.marks.count(true), i, city().labels[i], "등불에 비친 그림 조각을 밀어서 맞춰요"); return
         "runes":
             if r.marks[i]: game.toast("이미 풀린 기둥이에요."); return
             open_puzzle("code", r.marks.count(true), i, city().labels[i], "숨은 문양 순서를 추리해요"); return

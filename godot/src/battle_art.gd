@@ -316,8 +316,13 @@ func job_gear(c: Control, boy: Vector2, g) -> void:
             block(c, o.x + 10, o.y - 4, 68, 6, Color(metal).lightened(0.4).to_html(false))
             block(c, o.x + 4, o.y + 18, 80, 8, dark); block(c, o.x + 6, o.y + 20, 76, 4, Color(metal).darkened(0.25).to_html(false))
             block(c, o.x + 36, o.y - 14, 16, 10, dark); block(c, o.x + 38, o.y - 12, 12, 8, metal)
+    var three = g.job_rank() >= 3
+    if three:
+        # 3차: 머리 위에 빛나는 보석
+        block(c, o.x + 38, o.y - 44, 12, 12, dark); block(c, o.x + 40, o.y - 42, 8, 8, "8ff0ff"); block(c, o.x + 40, o.y - 42, 4, 4, "ffffff")
     if two and g.effects_on:
-        var tint = Color(String(g.JOBS[g.job].color))
-        for i in range(6):
-            var a = i * TAU / 6.0 + g.clock_time * 1.4
+        var tint = Color("fff2a8") if three else Color(String(g.JOBS[g.job].color))
+        var count = 12 if three else 6
+        for i in range(count):
+            var a = i * TAU / float(count) + g.clock_time * 1.4
             c.draw_rect(Rect2((boy + Vector2(cos(a) * 46, -62 + sin(a) * 60)).round() - Vector2(3, 3), Vector2(6, 6)), Color(tint, 0.5 + 0.35 * sin(g.clock_time * 5.0 + i)))

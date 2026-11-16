@@ -67,11 +67,40 @@ var gear_slot = 0               # 장비 화면에서 보고 있는 칸
 # ── 전직 ───────────────────────────────────────────────
 const JOB_LEVEL = 10
 const JOBS = [
-    { "name": "평범한 남편", "name2": "평범한 남편", "line": "", "ult": "", "ult_line": "", "color": "788277"},
-    { "name": "설거지 장인", "name2": "식기세척의 신", "line": "설거지 한 대마다 +1 · 치명타 +10%", "ult": "식기세척기 풀가동", "ult_line": "기력 2 · 수세미 5연타", "color": "3f8fd0"},
-    { "name": "불림술사", "name2": "가마솥 대마법사", "line": "냄비 불리기 피해 +15%", "ult": "압력솥 대폭발", "ult_line": "기력 2 · 지금 바로 터뜨린다", "color": "8a5fc0"},
-    { "name": "야근 기사", "name2": "칼퇴의 수호자", "line": "최대 체력 +15 · 버티기 회복 +3", "ult": "칼퇴 선언", "ult_line": "기력 2 · 반격을 막고 되돌려준다", "color": "c9951a"},
+    { "names": ["평범한 남편", "평범한 남편", "평범한 남편"], "color": "788277"},
+    { "names": ["설거지 장인", "식기세척의 달인", "식기세척의 신"], "color": "3f8fd0"},
+    { "names": ["불림술사", "가마솥 마법사", "가마솥 대마법사"], "color": "8a5fc0"},
+    { "names": ["야근 기사", "철야의 방패", "칼퇴의 수호자"], "color": "c9951a"},
 ]
+# 차수마다 하나씩 늘어나는 패시브 (앞의 것은 그대로 남고, 수치 보너스는 차수만큼 곱해진다)
+const JOB_PASSIVE = [
+    [],
+    ["설거지 한 대마다 +1 · 치명타 +10%", "치명타 피해 1.5배 → 1.8배", "설거지 연타가 한 대 늘어요"],
+    ["냄비 불리기 피해 +15%", "냄비가 터지면 기력 +1", "냄비가 한 턴 빨리 터져요"],
+    ["최대 체력 +15 · 버티기 회복 +3", "버티기가 피해를 90% 막아요", "매 턴 체력을 3% 회복해요"],
+]
+# 차수마다 하나씩 생기는 직업 기술. need = 먼저 Lv.10 까지 마스터해야 하는 기본 기술
+const JOB_SKILLS = [
+    [],
+    [
+        { "name": "식기세척기 풀가동", "need": "strike", "energy": 2, "kind": "volley", "line": "수세미 5연타"},
+        { "name": "스팀 살균", "need": "soap", "energy": 2, "kind": "blast", "line": "큰 피해 · 3턴 미끌 · 방어 무시"},
+        { "name": "주방 대청소", "need": "coffee", "energy": 3, "kind": "volley", "line": "8연타 · 전부 치명타"},
+    ],
+    [
+        { "name": "압력솥 대폭발", "need": "soak", "energy": 2, "kind": "blast", "line": "불려 둔 냄비까지 즉시 폭발"},
+        { "name": "이중 불림", "need": "soap", "energy": 2, "kind": "arm", "line": "두 배로 터지는 냄비를 불린다"},
+        { "name": "천년 누룽지", "need": "coffee", "energy": 3, "kind": "blast", "line": "방어를 뚫는 초대형 폭발"},
+    ],
+    [
+        { "name": "칼퇴 선언", "need": "guard", "energy": 2, "kind": "ward", "line": "반격을 막고 되돌려준다"},
+        { "name": "연차 사용", "need": "coffee", "energy": 2, "kind": "heal", "line": "체력 절반 회복 · 기력 +1"},
+        { "name": "정시 퇴근 결계", "need": "team", "energy": 3, "kind": "ward", "line": "2턴 동안 막고 되돌려준다"},
+    ],
+]
+var ult_index = 0               # 고른 직업 기술 (0~2)
+var ward_turns = 0              # 반격을 되돌리는 남은 턴
+var bomb_mul = 1.0              # 이중 불림: 다음 폭발 배율
 var job = 0
 var battle_reflect = false      # 칼퇴 선언: 이번 반격을 되돌려준다
 var volley_total = 3            # 이번 연타가 몇 대인가
@@ -411,13 +440,30 @@ func speed_mul() -> float:
 func party_max() -> int:
     return 36 + power_stamps() * 3 + (level - 1) * 2 + gear_sum("hp") + souvenirs() * 3 + (15 * job_rank() if job == 3 else 0)
 
-# 전직은 레벨 10부터, 레벨 20이 되면 저절로 2차로 오른다
+# 전직은 레벨 10부터. 레벨 20에 2차, 레벨 30에 3차로 저절로 오른다
 func job_rank() -> int:
     if job == 0: return 0
-    return 2 if level >= 20 else 1
+    return 3 if level >= 30 else (2 if level >= 20 else 1)
 
 func job_name() -> String:
-    return String(JOBS[job].name2 if job_rank() == 2 else JOBS[job].name)
+    return String(JOBS[job].names[maxi(0, job_rank() - 1)])
+
+func ult_info(i: int = -1) -> Dictionary:
+    return JOB_SKILLS[job][clampi(ult_index if i < 0 else i, 0, 2)]
+
+# 직업 기술은 그 차수에 오르고, 연결된 기본 기술을 마스터해야 열린다
+func ult_open(i: int) -> bool:
+    return job > 0 and job_rank() > i and sk(String(ult_info(i).need)) >= SKILL_MAX
+
+func ult_lock(i: int) -> String:
+    if job_rank() <= i: return str(i + 1) + "차 전직 (Lv." + str((i + 1) * 10) + ") 필요"
+    return String(skill_of(String(ult_info(i).need)).name) + " Lv.10 필요"
+
+func ult_kind() -> String:
+    return String(ult_info().kind) if battle_choice == "ult" and job > 0 else ""
+
+func crit_mul() -> float:
+    return 1.8 if job == 1 and job_rank() >= 2 else 1.5
 
 func pick_job(index: int) -> void:
     if index < 1 or index > 3 or index == job or level < JOB_LEVEL: return
@@ -427,7 +473,7 @@ func pick_job(index: int) -> void:
     job = index
     PARTY_HP = party_max(); health = PARTY_HP
     sfx("job"); flash = 0.8; save_progress()
-    toast(job_name() + "(으)로 전직했어요!  고유 기술 「" + String(JOBS[job].ult) + "」")
+    toast(job_name() + "(으)로 전직했어요!  직업 기술 「" + String(ult_info(0).name) + "」은 " + String(skill_of(String(ult_info(0).need)).name) + "을(를) 마스터하면 열려요.")
 
 # 기술 레벨 1~3 / 4~6 / 7~9 / 10 — 단계가 오르면 이펙트가 달라진다
 func tier(id: String) -> int:
@@ -435,7 +481,7 @@ func tier(id: String) -> int:
     return 3 if lv >= 10 else (2 if lv >= 7 else (1 if lv >= 4 else 0))
 
 func strike_hits() -> int:
-    return 4 if sk("strike") >= SKILL_MAX else 3
+    return (4 if sk("strike") >= SKILL_MAX else 3) + (1 if job == 1 and job_rank() >= 3 else 0)
 
 func crit_rate() -> float:
     return (8 + gear_sum("crit") + (10 if job == 1 else 0)) / 100.0
@@ -444,8 +490,10 @@ func crit_rate() -> float:
 func cycle_mul(per: float) -> float:
     return 1.0 + cycle * per
 
+# 직업 기술 한 방(연타는 한 대)의 피해
 func ult_damage() -> int:
-    if job == 2: return int(soak_damage() * (0.8 + 0.3 * job_rank()))
+    if job == 2: return int(soak_damage() * (3.0 if ult_index == 2 else 0.8 + 0.3 * job_rank()))
+    if ult_index == 1: return int((dish_base(0) + dish_base(1) + dish_base(2)) * 2.5)
     return dish_base(1) + job_rank()
 
 func stamps() -> int:
@@ -525,7 +573,7 @@ func skill_line(id: String) -> String:
         _: return "기력 +2 · 다음 공격 " + str(snappedf(coffee_mul(), 0.1)) + "배"
 
 func fuse_turns() -> int:
-    return 1 if gear_sum("fuse") > 0 else 2
+    return 1 if gear_sum("fuse") > 0 or (job == 2 and job_rank() >= 3) else 2
 
 func skill_up(id: String) -> void:
     if skill_points <= 0 or not skill_open(id) or sk(id) >= SKILL_MAX: return
@@ -568,7 +616,7 @@ func look(girl: bool) -> Dictionary:
     var shoes = Color(["46304e", "f2f2f2", "8a5a2c", "ffd84a"][int(slot_gear(2).tier)])
     var cap = Color(row[3]) if row[3] != "" else hair2
     if job > 0:
-        cap = Color([["", "f4f4f4", "7a4fc0", "9aa4ad"], ["", "ffd84a", "3a2a6a", "ffcf3a"]][job_rank() - 1][job])
+        cap = Color([["", "f4f4f4", "7a4fc0", "9aa4ad"], ["", "ffd84a", "3a2a6a", "ffcf3a"], ["", "8fe8ff", "ff7ad0", "fff2a8"]][job_rank() - 1][job])
         if armor == 0: top = Color(["", "dfeaf4", "6a4a9a", "6f7f8f"][job])
     return { "O": Color("2a1c18"), "S": skin, "G": glove, "H": hair2, "C": cap, "T": top, "D": Color(row[4]), "E": shoes}
 
@@ -588,7 +636,8 @@ func gain_exp(amount: int) -> void:
         sfx("levelup")
         var note = "레벨 " + str(level) + "! 기술 포인트 +" + str(gained)
         if job == 0 and level >= JOB_LEVEL and level - gained < JOB_LEVEL: note += " · 전직할 수 있어요! (내 정보 → 스텟)"
-        if job > 0 and level >= 20 and level - gained < 20: note += " · " + job_name() + "(으)로 승급!"
+        for mark in [20, 30]:
+            if job > 0 and level >= mark and level - gained < mark: note += " · " + job_name() + "(으)로 승급!"
         for entry in SKILLS:
             if int(entry.need) > level - gained and int(entry.need) <= level and int(entry.need) > 1: note += " · 새 기술 " + String(entry.name)
         toast(note)
@@ -1134,7 +1183,12 @@ func action(id: String) -> void:
         "fight_menu", "bag_menu", "battle_back":
             if state == "battle" and battle_phase == "choose":
                 battle_menu = { "fight_menu": "fight", "bag_menu": "bag", "battle_back": "main"}[id]
-        "strike", "guard", "heal", "team", "soak", "soap", "coffee", "ult": choose_battle(id)
+        "strike", "guard", "heal", "team", "soak", "soap", "coffee": choose_battle(id)
+        "ult0", "ult1", "ult2":
+            if state == "battle" and battle_phase == "choose":
+                ult_index = int(id.right(1)); choose_battle("ult")
+        "jobs_menu":
+            if state == "battle" and battle_phase == "choose": battle_menu = "job"
         "new_cycle": start_cycle()
         "openjobs": sheet_tab = 6; sfx("click")
         "petpage_prev": pet_page = maxi(0, pet_page - 1); sfx("click")
@@ -1189,7 +1243,7 @@ func begin_battle() -> void:
     elif legend_battle: battle_max_hp = int(boss_hp * 1.7 * cycle_mul(0.8))
     elif wild_battle: battle_max_hp = int((34 + wild_index * 4) * pow(1.3, city_index) * float(GRADES[wild_grade].hp) * cycle_mul(0.8))
     else: battle_max_hp = int(boss_hp * cycle_mul(0.8))
-    battle_bomb = 0; battle_vuln = 0; battle_charge = false; battle_reflect = false; pops.clear(); shake = 0
+    battle_bomb = 0; battle_vuln = 0; battle_charge = false; battle_reflect = false; ward_turns = 0; bomb_mul = 1.0; pops.clear(); shake = 0
     battle_hp = battle_max_hp; health = PARTY_HP; perfects = 0; battle_hits = 0
     battle_turn = 1; battle_energy = mini(3, pet_bonus("energy") + next_energy + gear_sum("en")); battle_berries = bag_count("candy"); battle_guard = false
     next_energy = 0
@@ -1236,23 +1290,24 @@ func choose_battle(choice: String) -> void:
     if state != "battle" or battle_phase != "choose": return
     if choice == "team" and (battle_energy < 3 or coins < 40): return
     if choice == "heal" and (battle_berries <= 0 or health >= PARTY_HP): return
-    if choice == "ult" and (job == 0 or battle_energy < 2): return
+    if choice == "ult" and (not ult_open(ult_index) or battle_energy < int(ult_info().energy)): return
     if choice not in ["strike", "guard", "heal", "team", "soak", "soap", "coffee", "ult"]: return
     if choice in ["soak", "soap", "coffee"] and not skill_open(choice): return
     if choice in ["soak", "soap"] and battle_energy < 1: return
     if choice == "soak" and battle_bomb > 0: return
     if choice == "coffee" and battle_charge: return
     battle_choice = choice; battle_phase = "player"; battle_phase_time = 0; battle_menu = "main"
-    battle_guard = choice == "guard"; battle_hit_applied = false; battle_volley_hits = 0; battle_hitstop = 0; battle_fx_left = 0
+    battle_guard = choice == "guard" or battle_reflect; battle_hit_applied = false; battle_volley_hits = 0; battle_hitstop = 0; battle_fx_left = 0
     if choice == "team":
         battle_energy -= 3; coins -= 40; save_progress()
     if choice == "heal": battle_berries -= 1; bag_add("candy", -1)
     if choice in ["soak", "soap"]: battle_energy -= 1
-    battle_reflect = false; volley_total = strike_hits() if choice == "strike" else 5
+    volley_total = strike_hits() if choice == "strike" else (8 if ult_index == 2 else 5)
     if choice == "ult":
-        battle_energy -= 2
-        if job == 3: battle_guard = true; battle_reflect = true
-    battle_result = { "ult": "「" + String(JOBS[job].ult) + "」!  " + job_name() + "의 고유 기술!", "strike": "설거지 연타! 수세미 " + str(strike_hits()) + "개, 갑니다!", "guard": "야근 버티기! 방어하면서 체력을 채워요.", "heal": "뽀뽀사탕! 동훈의 체력을 회복해요.", "team": "월급 박치기! 여행비 40원을 던졌다!", "soak": "냄비 불리기! 눌어붙은 냄비를 물에 담가 둔다…", "soap": "퐁퐁 뿌리기! 바닥이 미끌미끌해졌다!", "coffee": "커피 수혈! 눈이 번쩍 뜨인다!"}[choice]
+        battle_energy -= int(ult_info().energy)
+        if ult_kind() == "ward":
+            battle_guard = true; battle_reflect = true; ward_turns = 2 if ult_index == 2 else 1
+    battle_result = { "ult": "「" + (String(ult_info().name) if job > 0 else "") + "」!  " + job_name() + "의 직업 기술!", "strike": "설거지 연타! 수세미 " + str(strike_hits()) + "개, 갑니다!", "guard": "야근 버티기! 방어하면서 체력을 채워요.", "heal": "뽀뽀사탕! 동훈의 체력을 회복해요.", "team": "월급 박치기! 여행비 40원을 던졌다!", "soak": "냄비 불리기! 눌어붙은 냄비를 물에 담가 둔다…", "soap": "퐁퐁 뿌리기! 바닥이 미끌미끌해졌다!", "coffee": "커피 수혈! 눈이 번쩍 뜨인다!"}[choice]
     battle_quote = { "ult": [["", "", ""], ["헹굼까지 한 번에!", "건조는 자연 건조야!", "그릇이 뽀득뽀득!"], ["뜸 들일 시간 없어!", "김 빠진다, 물러서!", "밥 다 됐다!"], ["저 먼저 들어가 보겠습니다!", "내일 하겠습니다!", "여섯 시 정각입니다!"]][job], "strike": ["이 정도 설거지는 매일 해!", "퐁퐁 묻었다!", "손목 나가겠네…"], "guard": ["야근보단 낫지.", "버티는 건 자신 있어.", "새벽 세 시도 버텼어."], "team": ["이번 달 월급이다!", "카드값… 아니, 받아라!", "돈으로 되는 일도 있어!"], "heal": ["당 충전 완료!", "하나만 더 먹을까…", "조금 살 것 같다."], "soak": ["불려야 잘 닦여.", "지금은 건드리지 마.", "기다림도 기술이야."], "soap": ["한 방울이면 충분해.", "거품 조심해!", "미끄러우니까 뛰지 마."], "coffee": ["샷 추가요.", "이제 좀 살겠다.", "오늘 세 잔째야…"]}[choice][randi_range(0, 2)]
     hud.release_all(); chime(880 if choice in ["team", "ult"] else 540)
 
@@ -1304,7 +1359,7 @@ func battle_tick(dt: float) -> void:
     battle_phase_time += dt; battle_time += dt
     if battle_phase == "player":
 
-        var volley = battle_choice == "strike" or (battle_choice == "ult" and job == 1)
+        var volley = battle_choice == "strike" or ult_kind() == "volley"
         var first = 0.38 if battle_choice == "strike" else 0.3
         var gap = 0.24 if battle_choice == "strike" else 0.15
         if volley:
@@ -1314,30 +1369,42 @@ func battle_tick(dt: float) -> void:
                     damage = ult_damage()
                     if battle_enemy_guard: damage = maxi(1, int(ceil(damage * 0.5)))
                     damage = amp(damage)
-                var lucky = randf() < crit_rate()
-                if lucky: damage = int(ceil(damage * 1.5))
+                var lucky = randf() < crit_rate() or (battle_choice == "ult" and ult_index == 2)
+                if lucky: damage = int(ceil(damage * crit_mul()))
                 battle_hp = maxi(0, battle_hp - damage); battle_volley_hits += 1; battle_hits += 1
-                battle_result = ("식기세척기 풀가동 " if battle_choice == "ult" else "설거지 연타 ") + str(battle_volley_hits) + "/" + str(volley_total) + "! " + ("치명타! " if lucky else "수세미 명중 · ") + str(damage) + " 피해"
+                battle_result = (String(ult_info().name) + " " if battle_choice == "ult" else "설거지 연타 ") + str(battle_volley_hits) + "/" + str(volley_total) + "! " + ("치명타! " if lucky else "수세미 명중 · ") + str(damage) + " 피해"
                 battle_impact("sponge", "enemy", damage, lucky)
                 if battle_choice == "strike" and (battle_volley_hits == volley_total or battle_hp == 0): battle_energy = mini(3, battle_energy + 1)
         elif battle_phase_time >= (0.5 if battle_choice in ["team", "ult"] else 0.28) and not battle_hit_applied:
             battle_hit_applied = true
-            if battle_choice == "ult" and job == 2:
+            if ult_kind() == "blast":
                 var blast = amp(ult_damage())
-                if battle_bomb > 0:
-                    blast += soak_damage(); battle_bomb = 0
+                if job == 2 and ult_index == 0 and battle_bomb > 0:
+                    blast += int(soak_damage() * bomb_mul); battle_bomb = 0; bomb_mul = 1.0
+                if job == 1:
+                    battle_vuln = 4; battle_enemy_guard = false
                 battle_hp = maxi(0, battle_hp - blast); battle_hits += 1
-                battle_result = "압력솥 대폭발! " + str(blast) + " 피해!"
+                battle_result = String(ult_info().name) + "! " + str(blast) + " 피해!" + (" 상대가 3턴 동안 미끄러워해요." if job == 1 else "")
                 battle_impact("boom", "enemy", blast)
+            elif ult_kind() == "arm":
+                bomb_mul = 2.0
+                if battle_bomb == 0: battle_bomb = fuse_turns()
+                battle_result = "이중 불림! 이번 냄비는 두 배(" + str(int(soak_damage() * 2)) + ")로 터져요."
+                battle_fx_note = "두 배 불림!"; battle_impact("buff", "party", 0)
+            elif ult_kind() == "heal":
+                var day_off = mini(int(PARTY_HP * 0.5), PARTY_HP - health)
+                health += day_off; battle_energy = mini(3, battle_energy + 1); battle_fog = false
+                battle_result = "연차 사용! 체력 " + str(day_off) + " 회복 · 기력 +1"
+                battle_impact("heal", "party", day_off)
             elif battle_choice == "ult":
                 var rest = guard_heal() * 2
                 health = mini(PARTY_HP, health + rest)
-                battle_result = "칼퇴 선언! 체력 +" + str(rest) + " · 이번 반격은 그대로 돌려줘요."
+                battle_result = String(ult_info().name) + "! 체력 +" + str(rest) + " · " + str(ward_turns) + "턴 동안 반격을 그대로 돌려줘요."
                 battle_fx_note = "칼퇴!"; battle_impact("buff", "party", 0)
             elif battle_choice == "team":
                 var damage = amp(salary_damage())
                 var lucky = randf() < crit_rate()
-                if lucky: damage = int(ceil(damage * 1.5))
+                if lucky: damage = int(ceil(damage * crit_mul()))
                 battle_hp = maxi(0, battle_hp - damage); battle_hits += 1; perfects += 1
                 battle_result = "월급 박치기! " + ("치명타! " if lucky else "") + str(damage) + " 피해. 아파요, 둘 다."
                 battle_impact("money", "enemy", damage, lucky)
@@ -1364,7 +1431,7 @@ func battle_tick(dt: float) -> void:
                 battle_impact("heal", "party", recovered)
         var duration = first + gap * (volley_total - 1) + 0.3 if volley else (0.95 if battle_choice in ["team", "ult"] else 0.72)
         if battle_phase_time < duration: return
-        if battle_choice in ["strike", "team"] or (battle_choice == "ult" and job != 3): battle_charge = false
+        if battle_choice in ["strike", "team"] or ult_kind() in ["volley", "blast"]: battle_charge = false
         if battle_hp == 0:
             win_battle(); return
         battle_fog = false
@@ -1378,7 +1445,7 @@ func battle_tick(dt: float) -> void:
             battle_hit_applied = true
             battle_enemy_guard = battle_intent == "brace"
             var damage = enemy_damage()
-            if battle_guard: damage = maxi(1, int(ceil(damage * 0.25))) if damage > 0 else 0
+            if battle_guard: damage = maxi(1, int(ceil(damage * (0.1 if job == 3 and job_rank() >= 2 else 0.25)))) if damage > 0 else 0
             elif battle_intent == "sand": damage += 2
             if not battle_guard and battle_intent in ["chill", "gust"]: battle_energy = maxi(0, battle_energy - 1)
             if not battle_guard and battle_intent == "mist": battle_fog = true
@@ -1388,7 +1455,7 @@ func battle_tick(dt: float) -> void:
                 battle_hp = maxi(0, battle_hp - back); battle_hits += 1
             health = maxi(0, health - damage)
             if battle_reflect:
-                battle_result = "칼퇴 선언! 반격을 흘려보내고 " + str(back) + " 피해로 되돌려줬어요."
+                battle_result = "반격을 흘려보내고 " + str(back) + " 피해로 되돌려줬어요."
                 battle_impact("reflect", "enemy", back)
             elif battle_intent == "brace": battle_result = "상대가 방어 자세! 다음 피해 절반 · 월급 박치기는 방어를 뚫어요."
             elif battle_intent == "rest": battle_result = "상대가 숨을 골랐어요. 이번에는 반격이 없어요."
@@ -1401,7 +1468,7 @@ func battle_tick(dt: float) -> void:
             state = "battle_lost"; battle_phase = "done"; sfx("lose"); return
         if battle_hp == 0:
             win_battle(); return
-        battle_reflect = false
+        ward_turns = maxi(0, ward_turns - 1); battle_reflect = ward_turns > 0
         battle_phase = "recover"; battle_phase_time = 0
     elif battle_phase == "recover":
         if battle_phase_time < 0.55: return
@@ -1409,7 +1476,9 @@ func battle_tick(dt: float) -> void:
         if battle_bomb > 0:
             battle_bomb -= 1
             if battle_bomb == 0:
-                var blast = soak_damage()
+                var blast = int(soak_damage() * bomb_mul)
+                bomb_mul = 1.0
+                if job == 2 and job_rank() >= 2: battle_energy = mini(3, battle_energy + 1)
                 if battle_vuln > 0: blast = int(round(blast * soap_mul()))
                 battle_hp = maxi(0, battle_hp - blast); battle_hits += 1
                 battle_result = "불려 둔 냄비가 터졌다! " + str(blast) + " 피해!"
@@ -1423,6 +1492,7 @@ func battle_tick(dt: float) -> void:
 
 func next_turn() -> void:
     battle_turn += 1; battle_guard = false; battle_phase = "choose"; battle_phase_time = 0; refresh_intent()
+    if job == 3 and job_rank() >= 3 and health < PARTY_HP: health = mini(PARTY_HP, health + maxi(1, int(ceil(PARTY_HP * 0.03))))
     battle_result = "상대가 힘을 모아요. 방어할까요?" if enemy_heavy() else "다음 행동을 골라주세요."
     if battle_bomb == 1: battle_result += " (냄비는 다음 턴에 터져요)"
 
