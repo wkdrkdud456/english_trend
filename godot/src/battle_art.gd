@@ -246,6 +246,14 @@ func draw(c: Control) -> void:
             c.draw_rect(Rect2((mid + Vector2(cos(a) * 68, sin(a) * 52)).round() - Vector2(4, 4), Vector2(8, 8)), Color(tone, 0.55 + 0.3 * sin(g.clock_time * 4.0 + i)))
         c.panel(Rect2(foe.x - 40, foe.y + 12, 80, 22), tone, 3)
         c.txt(String(g.GRADES[g.wild_grade].tag), foe.x - 40, foe.y + 28, 13, Color("fff8e8"), 80, HORIZONTAL_ALIGNMENT_CENTER)
+    if g.boss_phase == 1 and g.state != "battle_won":
+        # 각성한 라이벌: 붉은 기운이 두 겹으로 돈다
+        var core = foe - Vector2(0, 60)
+        for i in range(16):
+            var a2 = i * TAU / 16.0 - g.clock_time * 1.6
+            var far = 60.0 + (i % 2) * 18.0
+            c.draw_rect(Rect2((core + Vector2(cos(a2) * far, sin(a2) * far * 0.8)).round() - Vector2(5, 5), Vector2(10, 10)), Color(1.0, 0.36, 0.25, 0.5 + 0.35 * sin(g.clock_time * 5.0 + i)))
+        if phase == "morph": c.draw_rect(Rect2(foe.x - 90, foe.y - 160, 180, 180), Color(1.0, 0.5, 0.3, 0.35 * absf(sin(t * 14.0))))
     if g.state != "battle_won":
         var flash = foe_hit and fx_age < 0.1 and g.effects_on
         if g.city_index > 0 or g.legend_battle or g.tower_battle: regional.sprite(c, foe, flash)

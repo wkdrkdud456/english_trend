@@ -238,7 +238,7 @@ func draw_title() -> void:
     txt("너와 함께,", 26, 105, 43)
     txt("열 개의 도시.", 26, 157, 43)
     txt("가라! 동훈!  ·  둘의 세계여행", 29, 193, 15, muted)
-    chip("%02d / 10     %s" % [game.city_index + 1, game.city().english], Rect2(w - 175, 242, 150, 34))
+    chip("%02d / 10     %s" % [game.route_pos() + 1, game.city().english], Rect2(w - 175, 242, 150, 34))
     var y = h - 290
     panel(Rect2(16, y, w - 32, 270), cream, 25)
     txt("잊었던 약속이, 다시 시작되는 곳.", 36, y + 36, 19)
@@ -422,7 +422,10 @@ func draw_battle_ready() -> void:
     para( "층마다 상대가 강해져요. 5층마다 수호자가 지켜요.\n체력은 층마다 가득 차지만 뽀뽀사탕은 돌아오지 않아요.\n지면 그 층에 다시 도전하거나 내려올 수 있어요. 최고 기록 " + str(game.tower_best) + "층" if game.tower_battle else "도시마다 단 한 마리뿐인 전설이에요.\n이기면 반드시 친구가 되고, 기술 포인트 2개를 얻어요.\n냄비를 불려 두고 퐁퐁을 뿌린 뒤 크게 터뜨려요." if game.legend_battle else ("평소보다 훨씬 강해요. 체력 ×" + str(game.GRADES[grade].hp) + " · 보상 ×" + str(game.GRADES[grade].gold) + "\n이기면 친구가 될 확률도 높아요.\n냄비 불리기와 퐁퐁으로 크게 한 방을 노려요." if grade > 0 else "설거지 연타는 수세미로 3연타!\n야근 버티기로 지키고, 가방에서 회복해요.\n월급 박치기는 기력 3칸과 40원을 써요.")
     , 35, y + 83, w - 70, 16)
     para(game.city().rule, 35, y + 180, w - 70, 16, rose, 1.45)
-    button("battle_start", "동훈, 가라!", Rect2(33, y + 271, w - 66, 60), true)
+    if game.tower_battle:
+        button("battle_start", "동훈, 가라!", Rect2(33, y + 271, (w - 76) * 0.5, 60), true)
+        button("auto_toggle", "자동으로 오르기", Rect2(33 + (w - 76) * 0.5 + 10, y + 271, (w - 76) * 0.5, 60), false, true, 15)
+    else: button("battle_start", "동훈, 가라!", Rect2(33, y + 271, w - 66, 60), true)
     button("leave_battle", "지금은 지나가기", Rect2(33, y + 340, w - 66, 54), false, true, 14)
 
 func battle_command(id: String, title: String, detail: String, rect: Rect2, primary: bool = false, enabled: bool = true) -> void:
@@ -440,6 +443,7 @@ func draw_battle() -> void:
     progress(Rect2(32, 87, w - 136, 9), float(game.battle_hp) / game.battle_max_hp, rose)
     txt("HP  " + str(game.battle_hp) + " / " + str(game.battle_max_hp), 32, 115, 12, muted)
     button("pause", "Ⅱ", Rect2(w - 78, 28, 60, 60))
+    if game.tower_battle: button("auto_toggle", "자동 끄기" if game.auto_battle else "자동", Rect2(w - 84, 94, 72, 38), game.auto_battle, true, 12)
     var intent = "다음 반격: " + game.enemy_attack_name()
     chip(intent, Rect2(18, 140, w - 36, 34), Color("f4d8bc") if game.enemy_heavy() else cream)
     var party_y = h - 402

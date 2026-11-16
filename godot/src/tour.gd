@@ -102,7 +102,7 @@ func read_photo(index: int, extra: String = "") -> ImageTexture:
     return null
 
 func travel(index: int) -> void:
-    if game.state not in ["passport", "journal", "ending", "explore"] or index < 0 or index > unlocked: return
+    if game.state not in ["passport", "journal", "ending", "explore"] or index < 0 or index > 9 or game.route_pos(index) > unlocked: return
     store_current(); game.save_progress(); game.joystick = Vector2.ZERO; game.hud.release_all()
     apply_city(index)
     game.state = "arrival" if not bool(record().visited) else "explore"
@@ -110,7 +110,7 @@ func travel(index: int) -> void:
 
 func stamp_city() -> void:
     if not completed[game.city_index]:
-        completed[game.city_index] = true; unlocked = maxi(unlocked, mini(9, game.city_index + 1))
+        completed[game.city_index] = true; unlocked = maxi(unlocked, mini(9, game.route_pos() + 1))
         var reward = 40 + game.city_index * 10
         if game.bag_count("film") > 0:
             game.bag_add("film", -1); reward += 30

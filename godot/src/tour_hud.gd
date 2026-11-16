@@ -19,7 +19,7 @@ func draw(c) -> void:
     match g.state:
         "arrival":
             c.panel(Rect2(0, 0, w, 150), Color("294b46ed"), 0)
-            c.txt("CHAPTER %02d / %s" % [g.city_index + 1, d.english], 26, 44, 13, c.gold)
+            c.txt("CHAPTER %02d / %s" % [g.route_pos() + 1, d.english], 26, 44, 13, c.gold)
             c.txt(d.name, 24, 96, 38, c.cream); c.txt(d.subtitle, 27, 130, 17, c.cream)
             var y = h - 330; c.panel(Rect2(0, y, w, 330), c.cream, 0)
             var line_y = y + 35
@@ -34,7 +34,7 @@ func draw(c) -> void:
                 c.button("city_" + str(i), "", Rect2(x, y, bw, row_h - 12), i == g.city_index)
                 var fg = c.cream if i == g.city_index else c.ink
                 c.txt("%02d  %s" % [i + 1, ci.name], x + 14, y + 29, 19, fg)
-                c.txt("도장 완료 ✓" if t.completed[i] else "여행 가능" if i <= t.unlocked else "이전 도시 도장 필요", x + 14, y + 55, 12, fg)
+                c.txt("도장 완료 ✓" if t.completed[i] else "여행 가능" if g.route_pos(i) <= t.unlocked else "앞 도시 도장 필요", x + 14, y + 55, 12, fg)
             c.button("passport_close", "지금 도시에서 계속 걷기", Rect2(24, h - 88, w - 48, 60), true)
         "journal":
             var i = t.selected; var ci = g.CityData.CITIES[i]; var r = t.records[i]
@@ -51,7 +51,7 @@ func draw(c) -> void:
                     c.button("vista_album_" + str(v), "풍경 " + str(v + 1), rect, false, bool(r.marks[v]), 13)
                     var im = t.read_photo(i, "-vista" + str(v)) if r.marks[v] else null
                     if im: photo(c, im, rect.grow(-3), "")
-            c.button("travel_selected", "이 도시로 이동" if i <= t.unlocked else "이전 도시를 먼저 마쳐 주세요", Rect2(24, h - 158, w - 48, 60), true, i <= t.unlocked, 16)
+            c.button("travel_selected", "이 도시로 이동" if g.route_pos(i) <= t.unlocked else "앞 도시를 먼저 마쳐 주세요", Rect2(24, h - 158, w - 48, 60), true, g.route_pos(i) <= t.unlocked, 16)
             c.button("passport", "← 여권으로", Rect2(24, h - 86, w - 48, 60))
         "vista_album":
             heading(c, g.CityData.CITIES[6].labels[t.vista], "SANTORINI / VIEWFINDER %02d" % (t.vista + 1))
@@ -154,14 +154,16 @@ func draw(c) -> void:
 
 func ending(c) -> void:
     var g = c.game; var d = g.city(); var w = c.w; var h = c.h
-    heading(c, "다시 기억하게 된 " + d.name, "OUR LITTLE JOURNEY / %02d" % [g.city_index + 1])
+    heading(c, "다시 기억하게 된 " + d.name, "OUR LITTLE JOURNEY / %02d" % [g.route_pos() + 1])
     var ph = minf(260, h * 0.29); photo(c, null, Rect2(24, 114, w - 48, ph), d.english, g.city_index)
     var y = 143 + ph; c.chip("도장 %d / 10 · 최대 체력 +3" % g.tour.completed.count(true), Rect2(24, y - 9, w - 48, 37), c.gold)
     c.para(d.memory, 26, y + 62, w - 52, 19, c.ink, 1.55)
-    if g.city_index == 9: c.centered("열 도시의 끝. 우리의 내일은 이제 시작.", h - 273, 15, c.rose)
-    c.button("next_city" if g.city_index < 9 else "passport", "다음 도시, " + g.CityData.CITIES[mini(9, g.city_index + 1)].name + "로 →" if g.city_index < 9 else "열 도시의 추억 돌아보기", Rect2(24, h - 228, w - 48, 62), true)
-    c.button("passport" if g.city_index < 9 else "wander", "여권 · 도시별 앨범" if g.city_index < 9 else "서울에서 조금 더 걷기", Rect2(24, h - 154, w - 48, 60))
-    c.button("wander" if g.city_index < 9 else "new_cycle", "이 도시에서 조금 더 걷기" if g.city_index < 9 else str(g.cycle + 2) + "회차 여행 떠나기 · 상대가 더 강해져요", Rect2(24, h - 82, w - 48, 60), false, true, 15)
+    var last = g.route_pos() >= 9
+    var next_name = String(g.CityData.CITIES[g.route_city(g.route_pos() + 1)].name)
+    if last: c.centered("열 도시의 끝. 우리의 내일은 이제 시작.", h - 273, 15, c.rose)
+    c.button("passport" if last else "next_city", "열 도시의 추억 돌아보기" if last else "다음 도시, " + next_name + "(으)로 →", Rect2(24, h - 228, w - 48, 62), true)
+    c.button("wander" if last else "passport", String(d.name) + "에서 조금 더 걷기" if last else "여권 · 도시별 앨범", Rect2(24, h - 154, w - 48, 60))
+    c.button("new_cycle" if last else "wander", str(g.cycle + 2) + "회차 여행 떠나기 · " + ("파리부터 다시" if g.reversed_route() else "서울부터 거꾸로") if last else "이 도시에서 조금 더 걷기", Rect2(24, h - 82, w - 48, 60), false, true, 15)
 
 func map_screen(c) -> void:
     var g = c.game; var w = c.w; var h = c.h
