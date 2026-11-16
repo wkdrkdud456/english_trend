@@ -227,8 +227,9 @@ var wild_index = 0
 var wild_wins = 0
 var wild_seen = [false, false, false]
 var grass_steps = 0.0
-var encounter_at = 3.2
-var encounter_grace = 1.5
+var encounter_at = 11.0
+var encounter_grace = 6.0
+var move_axis = 0               # 0 멈춤 · 1 좌우 · 2 상하
 var battle_return = Vector3.ZERO
 var partner_return = Vector3.ZERO
 var story_perfects = 0
@@ -779,6 +780,13 @@ func move_player(dt: float) -> void:
     axis.x += float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT)) - float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT))
     axis.y += float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN)) - float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP))
     axis = axis.limit_length()
+    # 한 번에 한 방향만: 더 많이 민 쪽으로만 걷는다 (대각선 근처에서 떨리지 않게 지금 방향을 조금 더 쳐 준다)
+    if axis.length() < 0.12: move_axis = 0
+    elif move_axis == 1 and absf(axis.y) > absf(axis.x) * 1.35: move_axis = 2
+    elif move_axis == 2 and absf(axis.x) > absf(axis.y) * 1.35: move_axis = 1
+    elif move_axis == 0: move_axis = 1 if absf(axis.x) >= absf(axis.y) else 2
+    if move_axis == 1: axis = Vector2(signf(axis.x) * axis.length(), 0)
+    elif move_axis == 2: axis = Vector2(0, signf(axis.y) * axis.length())
     # 2D 탑다운이라 스틱 방향이 곧 월드 방향이다
     var dir = Vector3(axis.x, 0, axis.y)
     # 스틱을 끝까지 밀면 달린다
@@ -787,6 +795,8 @@ func move_player(dt: float) -> void:
     var top = 3.6 * (1.0 + 0.55 * run_blend) * speed_mul()
     # 즉시 최고속도가 아니라 붙었다 떨어진다 — 무게가 생긴다
     move_vel = move_vel.lerp(dir * top, minf(1, dt * (9.0 if dir.length() > 0.05 else 13.0)))
+    if move_axis == 1: move_vel.z = 0.0
+    elif move_axis == 2: move_vel.x = 0.0
     move_speed = clampf(move_vel.length() / 3.6, 0, 1.6)
     step_phase += dt * (6.5 + run_blend * 5.0) * minf(1.0, move_speed)
     if int(step_phase / PI) != step_tick:
@@ -993,7 +1003,7 @@ func enter_area(zone: int) -> void:
     for offset in [Vector3(0.8, 0, 0.5), Vector3(-0.8, 0, 0.5), Vector3(0, 0, 1), Vector3(0, 0, -1)]:
         if world.can_walk(hero.position + offset):
             partner.position = hero.position + offset; break
-    wild_battle = false; grass_steps = 0; encounter_grace = 2.5
+    wild_battle = false; grass_steps = 0; encounter_grace = 5.0
     reset_follow_path()
     if zone == 0: tour.sync_props()
     state = "explore"; update_target(); set_camera(1, true); save_progress()
@@ -1592,7 +1602,7 @@ func restore_from_wild() -> void:
     rival.visible = false; rival = story_rival
     hero.position = battle_return; partner.position = partner_return
     perfects = story_perfects; wild_battle = false; wild_grade = 0; legend_battle = false; tower_battle = false
-    encounter_grace = 1.8; grass_steps = 0; encounter_at = randf_range(2.8, 5.0)
+    encounter_grace = 5.0; grass_steps = 0; encounter_at = randf_range(9.0, 16.0)
     follow_path = battle_follow_path.duplicate(); follow_anchor = battle_follow_anchor
     state = "explore"; update_target(); set_camera(1, true)
 
@@ -1921,7 +1931,7 @@ func restart() -> void:
     job = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]
-    grass_steps = 0; encounter_grace = 1.5; encounter_at = 3.2
+    grass_steps = 0; encounter_grace = 6.0; encounter_at = 11.0
     stage = 0; collected = [false, false, false]; coins = 0; perfects = 0; best_combo = 0; game_time = 0
     hero.position = Vector3(-0.45, 0.12, 8); partner.position = Vector3(0.55, 0.12, 8.4)
     rival.position = Vector3(2.7, 0.12, -5.5); photo = null

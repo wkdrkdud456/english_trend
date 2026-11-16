@@ -86,7 +86,7 @@ func apply_city(index: int) -> void:
     game.partner.position = game.hero.position
     for offset in [Vector3(0.8, 0, 0.5), Vector3(-0.8, 0, 0.5), Vector3(0, 0, 1)]:
         if game.world.can_walk(game.hero.position + offset): game.partner.position = game.hero.position + offset; break
-    game.wild_battle = false; game.grass_steps = 0; game.encounter_grace = 2.8; trial = -1
+    game.wild_battle = false; game.grass_steps = 0; game.encounter_grace = 5.0; game.encounter_at = randf_range(9.0, 16.0); trial = -1
     game.PARTY_HP = game.party_max()
     game.photo_file = current_photo_path(); game.photo = read_photo(game.city_index)
     game.reset_follow_path(); sync_props(); game.update_target(); game.set_camera(1, true)
