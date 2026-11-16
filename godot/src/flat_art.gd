@@ -219,7 +219,7 @@ func setup(c: Control, g) -> void:
     view = Rect2(0, 0, c.w, c.flat_bottom())
     u = view.size.x / (14.6 if g.overview else 10.6)
     k = u * 0.036
-    var lead = Vector2(g.move_vel.x, g.move_vel.z) * 0.25
+    var lead = g.look_lead
     # 위쪽 카드와 아래쪽 조작부 사이 가운데에 주인공이 오게 한다
     var want = Vector2(g.hero.position.x, g.hero.position.z + view.size.y * 0.04 / u) + lead
     var half = Vector2(view.size.x, view.size.y) / (2.0 * u)

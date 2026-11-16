@@ -230,6 +230,7 @@ var grass_steps = 0.0
 var encounter_at = 11.0
 var encounter_grace = 6.0
 var move_axis = 0               # 0 멈춤 · 1 좌우 · 2 상하
+var look_lead = Vector2.ZERO
 var battle_return = Vector3.ZERO
 var partner_return = Vector3.ZERO
 var story_perfects = 0
@@ -797,6 +798,8 @@ func move_player(dt: float) -> void:
     move_vel = move_vel.lerp(dir * top, minf(1, dt * (9.0 if dir.length() > 0.05 else 13.0)))
     if move_axis == 1: move_vel.z = 0.0
     elif move_axis == 2: move_vel.x = 0.0
+    # 화면이 미리 보여 주는 쪽은 천천히 따라가게 한다 (방향을 바꿀 때 화면이 튀지 않도록)
+    look_lead = look_lead.lerp(Vector2(move_vel.x, move_vel.z) * 0.25, minf(1, dt * 3.5))
     move_speed = clampf(move_vel.length() / 3.6, 0, 1.6)
     step_phase += dt * (6.5 + run_blend * 5.0) * minf(1.0, move_speed)
     if int(step_phase / PI) != step_tick:
