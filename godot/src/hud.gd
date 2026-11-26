@@ -305,6 +305,15 @@ func draw_explore() -> void:
         plate(Rect2(14, sy, 230, 40), rose)
         icon_leaf(Vector2(32, sy + 20), 7)
         txt("들켰다! 맞서거나 달아나요", 46, sy + 26, 13, ink)
+    else:
+        # 오늘의 의뢰와 여행 패스 — 누르면 목표 화면
+        var done_q = game.daily_done()
+        var goal_rect = Rect2(14, sy, 236, 40)
+        plate(goal_rect, gold if done_q < 3 else Color("4a8a38"), cream, 12, 3)
+        icon_star(Vector2(32, sy + 16), 6)
+        txt("의뢰 " + str(done_q) + "/3 · 패스 Lv." + str(mini(game.pass_level, game.PASS_MAX)) + (" · 티켓 " + str(game.tickets) if game.tickets > 0 else ""), 46, sy + 19, 12, ink)
+        bar(Rect2(46, sy + 26, 186, 6), float(game.pass_points % 100) / 100.0, gold)
+        buttons["goals_open"] = goal_rect
 
     # ── 목표 방향 표시 ──────────────────────────────────
     var distance = game.hero.position.distance_to(game.target)
@@ -801,7 +810,7 @@ func row(rect: Rect2, title: String, line: String, tone: Color, right: String, t
 
 func draw_status() -> void:
     var top = sheet_head("장동훈 · " + game.job_name(), "레벨 " + str(game.level) + " · 도장 " + str(game.stamps()) + " / 10" + (" · " + str(game.cycle + 1) + "회차" if game.cycle > 0 else ""))
-    tabs(["tab_0", "tab_1", "tab_2", "tab_3", "tab_4", "tab_5"], ["스텟", "기술" + ("●" if game.skill_points > 0 else ""), "가방", "장비", "동행", "도감"], 0 if game.sheet_tab == 6 else game.sheet_tab, top, 74)
+    tabs(["tab_0", "tab_1", "tab_2", "tab_3", "tab_4", "tab_5", "tab_7"], ["스텟", "기술" + ("●" if game.skill_points > 0 else ""), "가방", "장비", "동행", "도감", "목표" + ("●" if game.daily_done() < 3 else "")], 6 if game.sheet_tab == 7 else (0 if game.sheet_tab == 6 else game.sheet_tab), top, 74)
     var y = top + 52
     match game.sheet_tab:
         0: status_stats(y)
@@ -810,6 +819,7 @@ func draw_status() -> void:
         3: status_gear(y)
         4: status_pets(y)
         5: status_dex(y)
+        7: status_goals(y)
         _: status_job(y)
 
 func status_job(y: float) -> void:
@@ -836,6 +846,41 @@ func status_job(y: float) -> void:
     button("tab_0", "← 스텟으로", Rect2(12, y + 28 + 3 * card, 130, 40), false, true, 13)
 
 # 도감: 도시마다 만난 친구 셋 + 전설 하나, 숨은 발견, 기억 조각
+# 목표: 여행 패스 30단계와 오늘의 의뢰 세 개
+func status_goals(y: float) -> void:
+    game.refresh_daily()
+    var lv = mini(game.pass_level, game.PASS_MAX)
+    plate(Rect2(12, y, w - 24, 112), gold)
+    txt("여행 패스 Lv." + str(lv) + " / " + str(game.PASS_MAX), 28, y + 28, 18)
+    txt("뽑기 티켓 " + str(game.tickets) + "장", w - 200, y + 28, 13, rose, 172, HORIZONTAL_ALIGNMENT_RIGHT)
+    bar(Rect2(28, y + 40, w - 56, 10), float(game.pass_points % 100) / 100.0, Color("e5b33c"))
+    txt("다음 보상: " + (game.pass_reward_text(lv + 1) if lv < game.PASS_MAX else "티켓 1장씩 계속"), 28, y + 70, 12, muted)
+    txt("점수: 의뢰 50 · 업적 20 · 라이벌 30 · 전설·그림자 40 · 야생 3", 28, y + 92, 10, muted)
+    var ry = y + 124
+    var cw = (w - 24) / 5.0
+    for k in range(5):
+        var nl = lv + 1 + k
+        if nl > game.PASS_MAX: break
+        var cell = Rect2(12 + k * cw, ry, cw - 6, 60)
+        var big = nl % 10 == 0
+        plate(cell, Color("e0a020") if big else Color("8d8578"), Color("fff1c8") if big else cream, 10, 2)
+        txt("Lv." + str(nl), cell.position.x, cell.position.y + 20, 12, ink, cell.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+        txt(game.pass_reward_short(nl), cell.position.x, cell.position.y + 42, 10, rose if big else muted, cell.size.x, HORIZONTAL_ALIGNMENT_CENTER)
+    var qy = ry + 84
+    txt("오늘의 의뢰 · 내일 새로 바뀌어요", 16, qy, 12, cream)
+    for i in range(game.daily.size()):
+        var q = game.daily[i]
+        var finished = bool(q[4])
+        var r = Rect2(12, qy + 12 + i * 62, w - 24, 56)
+        plate(r, Color("4a8a38") if finished else ink, Color("e8f2dc") if finished else cream, 13, 3)
+        txt(String(q[2]), 28, r.position.y + 24, 15)
+        var prog = game.quest_progress(q)
+        bar(Rect2(28, r.position.y + 34, w - 160, 8), float(prog) / maxf(1.0, float(q[1])), Color("86cc5e"))
+        txt("완료!" if finished else str(prog) + " / " + str(int(q[1])), w - 124, r.position.y + 34, 13, Color("3f7a32") if finished else rose, 96, HORIZONTAL_ALIGNMENT_RIGHT)
+    var ty = qy + 12 + 3 * 62 + 16
+    txt("의뢰마다 티켓 +1 · 패스 +50 · 셋 다 끝내면 티켓 +2", 16, ty, 11, Color("cfc5b4"))
+    txt("뽑기 전설 확정까지 " + str(maxi(0, 50 - game.gacha_pity)) + "번", 16, ty + 20, 11, gold)
+
 func status_ach(y: float) -> void:
     var pitch = minf(48.0, (h - y - 70) / 12.0)
     var cw = (w - 30) / 2.0

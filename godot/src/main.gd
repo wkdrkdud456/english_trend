@@ -126,7 +126,20 @@ const ACHS = [
     { "id": "cy1", "name": "다시 떠나는 여행", "key": "cycle", "need": 1, "stones": 15},
     { "id": "en5", "name": "+5 강화", "key": "enhance5", "need": 1, "coins": 300},
     { "id": "ch20", "name": "보물 사냥꾼", "key": "chests", "need": 20, "stones": 5},
+    { "id": "jp1", "name": "잭팟!", "key": "jackpot", "need": 1, "sp": 1},
+    { "id": "pass10", "name": "여행 패스 10", "key": "pass", "need": 10, "stones": 10},
+    { "id": "pass30", "name": "여행 패스 완주", "key": "pass", "need": 30, "sp": 3},
 ]
+# 오늘의 의뢰 — 날짜가 바뀌면 세 개를 새로 뽑는다
+const QUESTS = [
+    ["wins", 5, "야생 몬스터 5마리 이기기"], ["wins", 12, "야생 몬스터 12마리 이기기"], ["perfect", 10, "완벽 타이밍 10번"],
+    ["weak", 8, "약점 공격 8번"], ["crit", 6, "치명타 6번"], ["gacha", 3, "뽑기 3번"], ["chests", 1, "보물 상자 1개 열기"],
+    ["petskill", 4, "친구 기술 4번"], ["enhance", 2, "장비 강화 2번 시도"], ["slot", 5, "행운의 슬롯 5번"], ["golden", 1, "황금 몬스터 잡기"],
+]
+const PASS_MAX = 30
+# 행운의 슬롯: 수세미 · 냄비 · 하트 · 별 · 황금 숟가락 · 7
+const SLOT_WEIGHT = [30, 25, 20, 15, 7, 3]
+const SLOT_TRIPLE = [4, 6, 8, 14, 30, 100]
 # ── 장비 / 가방 ────────────────────────────────────────
 const GEAR = [
     { "id": "g0", "slot": 0, "tier": 0, "name": "낡은 수세미", "line": "집에서 쓰던 그것", "cost": 0, "atk": 0, "hp": 0, "heal": 0, "spd": 0},
@@ -197,6 +210,16 @@ var ach_done: Array = []
 var gacha_results: Array = []
 var dex_view = 0
 var survived_once = false
+var tickets = 0                 # 뽑기 티켓
+var gacha_pity = 0              # 전설 없이 뽑은 횟수 (50번이면 전설 확정)
+var pass_points = 0
+var pass_level = 0
+var daily_day = ""
+var daily: Array = []           # [[키, 목표, 글, 시작 값, 완료]]
+var slot_reels = [0, 1, 2]
+var slot_spin = -1.0            # 돌아가는 중이면 0 이상
+var slot_bet = 0
+var slot_note = ""
 var boss_phase = 0              # 2회차 라이벌은 한 번 쓰러지면 각성해서 다시 일어난다
 var auto_battle = false         # 도전의 탑: 알아서 싸우고 올라간다
 var auto_wait = 0.0
@@ -734,7 +757,132 @@ func stat_value(key: String) -> int:
         "cycle": return cycle
     return int(stat.get(key, 0))
 
+# ── 오늘의 의뢰와 여행 패스 ──
+func today() -> String:
+    var d = Time.get_date_dict_from_system()
+    return str(int(d.year) * 10000 + int(d.month) * 100 + int(d.day))
+
+func refresh_daily() -> void:
+    var now = today()
+    if daily_day == now and daily.size() == 3: return
+    daily_day = now; daily = []
+    var pool = range(QUESTS.size())
+    pool.shuffle()
+    var keys = []
+    for k in pool:
+        var q = QUESTS[k]
+        if keys.has(String(q[0])): continue
+        keys.append(String(q[0]))
+        daily.append([String(q[0]), int(q[1]), String(q[2]), stat_value(String(q[0])), false])
+        if daily.size() == 3: break
+
+func quest_progress(q: Array) -> int:
+    return mini(int(q[1]), stat_value(String(q[0])) - int(q[3]))
+
+func daily_done() -> int:
+    var n = 0
+    for q in daily:
+        if bool(q[4]): n += 1
+    return n
+
+func check_daily() -> void:
+    refresh_daily()
+    for q in daily:
+        if bool(q[4]) or quest_progress(q) < int(q[1]): continue
+        q[4] = true; tickets += 1; add_pass(50)
+        sfx("levelup"); toast("의뢰 완료! 「" + String(q[2]) + "」  뽑기 티켓 +1")
+        if daily_done() == 3:
+            tickets += 2; add_pass(50); toast("오늘의 의뢰 모두 완료! 뽑기 티켓 +2 · 패스 +50")
+
+func pass_reward_text(lv: int) -> String:
+    if lv == 10: return "전설 장비 확정"
+    if lv == 20: return "여행 기념품 하나"
+    if lv == 30: return "뽑기 티켓 10장"
+    if lv % 5 == 0: return "뽑기 티켓 3장"
+    if lv % 2 == 0: return "강화석 3개 + 티켓 1장"
+    return "여행비 " + str(200 + lv * 40) + "원"
+
+func pass_reward_short(lv: int) -> String:
+    if lv == 10: return "전설 장비"
+    if lv == 20: return "기념품"
+    if lv == 30: return "티켓 10"
+    if lv % 5 == 0: return "티켓 3"
+    if lv % 2 == 0: return "강화석+티켓"
+    return "여행비"
+
+func add_pass(points: int) -> void:
+    pass_points += points
+    while pass_points >= (pass_level + 1) * 100:
+        pass_level += 1
+        if pass_level > PASS_MAX:
+            tickets += 1; continue
+        match pass_level:
+            10: make_loot(3)
+            20:
+                var pool = []
+                for one in RELICS:
+                    if not relics.has(String(one.id)): pool.append(String(one.id))
+                if pool.is_empty(): tickets += 3
+                else: relics.append(String(pool[randi_range(0, pool.size() - 1)]))
+            30: tickets += 10
+            _:
+                if pass_level % 5 == 0: tickets += 3
+                elif pass_level % 2 == 0:
+                    gain_stones(3); tickets += 1
+                else: coins += 200 + pass_level * 40
+        stat["pass"] = mini(pass_level, PASS_MAX)
+        sfx("job"); flash = 0.5
+        toast("여행 패스 Lv." + str(pass_level) + "!  " + (pass_reward_text(pass_level) if pass_level <= PASS_MAX else "뽑기 티켓 1장"))
+
+# ── 행운의 슬롯 ──
+func slot_cost() -> int:
+    return 50 + route_pos() * 20 + cycle * 100
+
+func slot_roll() -> int:
+    var r = randi_range(1, 100)
+    for k in range(SLOT_WEIGHT.size()):
+        r -= SLOT_WEIGHT[k]
+        if r <= 0: return k
+    return 0
+
+func spin_slot() -> void:
+    if slot_spin >= 0: return
+    var cost = slot_cost()
+    if coins < cost:
+        sfx("bad"); toast("여행비가 " + str(cost - coins) + "원 모자라요."); return
+    coins -= cost; slot_bet = cost
+    slot_reels = [slot_roll(), slot_roll(), slot_roll()]
+    slot_spin = 0.0; slot_note = ""
+    stat_add("slot"); sfx("click")
+
+func slot_tick(dt: float) -> void:
+    if slot_spin < 0: return
+    var before = slot_spin
+    slot_spin += dt
+    for stop in [0.6, 0.95, 1.3]:
+        if before < stop and slot_spin >= stop: sfx("click", 0.8 + stop * 0.3)
+    if slot_spin < 1.4: return
+    slot_spin = -1.0
+    var a = int(slot_reels[0])
+    var b = int(slot_reels[1])
+    var c = int(slot_reels[2])
+    var win = 0
+    if a == b and b == c:
+        win = slot_bet * int(SLOT_TRIPLE[a])
+        if a == 5:
+            tickets += 3; stat_add("jackpot"); flash = 1.0; shake = 14; sfx("job")
+            slot_note = "잭팟!!! +" + str(win) + "원 · 뽑기 티켓 +3"
+        else:
+            sfx("levelup"); flash = 0.5
+            slot_note = "세 개 똑같다! +" + str(win) + "원"
+    elif a == b or b == c or a == c:
+        win = int(slot_bet * 1.2); sfx("coin"); slot_note = "두 개 맞음 +" + str(win) + "원"
+    else:
+        slot_note = "아깝다… 한 번 더?"
+    coins += win; save_progress()
+
 func check_achievements() -> void:
+    check_daily()
     for one in ACHS:
         var id = String(one.id)
         if ach_done.has(id) or stat_value(String(one.key)) < int(one.need): continue
@@ -746,29 +894,37 @@ func check_achievements() -> void:
             gain_stones(int(one.stones)); prize = "강화석 " + str(int(one.stones)) + "개"
         if one.has("sp"):
             skill_points += int(one.sp); prize = "기술 포인트 " + str(int(one.sp)) + "개"
-        sfx("levelup"); toast("업적 달성! 「" + String(one.name) + "」  " + prize)
+        sfx("levelup"); add_pass(20); toast("업적 달성! 「" + String(one.name) + "」  " + prize)
 
 # 뽑기 기계: 도시를 지날수록 비싸지지만 좋은 게 나온다
 func gacha_cost() -> int:
     return 150 + route_pos() * 40 + cycle * 300
 
-func pull_gacha(n: int) -> void:
-    var cost = gacha_cost() * (9 if n == 10 else 1)
-    if coins < cost:
-        sfx("bad"); toast("여행비가 " + str(cost - coins) + "원 모자라요."); return
-    coins -= cost
+func pull_gacha(n: int, use_ticket: bool = false) -> void:
+    if use_ticket:
+        if tickets < n:
+            sfx("bad"); toast("티켓이 " + str(n - tickets) + "장 모자라요."); return
+        tickets -= n
+    else:
+        var cost = gacha_cost() * (9 if n == 10 else 1)
+        if coins < cost:
+            sfx("bad"); toast("여행비가 " + str(cost - coins) + "원 모자라요."); return
+        coins -= cost
     gacha_results = []
     var best = -1
     for k in range(n):
         var r = randf()
         var force = n == 10 and k == n - 1 and best < 1
-        if force or r >= 0.62:
-            var floor_grade = 1 if force else (3 if r >= 0.99 else (2 if r >= 0.94 else 0))
+        gacha_pity += 1
+        var pity = gacha_pity >= 50
+        if force or pity or r >= 0.62:
+            var floor_grade = 3 if pity else (1 if force else (3 if r >= 0.99 else (2 if r >= 0.94 else 0)))
             var id = make_loot(floor_grade)
             var grade = int(loot[id].grade)
             best = maxi(best, grade)
             gacha_results.append({ "t": String(loot[id].name), "c": String(LOOT_GRADES[grade].color), "g": grade})
-            if grade >= 3: stat_add("drop_legend")
+            if grade >= 3:
+                stat_add("drop_legend"); gacha_pity = 0
         elif r >= 0.4:
             var amount = randi_range(2, 4)
             gain_stones(amount); gacha_results.append({ "t": "강화석 " + str(amount) + "개", "c": "3f8fa8", "g": -1})
@@ -808,7 +964,8 @@ func eff_text(cat: String) -> String:
     return ""
 
 func eff_pop(cat: String) -> void:
-    if type_mul(cat) > 1.0: pop("약점!", "enemy", "ffd84a", true)
+    if type_mul(cat) > 1.0:
+        pop("약점!", "enemy", "ffd84a", true); stat_add("weak")
     elif type_mul(cat) < 1.0: pop("저항", "enemy", "bcd3dc")
 
 func ult_cat() -> String:
@@ -989,7 +1146,7 @@ func pet_heal(p: Dictionary) -> int:
 func use_pet(n: int) -> void:
     if state != "battle" or battle_phase != "choose" or n < 0 or n >= pet_team.size() or pet_uses_left(n) <= 0: return
     var p = pets[int(pet_team[n])]
-    pet_used.append(n); battle_menu = "main"
+    pet_used.append(n); battle_menu = "main"; stat_add("petskill")
     var name = pet_name(p)
     if int(p.i) == 3:
         var roar = amp(int(soak_damage() * 0.8) + pet_hit(p)); battle_enemy_guard = false
@@ -1031,6 +1188,7 @@ func enhance(id: String) -> void:
     if coins < enhance_cost(id): toast("강화하려면 " + str(enhance_cost(id)) + "원이 필요해요."); return
     if stones < enhance_stones(id): toast("강화석이 " + str(enhance_stones(id) - stones) + "개 모자라요. 등급 높은 상대나 도전의 탑에서 얻어요."); return
     var chance = mini(100, ENHANCE_RATE[enhance_lv(id)] + (10 if relic("map_scrap") else 0))
+    stat_add("enhance")
     coins -= enhance_cost(id); stones -= enhance_stones(id)
     if randi_range(1, 100) <= chance:
         gear_lv[id] = enhance_lv(id) + 1
@@ -1429,6 +1587,8 @@ func _process(dt: float) -> void:
         if save_clock > 6: save_clock = 0; save_progress()
     elif state == "ride":
         ride_tick(dt)
+    elif state == "food_shop":
+        slot_tick(dt)
     elif state == "puzzle":
         tour.pz.tick(dt)
     elif state == "cook":
@@ -1936,7 +2096,7 @@ func action(id: String) -> void:
     if id.begins_with("meal_"):
         tour.buy_meal(int(id.trim_prefix("meal_"))); return
     if id.begins_with("tab_"):
-        sheet_tab = clampi(int(id.trim_prefix("tab_")), 0, 6); sfx("click"); return
+        sheet_tab = clampi(int(id.trim_prefix("tab_")), 0, 7); sfx("click"); return
     if id.begins_with("gearslot_"):
         gear_slot = clampi(int(id.trim_prefix("gearslot_")), 0, 3); gear_page = 0; sfx("click"); return
     if id.begins_with("job_"):
@@ -1947,6 +2107,12 @@ func action(id: String) -> void:
         dex_view = clampi(int(id.trim_prefix("dexview_")), 0, 1); sfx("click"); return
     if id == "gacha_1" or id == "gacha_10":
         pull_gacha(10 if id == "gacha_10" else 1); return
+    if id == "ticket_1" or id == "ticket_10":
+        pull_gacha(10 if id == "ticket_10" else 1, true); return
+    if id == "slot_spin":
+        spin_slot(); return
+    if id == "goals_open":
+        previous_state = state; state = "status"; sheet_tab = 7; joystick = Vector2.ZERO; hud.release_all(); return
     if id.begins_with("bitem_"):
         choose_battle(id); return
     if id.begins_with("petskill_"):
@@ -1962,7 +2128,7 @@ func action(id: String) -> void:
     if id.begins_with("skillup_"):
         skill_up(String(id.trim_prefix("skillup_"))); return
     if id.begins_with("shoptab_"):
-        shop_tab = clampi(int(id.trim_prefix("shoptab_")), 0, 3); sfx("click"); return
+        shop_tab = clampi(int(id.trim_prefix("shoptab_")), 0, 4); sfx("click"); return
     if id.begins_with("equip_"):
         equip_gear(String(id.trim_prefix("equip_"))); return
     if id.begins_with("enh_"):
@@ -2601,7 +2767,7 @@ func claim_battle_win() -> void:
         finish_floor(); return
     if wild_battle: finish_wild_battle(); return
     coins += battle_reward; stage = 3
-    skill_points += 1; gain_stones(3); pending_pick = true
+    skill_points += 1; gain_stones(3); pending_pick = true; add_pass(30)
     gain_exp(40 + route_pos() * 12 + perfects * 4)
     hero.position = battle_return; partner.position = partner_return; reset_follow_path()
     rival.position = tour.v(city().boss_at)
@@ -2678,7 +2844,7 @@ func finish_wild_battle() -> void:
         finish_shadow(); return
     if legend_battle:
         finish_legend(); return
-    win_streak += 1; stat_add("wins"); stat["streak"] = maxi(int(stat.get("streak", 0)), win_streak)
+    win_streak += 1; stat_add("wins"); add_pass(15 if wild_grade == 4 else 3); stat["streak"] = maxi(int(stat.get("streak", 0)), win_streak)
     if wild_grade == 4:
         gain_stones(5); stat_add("golden")
     var reward = battle_reward
@@ -2723,7 +2889,7 @@ func finish_shadow() -> void:
         var lines = FINAL_TALK.win.duplicate()
         lines.append(["소현", "여행비 " + str(prize) + "원, 기술 포인트 5개, 강화석 15개! 그리고… " + str(cycle + 2) + "회차 여행이 열렸어."])
         show_dialogue(lines, "ending"); return
-    tour.record()["shadow"] = true; stat_add("shadows"); pending_pick = true; skill_points += 1; gain_stones(4); gain_exp(150 + route_pos() * 30)
+    tour.record()["shadow"] = true; stat_add("shadows"); pending_pick = true; add_pass(40); skill_points += 1; gain_stones(4); gain_exp(150 + route_pos() * 30)
     save_progress()
     var after = SHADOW_TALK[maxi(0, which)].win.duplicate()
     after.append(["소현", "여행비 " + str(prize) + "원과 기술 포인트를 얻었어. 이제 사진 찍자!"])
@@ -2739,7 +2905,7 @@ func finish_legend() -> void:
     coins += battle_reward
     var prize = battle_reward
     restore_from_wild()
-    tour.record()["legend"] = true; stat_add("legends"); pending_pick = true
+    tour.record()["legend"] = true; stat_add("legends"); pending_pick = true; add_pass(40)
     pets.append({ "c": c, "i": 3, "lv": 5, "g": 3})
     if pet_team.size() < team_max(): pet_team.append(pets.size() - 1)
     spawn_pet(); skill_points += 2; gain_stones(5)
@@ -2892,7 +3058,7 @@ func save_progress() -> void:
     if not ui_ready or (state == "title" and not has_save): return
     check_achievements()
     tour.store_current()
-    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "job_tier": job_tier, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones, "loot": loot, "loot_seq": loot_seq, "final_done": final_done, "relics": relics, "stat": stat, "ach_done": ach_done}
+    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "job_tier": job_tier, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones, "loot": loot, "loot_seq": loot_seq, "final_done": final_done, "relics": relics, "stat": stat, "ach_done": ach_done, "tickets": tickets, "gacha_pity": gacha_pity, "pass_points": pass_points, "pass_level": pass_level, "daily_day": daily_day, "daily": daily}
     var temp = SAVE_FILE + ".tmp"; var file = FileAccess.open(temp, FileAccess.WRITE)
     save_ok = file != null
     if not file: return
@@ -2945,6 +3111,13 @@ func load_progress() -> void:
     for one in data.get("relics", []):
         if not relics.has(String(one)): relics.append(String(one))
     for one in data.get("ach_done", []): ach_done.append(String(one))
+    tickets = maxi(0, int(data.get("tickets", 0))); gacha_pity = maxi(0, int(data.get("gacha_pity", 0)))
+    pass_points = maxi(0, int(data.get("pass_points", 0))); pass_level = maxi(0, int(data.get("pass_level", 0)))
+    daily_day = String(data.get("daily_day", "")); daily = []
+    var saved_daily = data.get("daily", [])
+    if saved_daily is Array:
+        for q in saved_daily:
+            if q is Array and q.size() == 5: daily.append([String(q[0]), int(q[1]), String(q[2]), int(q[3]), bool(q[4])])
     var saved_stat = data.get("stat", {})
     if saved_stat is Dictionary:
         for key in saved_stat: stat[String(key)] = int(saved_stat[key])
@@ -3067,6 +3240,7 @@ func restart() -> void:
     owned_gear = ["g0", "a0", "s0", "k0"]; equipped = ["g0", "a0", "s0", "k0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
     loot = {}; loot_seq = 0; final_done = -1; win_streak = 0; extra_mob = -1; shadow_battle = 0
     relics = []; stat = {}; ach_done = []; roamers.clear(); roam_pending = true
+    tickets = 0; gacha_pity = 0; pass_points = 0; pass_level = 0; daily_day = ""; daily = []
     job = 0; job_tier = 0; skill_view = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0; gear_lv = {}; stones = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]

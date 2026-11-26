@@ -92,7 +92,7 @@ func draw(c) -> void:
             c.txt(d.shop, 24, 76, 26)
             c.icon_coin(Vector2(w - 96, 64), 10)
             c.txt(str(g.coins) + "원", w - 80, 71, 18, c.rose)
-            c.tabs(["shoptab_0", "shoptab_1", "shoptab_2", "shoptab_3"], ["도시락", "장비", "소모품", "뽑기"], g.shop_tab, 96, 0)
+            c.tabs(["shoptab_0", "shoptab_1", "shoptab_2", "shoptab_3", "shoptab_4"], ["도시락", "장비", "소모품", "뽑기", "슬롯"], g.shop_tab, 96, 0)
             var sy = 152
             if g.shop_tab == 0:
                 var cost = 12 + g.city_index * 2
@@ -121,6 +121,36 @@ func draw(c) -> void:
                     if have: c.txt("보유 중", w - 110, gy + 34, 13, Color("3f7a32"), 86, HORIZONTAL_ALIGNMENT_RIGHT)
                     else: c.button("buygear_" + id, str(int(entry.cost)) + "원", Rect2(w - 112, gy + 9, 88, 40), false, afford, 14)
                     gy += 64
+            elif g.shop_tab == 4:
+                # 행운의 슬롯: 세 칸이 차례로 멈춘다
+                var reel_w = 92.0
+                var gap = 12.0
+                var x0 = (w - reel_w * 3 - gap * 2) / 2.0
+                var ry = sy + 20
+                c.panel(Rect2(x0 - 18, ry - 14, reel_w * 3 + gap * 2 + 36, 150), Color("c8323c"), 18)
+                c.panel(Rect2(x0 - 10, ry - 6, reel_w * 3 + gap * 2 + 20, 134), Color("e5b33c"), 12)
+                for i in range(3):
+                    var box = Rect2(x0 + i * (reel_w + gap), ry, reel_w, 122)
+                    c.panel(box, Color("fffaf0"), 10)
+                    var stop = [0.6, 0.95, 1.3][i]
+                    var face = int(g.slot_reels[i])
+                    if g.slot_spin >= 0 and g.slot_spin < stop: face = int(g.slot_spin * 22.0 + i * 3) % 6
+                    slot_symbol(c, face, box.get_center(), 30.0)
+                    if g.slot_spin >= 0 and g.slot_spin < stop:
+                        for k in range(3): c.draw_rect(Rect2(box.position.x + 6, box.position.y + 20 + k * 36 + fmod(g.slot_spin * 400.0, 36.0), reel_w - 12, 3), Color(0, 0, 0, 0.12))
+                var cost = g.slot_cost()
+                c.button("slot_spin", "돌리기 · " + str(cost) + "원", Rect2(40, sy + 172, w - 80, 56), true, g.slot_spin < 0 and g.coins >= cost, 17)
+                if g.slot_note != "" and g.slot_spin < 0:
+                    var big = g.slot_note.begins_with("잭팟") or g.slot_note.begins_with("세 개")
+                    c.txt(g.slot_note, 16, sy + 262, 22 if big else 16, c.rose if big else c.ink, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
+                var names = ["수세미", "냄비", "하트", "별", "황금 숟가락", "7"]
+                c.txt("세 개 똑같으면", 24, sy + 300, 12, c.muted)
+                for k in range(6):
+                    var py = sy + 316 + int(k / 2) * 46
+                    var px = 24 + (k % 2) * ((w - 48) / 2.0)
+                    slot_symbol(c, k, Vector2(px + 18, py + 18), 13.0)
+                    c.txt(names[k] + "  ×" + str(int(g.SLOT_TRIPLE[k])), px + 42, py + 24, 13, c.ink)
+                c.txt("두 개만 같아도 ×1.2 · 7 세 개면 뽑기 티켓 +3", 24, sy + 462, 11, c.muted)
             elif g.shop_tab == 3:
                 # 뽑기 기계: 캡슐이 굴러 나온다
                 var mx = w / 2.0
@@ -137,10 +167,15 @@ func draw(c) -> void:
                 var cost = g.gacha_cost()
                 c.button("gacha_1", "1회 " + str(cost) + "원", Rect2(16, sy + 186, (w - 44) / 2.0, 48), false, g.coins >= cost, 14)
                 c.button("gacha_10", "10회 " + str(cost * 9) + "원", Rect2(28 + (w - 44) / 2.0, sy + 186, (w - 44) / 2.0, 48), true, g.coins >= cost * 9, 14)
-                c.txt("장비 · 강화석 · 전투 물건 · 10회는 희귀 이상 1개 확정", 16, sy + 252, 11, c.muted, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
+                var gy = sy + 242
+                if g.tickets > 0:
+                    c.button("ticket_1", "티켓 1장 (" + str(g.tickets) + ")", Rect2(16, gy, (w - 44) / 2.0, 40), false, true, 13)
+                    c.button("ticket_10", "티켓 10장", Rect2(28 + (w - 44) / 2.0, gy, (w - 44) / 2.0, 40), true, g.tickets >= 10, 13)
+                    gy += 48
+                c.txt("10회는 희귀 이상 확정 · 전설 확정까지 " + str(maxi(0, 50 - g.gacha_pity)) + "번", 16, gy + 10, 11, c.rose, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
                 for k in range(g.gacha_results.size()):
                     var res = g.gacha_results[k]
-                    var cell = Rect2(16 + (k % 2) * ((w - 40) / 2.0 + 8), sy + 264 + int(k / 2) * 40, (w - 40) / 2.0, 36)
+                    var cell = Rect2(16 + (k % 2) * ((w - 40) / 2.0 + 8), gy + 22 + int(k / 2) * 40, (w - 40) / 2.0, 36)
                     var tone = Color(String(res.c))
                     c.plate(cell, tone, c.cream, 10, 2)
                     c.txt(String(res.t), cell.position.x + 8, cell.position.y + 23, 11, tone.darkened(0.3) if int(res.g) >= 0 else c.ink, cell.size.x - 12)
@@ -174,6 +209,31 @@ func draw(c) -> void:
             c.centered("섬을 다른 각도에서 기억해 봐요.", h - 155, 18)
             c.button("vista_capture", "이 풍경 담기 ◎", Rect2(26, h - 133, w - 52, 60), true)
             c.button("vista_close", "뒤로", Rect2(26, h - 63, w - 52, 48), false, true, 14)
+
+func slot_symbol(c, kind: int, p: Vector2, s: float) -> void:
+    match kind:
+        0:
+            c.draw_rect(Rect2(p.x - s, p.y - s * 0.6, s * 2, s * 0.6), Color("5fa55a"))
+            c.draw_rect(Rect2(p.x - s, p.y, s * 2, s * 0.6), Color("f0d04a"))
+        1:
+            c.draw_rect(Rect2(p.x - s * 0.9, p.y - s * 0.35, s * 1.8, s), Color("9aa4ad"))
+            c.draw_rect(Rect2(p.x - s * 1.1, p.y - s * 0.55, s * 2.2, s * 0.25), Color("c9d2d6"))
+            c.draw_rect(Rect2(p.x - s * 1.3, p.y - s * 0.3, s * 0.25, s * 0.25), Color("5a646c")); c.draw_rect(Rect2(p.x + s * 1.05, p.y - s * 0.3, s * 0.25, s * 0.25), Color("5a646c"))
+        2:
+            c.draw_circle(p + Vector2(- s * 0.45, - s * 0.25), s * 0.5, Color("e8548c")); c.draw_circle(p + Vector2(s * 0.45, - s * 0.25), s * 0.5, Color("e8548c"))
+            c.draw_colored_polygon(PackedVector2Array([p + Vector2(- s * 0.95, - s * 0.1), p + Vector2(s * 0.95, - s * 0.1), p + Vector2(0, s * 0.9)]), Color("e8548c"))
+        3:
+            var pts = PackedVector2Array()
+            for k in range(10):
+                var a = - PI / 2 + k * PI / 5
+                var rr = s if k % 2 == 0 else s * 0.45
+                pts.append(p + Vector2(cos(a), sin(a)) * rr)
+            c.draw_colored_polygon(pts, Color("ffd84a"))
+        4:
+            c.draw_circle(p + Vector2(0, - s * 0.4), s * 0.5, Color("e5b33c")); c.draw_circle(p + Vector2(- s * 0.15, - s * 0.55), s * 0.15, Color("fff4b0"))
+            c.draw_rect(Rect2(p.x - s * 0.12, p.y, s * 0.24, s * 0.95), Color("e5b33c"))
+        _:
+            c.txt("7", p.x - s, p.y + s * 0.6, int(s * 1.9), Color("c8323c"), s * 2, HORIZONTAL_ALIGNMENT_CENTER)
 
 func ending(c) -> void:
     var g = c.game; var d = g.city(); var w = c.w; var h = c.h
