@@ -64,7 +64,7 @@ func sponge_tier(c: Control, p: Vector2, angle: float, tr: int, grow: float = 1.
 
 # 단계가 오를수록 이펙트가 커진다. 직업 기술은 그보다 더 크다.
 func power(g) -> float:
-    if g.battle_choice == "ult": return 2.0 + g.ult_index * 0.3
+    if g.battle_choice == "ult": return 1.6 + int(g.ult_info().tier) * 0.3 + (g.job_mul() - 1.0)
     if g.battle_choice in ["strike", "guard", "team", "soak", "soap", "coffee"]: return [1.0, 1.25, 1.55, 1.9][g.tier(g.battle_choice)]
     return 1.0
 
@@ -156,9 +156,17 @@ func draw(c: Control, boy: Vector2, foe: Vector2) -> void:
         elif g.ult_kind() == "blast" and g.job == 2 and t < 0.5:
             # 하늘에서 압력솥이 떨어진다 (천년 누룽지는 화면을 덮을 만큼 크다)
             var drop = clampf(t / 0.5, 0, 1)
-            var huge = 3.4 if g.ult_index == 2 else 1.7 + g.job_rank() * 0.25
+            var top = int(g.ult_info().tier) >= 3
+            var huge = 3.4 if top else 1.7 + int(g.ult_info().tier) * 0.25
             c.draw_rect(Rect2(target.x - 30 * huge * drop, target.y + 36, 60 * huge * drop, 10), Color(0.1, 0.12, 0.12, 0.35))
-            pot(c, Vector2(target.x, lerpf(target.y - 420, target.y + 30, drop * drop)), huge, 3 if g.ult_index == 2 or g.job_rank() >= 2 else 2)
+            pot(c, Vector2(target.x, lerpf(target.y - 420, target.y + 30, drop * drop)), huge, 3 if int(g.ult_info().tier) >= 2 else 2)
+        elif g.ult_kind() == "blast" and g.job == 3 and t < 0.5:
+            # 사표·청구서: 종이 뭉치가 날아간다
+            for i in range(4 + int(g.ult_info().tier) * 3):
+                var u2 = clampf((t - i * 0.03) / 0.3, 0, 1)
+                var sheet = hand.lerp(target, u2) + Vector2(sin(i * 1.7) * 30.0, - sin(u2 * PI) * (30 + i * 6))
+                box(c, sheet - Vector2(11, 14), Vector2(22, 28), "343b41"); box(c, sheet - Vector2(9, 12), Vector2(18, 24), "fffdf4")
+                for ln in range(3): box(c, sheet + Vector2(-6, -7 + ln * 6), Vector2(12, 2), "9aa4ad")
         elif g.ult_kind() == "blast" and t < 0.5:
             # 스팀 살균: 뜨거운 김이 화면 아래에서 솟구친다
             for i in range(15): box(c, Vector2(target.x - 126 + i * 18, target.y + 60 - t * 520 - (i % 4) * 34), Vector2(12, 46 + (i % 3) * 18), "f4fbff" if i % 2 == 0 else "cfe9f2")
@@ -173,7 +181,7 @@ func draw(c: Control, boy: Vector2, foe: Vector2) -> void:
             aura(c, boy, t, "8fd96a", 1.8)
         elif g.ult_kind() == "ward":
             # 칼퇴: 시계가 여섯 시를 가리키고 빛의 벽이 선다
-            var wall = 1.0 + g.ult_index * 0.35
+            var wall = 1.0 + (int(g.ult_info().get("hits", 1)) - 1) * 0.35 + (g.job_mul() - 1.0) * 0.5
             for i in range(9): box(c, boy + Vector2(60, -170 * wall + i * 22 * wall), Vector2(10, 18 * wall), "ffe27a" if i % 2 == 0 else "fff8d8")
             c.draw_rect(Rect2(boy.x - 60 * wall, boy.y - 170 * wall, 130 * wall, 176 * wall), Color(1.0, 0.89, 0.48, 0.16))
             c.panel(Rect2(boy.x - 62, boy.y - 214, 124, 40), Color("c9951a"), 6)

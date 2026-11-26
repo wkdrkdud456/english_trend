@@ -296,7 +296,7 @@ func draw(c: Control) -> void:
         if open > 0.6:
             var slide = lerpf(c.w, 0.0, clampf(t / 0.2, 0, 1))
             c.txt(String(g.ult_info().name), slide, by + 6, 30, Color("fff8e8"), c.w, HORIZONTAL_ALIGNMENT_CENTER)
-            c.txt(g.job_name() + " · " + str(g.ult_index + 1) + "차 기술", slide, by + 28, 12, Color("fff4cd"), c.w, HORIZONTAL_ALIGNMENT_CENTER)
+            c.txt(g.job_name() + " · " + str(int(g.ult_info().tier)) + "차 기술 Lv." + str(g.sk(g.job_skill_id(g.ult_index))), slide, by + 28, 12, Color("fff4cd"), c.w, HORIZONTAL_ALIGNMENT_CENTER)
     # 떠오르는 숫자
     for one in g.pops:
         var base = foe - Vector2(0, 118) if one.side == "enemy" else boy - Vector2(-34, 150)

@@ -116,26 +116,39 @@ const JOB_PASSIVE = [
     ["냄비 불리기 피해 +15%", "냄비가 터지면 체력 5% 회복", "냄비가 한 턴 빨리 터져요"],
     ["최대 체력 +15 · 버티기 회복 +3", "버티기가 피해를 90% 막아요", "매 턴 체력을 3% 회복해요"],
 ]
-# 차수마다 하나씩 생기는 직업 기술. need = 먼저 Lv.10 까지 마스터해야 하는 기본 기술
+# 차수마다 새로 배우는 직업 기술 두 개씩 (Lv.1 부터 기술 포인트로 키운다)
+#   src: 피해 기준 (dish 한 대 · sum 세 대 합 · soak 냄비 폭발 · lost 잃은 체력 · maxhp 최대 체력)
+#   hits: 연타 수 또는 막는 턴 · crit: 전부 치명타 · pop: 불려 둔 냄비도 터뜨림 · slip: 3턴 미끌 · pierce: 방어 자세 무시
 const JOB_SKILLS = [
     [],
     [
-        { "name": "식기세척기 풀가동", "need": "strike", "energy": 2, "kind": "volley", "line": "수세미 5연타"},
-        { "name": "스팀 살균", "need": "soap", "energy": 2, "kind": "blast", "line": "큰 피해 · 3턴 미끌 · 방어 무시"},
-        { "name": "주방 대청소", "need": "coffee", "energy": 3, "kind": "volley", "line": "8연타 · 전부 치명타"},
+        { "tier": 1, "name": "고압 세척", "energy": 2, "kind": "volley", "hits": 5, "mul": 0.9, "line": "수세미 5연타"},
+        { "tier": 1, "name": "뽀득 마무리", "energy": 1, "kind": "volley", "hits": 1, "mul": 2.0, "crit": true, "line": "큰 한 방 · 반드시 치명타"},
+        { "tier": 2, "name": "스팀 살균", "energy": 2, "kind": "blast", "src": "sum", "mul": 2.0, "slip": true, "pierce": true, "line": "큰 피해 · 3턴 미끌 · 방어 무시"},
+        { "tier": 2, "name": "거품 폭풍", "energy": 2, "kind": "volley", "hits": 7, "mul": 0.75, "line": "수세미 7연타"},
+        { "tier": 3, "name": "주방 대청소", "energy": 3, "kind": "volley", "hits": 8, "mul": 1.0, "crit": true, "line": "8연타 · 전부 치명타"},
+        { "tier": 3, "name": "식기세척의 신", "energy": 3, "kind": "blast", "src": "sum", "mul": 3.6, "slip": true, "pierce": true, "line": "초대형 피해 · 미끌 · 방어 무시"},
     ],
     [
-        { "name": "압력솥 대폭발", "need": "soak", "energy": 2, "kind": "blast", "line": "불려 둔 냄비까지 즉시 폭발"},
-        { "name": "이중 불림", "need": "soap", "energy": 2, "kind": "arm", "line": "두 배로 터지는 냄비를 불린다"},
-        { "name": "천년 누룽지", "need": "coffee", "energy": 3, "kind": "blast", "line": "방어를 뚫는 초대형 폭발"},
+        { "tier": 1, "name": "압력솥 대폭발", "energy": 2, "kind": "blast", "src": "soak", "mul": 0.45, "pop": true, "line": "불려 둔 냄비까지 즉시 폭발"},
+        { "tier": 1, "name": "뜸 들이기", "energy": 1, "kind": "arm", "mul": 1.5, "line": "다음 냄비가 1.5배로 터진다"},
+        { "tier": 2, "name": "이중 불림", "energy": 2, "kind": "arm", "mul": 2.0, "line": "다음 냄비가 2배로 터진다"},
+        { "tier": 2, "name": "누룽지 긁기", "energy": 2, "kind": "volley", "src": "soak", "hits": 4, "mul": 0.18, "line": "눌어붙은 누룽지로 4연타"},
+        { "tier": 3, "name": "천년 누룽지", "energy": 3, "kind": "blast", "src": "soak", "mul": 1.0, "pierce": true, "line": "방어를 뚫는 초대형 폭발"},
+        { "tier": 3, "name": "가마솥 대마법", "energy": 3, "kind": "blast", "src": "soak", "mul": 0.6, "pop": true, "slip": true, "line": "냄비 폭발 + 3턴 미끌"},
     ],
     [
-        { "name": "칼퇴 선언", "need": "guard", "energy": 2, "kind": "ward", "line": "반격을 막고 되돌려준다"},
-        { "name": "연차 사용", "need": "coffee", "energy": 2, "kind": "heal", "line": "체력 절반 회복 · 기력 +1"},
-        { "name": "정시 퇴근 결계", "need": "team", "energy": 3, "kind": "ward", "line": "2턴 동안 막고 되돌려준다"},
+        { "tier": 1, "name": "칼퇴 선언", "energy": 2, "kind": "ward", "hits": 1, "line": "1턴 막고 반격을 되돌려준다"},
+        { "tier": 1, "name": "연차 사용", "energy": 2, "kind": "heal", "mul": 0.3, "line": "체력 30% 회복 · 기력 +1"},
+        { "tier": 2, "name": "야근 수당 청구", "energy": 2, "kind": "blast", "src": "lost", "mul": 1.4, "line": "잃은 체력만큼 큰 피해"},
+        { "tier": 2, "name": "정시 퇴근 결계", "energy": 3, "kind": "ward", "hits": 2, "line": "2턴 막고 되돌려준다"},
+        { "tier": 3, "name": "사표 투척", "energy": 3, "kind": "blast", "src": "maxhp", "mul": 0.8, "pierce": true, "line": "최대 체력 비례 피해 · 방어 무시"},
+        { "tier": 3, "name": "안식년", "energy": 3, "kind": "heal", "mul": 0.6, "line": "체력 60% 회복 · 기력 +1"},
     ],
 ]
-var ult_index = 0               # 고른 직업 기술 (0~2)
+var job_tier = 0                # 전직 차수 (0 = 전직 전). 다음 차수는 직업 기술을 마스터해야 오른다
+var skill_view = 0              # 기술 화면: 0 기본 · 1 직업
+var ult_index = 0               # 고른 직업 기술 (0~5)
 var ward_turns = 0              # 반격을 되돌리는 남은 턴
 var bomb_mul = 1.0              # 이중 불림: 다음 폭발 배율
 var job = 0
@@ -529,24 +542,68 @@ func speed_mul() -> float:
 func party_max() -> int:
     return 36 + power_stamps() * 3 + (level - 1) * 2 + gear_sum("hp") + souvenirs() * 3 + (15 * job_rank() if job == 3 else 0)
 
-# 전직은 레벨 10부터. 레벨 20에 2차, 레벨 30에 3차로 저절로 오른다
+# 1차: 레벨 10 + 기본 기술 하나 마스터
+# 2차·3차: 레벨 20·30 + 지금 차수의 직업 기술 하나 마스터 (직접 전직 버튼을 누른다)
 func job_rank() -> int:
-    if job == 0: return 0
-    return 3 if level >= 30 else (2 if level >= 20 else 1)
+    return clampi(job_tier, 1, 3) if job > 0 else 0
+
+func base_mastered() -> bool:
+    for entry in SKILLS:
+        if sk(String(entry.id)) >= SKILL_MAX: return true
+    return false
+
+func job_skill_id(i: int) -> String:
+    return "j" + str(job) + "_" + str(clampi(i, 0, 5))
+
+func job_mul(i: int = -1) -> float:
+    return 1.0 + 0.06 * (sk(job_skill_id(ult_index if i < 0 else i)) - 1)
+
+func job_open_count() -> int:
+    var n = 0
+    for i in range(6):
+        if ult_open(i): n += 1
+    return n
+
+func advance_need() -> String:
+    var t = job_rank()
+    if job == 0 or t >= 3: return "더 오를 차수가 없어요"
+    if level < (t + 1) * 10: return "레벨 " + str((t + 1) * 10) + "이 되어야 해요"
+    for i in range(6):
+        if int(ult_info(i).tier) == t and sk(job_skill_id(i)) >= SKILL_MAX: return ""
+    return str(t) + "차 직업 기술 하나를 Lv.10까지 올려야 해요"
+
+func advance_job() -> void:
+    var need = advance_need()
+    if need != "":
+        sfx("bad"); toast(need); return
+    job_tier = job_rank() + 1; skill_points += 3
+    PARTY_HP = party_max(); health = PARTY_HP
+    sfx("job"); flash = 1.0; save_progress()
+    toast(job_name() + "(으)로 " + str(job_tier) + "차 전직!  새 직업 기술 2개 · 기술 포인트 +3")
+
+func job_skill_up(i: int) -> void:
+    var id = job_skill_id(i)
+    if skill_points <= 0 or not ult_open(i) or sk(id) >= SKILL_MAX: return
+    skill_points -= 1; skill_lv[id] = sk(id) + 1; save_progress()
+    if sk(id) >= SKILL_MAX:
+        sfx("job"); flash = 0.5
+        toast(String(ult_info(i).name) + " 마스터!" + (" 이제 " + str(job_rank() + 1) + "차 전직을 할 수 있어요." if advance_need() == "" else ""))
+    else:
+        sfx("good"); toast(String(ult_info(i).name) + " Lv." + str(sk(id)) + "!  위력 +" + str(int(round((job_mul(i) - 1.0) * 100))) + "%")
 
 func job_name() -> String:
     return String(JOBS[job].names[maxi(0, job_rank() - 1)])
 
 func ult_info(i: int = -1) -> Dictionary:
-    return JOB_SKILLS[job][clampi(ult_index if i < 0 else i, 0, 2)]
+    if job == 0: return { "tier": 9, "name": "", "energy": 9, "kind": "", "line": ""}
+    return JOB_SKILLS[job][clampi(ult_index if i < 0 else i, 0, 5)]
 
-# 직업 기술은 그 차수에 오르고, 연결된 기본 기술을 마스터해야 열린다
+# 직업 기술은 그 차수로 전직하면 열린다
 func ult_open(i: int) -> bool:
-    return job > 0 and job_rank() > i and sk(String(ult_info(i).need)) >= SKILL_MAX
+    return job > 0 and job_rank() >= int(ult_info(i).tier)
 
 func ult_lock(i: int) -> String:
-    if job_rank() <= i: return str(i + 1) + "차 전직 (Lv." + str((i + 1) * 10) + ") 필요"
-    return String(skill_of(String(ult_info(i).need)).name) + " Lv.10 필요"
+    return str(int(ult_info(i).tier)) + "차 전직 후 배워요"
 
 func ult_kind() -> String:
     return String(ult_info().kind) if battle_choice == "ult" and job > 0 else ""
@@ -556,13 +613,17 @@ func crit_mul() -> float:
 
 func pick_job(index: int) -> void:
     if index < 1 or index > 3 or index == job or level < JOB_LEVEL: return
+    if job == 0 and not base_mastered():
+        sfx("bad"); toast("기본 기술 하나를 Lv.10까지 올리면 전직할 수 있어요."); return
     if job > 0:
         if coins < 200: toast("직업을 바꾸려면 200원이 필요해요."); return
         coins -= 200
-    job = index
+    if job == 0:
+        job_tier = 1; skill_points += 3
+    job = index; skill_view = 1
     PARTY_HP = party_max(); health = PARTY_HP
     sfx("job"); flash = 0.8; save_progress()
-    toast(job_name() + "(으)로 전직했어요!  직업 기술 「" + String(ult_info(0).name) + "」은 " + String(skill_of(String(ult_info(0).need)).name) + "을(를) 마스터하면 열려요.")
+    toast(job_name() + "(으)로 전직!  새 기술 「" + String(ult_info(0).name) + "」 「" + String(ult_info(1).name) + "」을 배웠어요 (내 정보 → 기술 → 직업)")
 
 # 기술 레벨 1~3 / 4~6 / 7~9 / 10 — 단계가 오르면 이펙트가 달라진다
 func tier(id: String) -> int:
@@ -591,9 +652,15 @@ func cycle_mul(per: float) -> float:
 
 # 직업 기술 한 방(연타는 한 대)의 피해
 func ult_damage() -> int:
-    if job == 2: return int(soak_damage() * (1.3 if ult_index == 2 else 0.5))
-    if ult_index == 1: return int((dish_base(0) + dish_base(1) + dish_base(2)) * 2.5)
-    return int((dish_base(1) + job_rank()) * (1.25 if ult_index == 2 else 1.0))
+    var info = ult_info()
+    var base = 0.0
+    match String(info.get("src", "dish")):
+        "soak": base = soak_damage()
+        "sum": base = dish_base(0) + dish_base(1) + dish_base(2)
+        "lost": base = maxi(PARTY_HP - health, int(PARTY_HP * 0.2))
+        "maxhp": base = PARTY_HP
+        _: base = dish_base(1) + job_rank()
+    return maxi(1, int(base * float(info.get("mul", 1.0)) * job_mul()))
 
 func stamps() -> int:
     return tour.completed.count(true)
@@ -750,9 +817,9 @@ func gain_exp(amount: int) -> void:
         PARTY_HP = party_max(); health = PARTY_HP
         sfx("levelup")
         var note = "레벨 " + str(level) + "! 기술 포인트 +" + str(gained)
-        if job == 0 and level >= JOB_LEVEL and level - gained < JOB_LEVEL: note += " · 전직할 수 있어요! (내 정보 → 스텟)"
+        if job == 0 and level >= JOB_LEVEL and level - gained < JOB_LEVEL: note += " · 기본 기술 하나를 마스터하면 전직할 수 있어요!"
         for mark in [20, 30]:
-            if job > 0 and level >= mark and level - gained < mark: note += " · " + job_name() + "(으)로 승급!"
+            if job > 0 and level >= mark and level - gained < mark: note += " · " + str(mark / 10) + "차 전직 레벨 달성! (기술 → 직업)"
         for entry in SKILLS:
             if int(entry.need) > level - gained and int(entry.need) <= level and int(entry.need) > 1: note += " · 새 기술 " + String(entry.name)
         toast(note)
@@ -1335,6 +1402,10 @@ func action(id: String) -> void:
         gear_slot = clampi(int(id.trim_prefix("gearslot_")), 0, 3); sfx("click"); return
     if id.begins_with("job_"):
         pick_job(int(id.trim_prefix("job_"))); return
+    if id.begins_with("jskill_"):
+        job_skill_up(int(id.trim_prefix("jskill_"))); return
+    if id.begins_with("skillview_"):
+        skill_view = clampi(int(id.trim_prefix("skillview_")), 0, 1); sfx("click"); return
     if id.begins_with("skillup_"):
         skill_up(String(id.trim_prefix("skillup_"))); return
     if id.begins_with("shoptab_"):
@@ -1417,8 +1488,12 @@ func action(id: String) -> void:
         "fight_menu", "bag_menu", "battle_back":
             if state == "battle" and battle_phase == "choose":
                 battle_menu = { "fight_menu": "fight", "bag_menu": "bag", "battle_back": "main"}[id]
+                if id == "fight_menu" and job > 0: battle_menu = "job"
         "strike", "guard", "heal", "team", "soak", "soap", "coffee": choose_battle(id)
-        "ult0", "ult1", "ult2":
+        "base_menu":
+            if state == "battle" and battle_phase == "choose": battle_menu = "fight"
+        "job_advance": advance_job()
+        "ult0", "ult1", "ult2", "ult3", "ult4", "ult5":
             if state == "battle" and battle_phase == "choose":
                 ult_index = int(id.right(1)); choose_battle("ult")
         "jobs_menu":
@@ -1546,11 +1621,11 @@ func choose_battle(choice: String) -> void:
         battle_energy -= 3; coins -= 40; save_progress()
     if choice == "heal": battle_berries -= 1; bag_add("candy", -1)
     if choice in ["soak", "soap"]: battle_energy -= 1
-    volley_total = strike_hits() if choice == "strike" else (8 if ult_index == 2 else 5)
+    volley_total = strike_hits() if choice == "strike" else int(ult_info().get("hits", 5))
     if choice == "ult":
         battle_energy -= int(ult_info().energy)
         if ult_kind() == "ward":
-            battle_guard = true; battle_reflect = true; ward_turns = 2 if ult_index == 2 else 1
+            battle_guard = true; battle_reflect = true; ward_turns = int(ult_info().get("hits", 1))
     battle_result = { "ult": "「" + (String(ult_info().name) if job > 0 else "") + "」!  " + job_name() + "의 직업 기술!", "strike": "설거지 연타! 수세미 " + str(strike_hits()) + "개, 갑니다!", "guard": "야근 버티기! 방어하면서 체력을 채워요.", "heal": "뽀뽀사탕! 동훈의 체력을 회복해요.", "team": "월급 박치기! 여행비 40원을 던졌다!", "soak": "냄비 불리기! 눌어붙은 냄비를 물에 담가 둔다…", "soap": "퐁퐁 뿌리기! 바닥이 미끌미끌해졌다!", "coffee": "커피 수혈! 눈이 번쩍 뜨인다!"}[choice]
     battle_quote = { "ult": [["", "", ""], ["헹굼까지 한 번에!", "건조는 자연 건조야!", "그릇이 뽀득뽀득!"], ["뜸 들일 시간 없어!", "김 빠진다, 물러서!", "밥 다 됐다!"], ["저 먼저 들어가 보겠습니다!", "내일 하겠습니다!", "여섯 시 정각입니다!"]][job], "strike": ["이 정도 설거지는 매일 해!", "퐁퐁 묻었다!", "손목 나가겠네…"], "guard": ["야근보단 낫지.", "버티는 건 자신 있어.", "새벽 세 시도 버텼어."], "team": ["이번 달 월급이다!", "카드값… 아니, 받아라!", "돈으로 되는 일도 있어!"], "heal": ["당 충전 완료!", "하나만 더 먹을까…", "조금 살 것 같다."], "soak": ["불려야 잘 닦여.", "지금은 건드리지 마.", "기다림도 기술이야."], "soap": ["한 방울이면 충분해.", "거품 조심해!", "미끄러우니까 뛰지 마."], "coffee": ["샷 추가요.", "이제 좀 살겠다.", "오늘 세 잔째야…"]}[choice][randi_range(0, 2)]
     hud.release_all(); chime(880 if choice in ["team", "ult"] else 540)
@@ -1613,7 +1688,7 @@ func battle_tick(dt: float) -> void:
                     damage = ult_damage()
                     if battle_enemy_guard: damage = maxi(1, int(ceil(damage * 0.5)))
                     damage = amp(damage)
-                var lucky = randf() < crit_rate() or (battle_choice == "ult" and ult_index == 2)
+                var lucky = randf() < crit_rate() or (battle_choice == "ult" and bool(ult_info().get("crit", false)))
                 if lucky: damage = int(ceil(damage * crit_mul()))
                 battle_hp = maxi(0, battle_hp - damage); battle_volley_hits += 1; battle_hits += 1
                 battle_result = (String(ult_info().name) + " " if battle_choice == "ult" else "설거지 연타 ") + str(battle_volley_hits) + "/" + str(volley_total) + "! " + ("치명타! " if lucky else "수세미 명중 · ") + str(damage) + " 피해"
@@ -1622,23 +1697,24 @@ func battle_tick(dt: float) -> void:
         elif battle_phase_time >= (0.5 if battle_choice in ["team", "ult"] else 0.28) and not battle_hit_applied:
             battle_hit_applied = true
             if ult_kind() == "blast":
+                var info = ult_info()
                 var blast = amp(ult_damage())
-                if job == 2 and ult_index == 0 and battle_bomb > 0:
+                if bool(info.get("pop", false)) and battle_bomb > 0:
                     blast += int(soak_damage() * bomb_mul); battle_bomb = 0; bomb_mul = 1.0
-                if job == 1:
-                    battle_vuln = 4; battle_enemy_guard = false
+                if bool(info.get("slip", false)): battle_vuln = 4
+                if bool(info.get("pierce", false)): battle_enemy_guard = false
                 battle_hp = maxi(0, battle_hp - blast); battle_hits += 1
-                battle_result = String(ult_info().name) + "! " + str(blast) + " 피해!" + (" 상대가 3턴 동안 미끄러워해요." if job == 1 else "")
+                battle_result = String(info.name) + "! " + str(blast) + " 피해!" + (" 상대가 3턴 동안 미끄러워해요." if bool(info.get("slip", false)) else "")
                 battle_impact("boom", "enemy", blast)
             elif ult_kind() == "arm":
-                bomb_mul = 2.0
+                bomb_mul = snappedf(float(ult_info().mul) * job_mul(), 0.1)
                 if battle_bomb == 0: battle_bomb = fuse_turns()
-                battle_result = "이중 불림! 이번 냄비는 두 배(" + str(int(soak_damage() * 2)) + ")로 터져요."
-                battle_fx_note = "두 배 불림!"; battle_impact("buff", "party", 0)
+                battle_result = String(ult_info().name) + "! 이번 냄비는 " + str(bomb_mul) + "배(" + str(int(soak_damage() * bomb_mul)) + ")로 터져요."
+                battle_fx_note = str(bomb_mul) + "배 불림!"; battle_impact("buff", "party", 0)
             elif ult_kind() == "heal":
-                var day_off = mini(int(PARTY_HP * 0.5), PARTY_HP - health)
+                var day_off = mini(int(PARTY_HP * float(ult_info().mul) * job_mul()), PARTY_HP - health)
                 health += day_off; battle_energy = mini(3, battle_energy + 1); battle_fog = false
-                battle_result = "연차 사용! 체력 " + str(day_off) + " 회복 · 기력 +1"
+                battle_result = String(ult_info().name) + "! 체력 " + str(day_off) + " 회복 · 기력 +1"
                 battle_impact("heal", "party", day_off)
             elif battle_choice == "ult":
                 var rest = guard_heal() * 2
@@ -1697,7 +1773,7 @@ func battle_tick(dt: float) -> void:
             if spilled: bomb_mul *= 0.5
             var back = 0
             if battle_reflect:
-                back = int(enemy_damage() * (1.0 + 0.5 * job_rank())) + guard_heal(); damage = 0
+                back = int((enemy_damage() * (1.0 + 0.5 * job_rank()) + guard_heal()) * (job_mul() if job == 3 else 1.0)); damage = 0
                 battle_hp = maxi(0, battle_hp - back); battle_hits += 1
             health = maxi(0, health - damage)
             if battle_reflect:
@@ -1774,7 +1850,7 @@ func auto_pick() -> String:
     var danger = enemy_damage()
     if health * 100 < PARTY_HP * 35 and battle_berries > 0: return "heal"
     if (enemy_heavy() and health < danger * 2) or (battle_intent == "kick" and battle_bomb > 0): return "guard"
-    for i in [2, 1, 0]:
+    for i in range(5, -1, -1):
         if ult_open(i) and battle_energy >= int(ult_info(i).energy):
             if String(ult_info(i).kind) == "arm" and battle_bomb > 0: continue
             if String(ult_info(i).kind) == "heal" and health * 2 > PARTY_HP: continue
@@ -2081,7 +2157,7 @@ func save_progress() -> void:
     if state in ["intro", "tutorial"]: return
     if not ui_ready or (state == "title" and not has_save): return
     tour.store_current()
-    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones}
+    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "job_tier": job_tier, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones}
     var temp = SAVE_FILE + ".tmp"; var file = FileAccess.open(temp, FileAccess.WRITE)
     save_ok = file != null
     if not file: return
@@ -2125,7 +2201,10 @@ func load_progress() -> void:
     var saved_lv = data.get("gear_lv", {})
     if saved_lv is Dictionary:
         for key in saved_lv: gear_lv[String(key)] = clampi(int(saved_lv[key]), 0, ENHANCE_MAX)
-    job = clampi(int(data.get("job", 0)), 0, 3); cycle = clampi(int(data.get("cycle", 0)), 0, 99)
+    job = clampi(int(data.get("job", 0)), 0, 3)
+    # 예전 세이브는 레벨로 정해지던 차수를 그대로 이어받는다
+    job_tier = clampi(int(data.get("job_tier", (3 if level >= 30 else (2 if level >= 20 else 1)))), 1, 3) if job > 0 else 0
+    cycle = clampi(int(data.get("cycle", 0)), 0, 99)
     owned_gear = ["g0", "a0", "s0", "k0"]
     var saved_gear = data.get("owned_gear", [])
     if saved_gear is Array:
@@ -2163,6 +2242,11 @@ func load_progress() -> void:
     var saved_skills = data.get("skill_lv", {})
     for entry in SKILLS:
         skill_lv[entry.id] = clampi(int(saved_skills.get(entry.id, 1)) if saved_skills is Dictionary else 1, 1, SKILL_MAX)
+    if saved_skills is Dictionary:
+        for j in range(1, 4):
+            for i in range(6):
+                var key = "j" + str(j) + "_" + str(i)
+                if saved_skills.has(key): skill_lv[key] = clampi(int(saved_skills[key]), 1, SKILL_MAX)
     tutorial_seen = data.get("tutorial_seen", true) == true
     sound_on = data.get("sound", true) == true; effects_on = data.get("effects", true) == true; overview = data.get("wide_view", false) == true
     sun.shadow_enabled = effects_on; tour.apply_city(clampi(int(data.get("city", 0)), 0, 9) if route_pos(clampi(int(data.get("city", 0)), 0, 9)) <= tour.unlocked else route_city(tour.unlocked))
@@ -2226,9 +2310,10 @@ func restart() -> void:
     if wild_battle: restore_from_wild()
     tour.reset_records(); city_index = 0; level = 1; xp = 0; pets.clear(); pet_active = -1; pet_team = []
     skill_points = 0; wild_grade = 0; area_index = 0
+    skill_lv = {}
     for entry in SKILLS: skill_lv[entry.id] = 1
     owned_gear = ["g0", "a0", "s0", "k0"]; equipped = ["g0", "a0", "s0", "k0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
-    job = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0; gear_lv = {}; stones = 0
+    job = 0; job_tier = 0; skill_view = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0; gear_lv = {}; stones = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]
     grass_steps = 0; encounter_grace = 6.0; encounter_at = 11.0

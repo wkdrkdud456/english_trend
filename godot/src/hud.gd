@@ -462,7 +462,7 @@ func draw_battle() -> void:
     var y = h - 308
     panel(Rect2(16, y, w - 32, 286), cream, 24)
     txt("TURN " + str(game.battle_turn) + ("  ·  나의 선택" if game.battle_phase == "choose" else "  ·  대결 중"), 32, y + 26, 11, muted)
-    var wide_menu = game.battle_phase == "choose" and game.battle_menu == "fight" and game.job > 0
+    var wide_menu = game.battle_phase == "choose" and game.battle_menu in ["fight", "job"] and game.job > 0
     if not wide_menu: txt("여행비 " + str(game.coins) + "원", w - 141, y + 26, 11, muted)
     para(game.battle_result, 32, y + 53, w - 64, 16, ink, 1.35)
     if game.battle_phase != "choose":
@@ -488,7 +488,7 @@ func draw_battle() -> void:
             ["soap", "기력 1 · 피해 +" + str(int((game.soap_mul() - 1.0) * 100)) + "%", game.battle_energy >= 1],
             ["coffee", "기력 +2 · 다음 공격 ×" + str(snappedf(game.coffee_mul(), 0.1)), not game.battle_charge],
         ]
-        if game.job > 0: cells.append(["jobs_menu", "차수마다 하나씩 · 기력 2~3", true])
+        if game.job > 0: cells.append(["jobs_menu", game.job_name() + "의 기술 " + str(game.job_open_count()) + "개", true])
         for i in range(cells.size()):
             var cell = Rect2(32 + (i % 2) * (bw + 12), y + 96 + int(i / 2) * 62, bw, 58)
             var id = String(cells[i][0])
@@ -504,16 +504,17 @@ func draw_battle() -> void:
         if wide_menu: button("battle_back", "← 뒤로", Rect2(w - 32 - 84, y + 4, 84, 40), false, true, 13)
         else: button("battle_back", "← 뒤로", Rect2(32 + bw + 12, y + 220, bw, 58), false, true, 14)
     elif game.battle_menu == "job":
-        for i in range(3):
+        # 전직하면 '싸운다'가 이 화면으로 열린다. 아래 차수부터 위로 쌓인다.
+        for i in range(6):
             var info = game.ult_info(i)
             var cell = Rect2(32 + (i % 2) * (bw + 12), y + 96 + int(i / 2) * 62, bw, 58)
             var unlocked = game.ult_open(i)
             var ok = unlocked and game.battle_energy >= int(info.energy)
             button("ult" + str(i), "", cell, true, ok)
-            txt(String(info.name), cell.position.x + 12, cell.position.y + 24, 15, cream if ok else muted)
+            txt(String(info.name) + ("  Lv." + str(game.sk(game.job_skill_id(i))) if unlocked else ""), cell.position.x + 12, cell.position.y + 24, 14, cream if ok else muted)
             txt("기력 " + str(int(info.energy)) + " · " + String(info.line) if unlocked else game.ult_lock(i), cell.position.x + 12, cell.position.y + 44, 10, cream if ok else muted)
-        button("battle_back", "← 뒤로", Rect2(32 + bw + 12, y + 158, bw, 58), false, true, 14)
-        txt("직업 기술은 연결된 기본 기술을 Lv.10까지 올리면 열려요.", 32, y + 244, 11, muted)
+        button("base_menu", "기본 기술", Rect2(w - 32 - 84 - 92, y + 4, 86, 40), false, true, 13)
+        button("battle_back", "← 뒤로", Rect2(w - 32 - 84, y + 4, 84, 40), false, true, 13)
     else:
         battle_command("heal", "뽀뽀사탕", "체력 +" + str(game.candy_heal()) + " · 남은 수 " + str(game.battle_berries), Rect2(32, y + 100, w - 64, 72), true, game.battle_berries > 0 and game.health < game.PARTY_HP)
         button("battle_back", "← 다른 행동 고르기", Rect2(32, y + 190, w - 64, 60), false, true, 15)
@@ -705,7 +706,7 @@ func draw_status() -> void:
         _: status_job(y)
 
 func status_job(y: float) -> void:
-    txt("Lv.10 전직 · Lv.20 2차 · Lv.30 3차. 직업 기술은 기본 기술을 마스터해야 열려요.", 16, y + 16, 11, Color("cfc5b4"))
+    txt("전직: Lv.10 + 기본 기술 하나 마스터 · 2차·3차: Lv.20·30 + 직업 기술 마스터", 16, y + 16, 11, Color("cfc5b4"))
     var card = clampf((h - y - 90) / 3.0, 128, 150)
     for i in range(1, 4):
         var entry = game.JOBS[i]
@@ -717,14 +718,14 @@ func status_job(y: float) -> void:
         txt(String(entry.names[maxi(0, rank - 1)]), 36, r.position.y + 26, 17)
         if mine: txt(str(rank) + "차 · 현재 직업", w - 250, r.position.y + 25, 12, Color("3f7a32"), 138, HORIZONTAL_ALIGNMENT_RIGHT)
         else: txt("→ " + String(entry.names[2]), w - 250, r.position.y + 25, 11, muted, 138, HORIZONTAL_ALIGNMENT_RIGHT)
-        button("job_" + str(i), "전직" if game.job == 0 else "변경 200", Rect2(w - 104, r.position.y + 6, 80, 34), true, not mine and game.level >= game.JOB_LEVEL and (game.job == 0 or game.coins >= 200), 12)
+        button("job_" + str(i), "전직" if game.job == 0 else "변경 200", Rect2(w - 104, r.position.y + 6, 80, 34), true, not mine and game.level >= game.JOB_LEVEL and ((game.job == 0 and game.base_mastered()) or (game.job > 0 and game.coins >= 200)), 12)
         var step = (r.size.y - 40) / 3.0
         for k in range(3):
             var ly = r.position.y + 44 + k * step
             var reached = mine and rank > k
-            var skill = game.JOB_SKILLS[i][k]
+            var pair = game.JOB_SKILLS[i]
             txt(str(k + 1) + "차  " + String(game.JOB_PASSIVE[i][k]), 36, ly, 11, ink if reached else muted)
-            txt("「" + String(skill.name) + "」 " + String(skill.line) + " · " + String(game.skill_of(String(skill.need)).name) + " 마스터", 36, ly + 14, 10, rose if reached else Color("b0a898"))
+            txt("새 기술 「" + String(pair[k * 2].name) + "」 「" + String(pair[k * 2 + 1].name) + "」", 36, ly + 14, 10, rose if reached else Color("b0a898"))
     button("tab_0", "← 스텟으로", Rect2(12, y + 28 + 3 * card, 130, 40), false, true, 13)
 
 # 도감: 도시마다 만난 친구 셋 + 전설 하나, 숨은 발견, 기억 조각
@@ -758,7 +759,12 @@ func status_dex(y: float) -> void:
 func status_skills(y: float) -> void:
     plate(Rect2(12, y, w - 24, 44), gold if game.skill_points > 0 else Color("8d8578"))
     txt("기술 포인트 " + str(game.skill_points), 28, y + 28, 17)
-    txt("레벨업 +1 · 라이벌 승리 +1", w - 200, y + 27, 11, muted, 172, HORIZONTAL_ALIGNMENT_RIGHT)
+    if game.job > 0:
+        button("skillview_0", "기본", Rect2(w - 170, y + 5, 70, 34), game.skill_view == 0, true, 13)
+        button("skillview_1", "직업", Rect2(w - 94, y + 5, 70, 34), game.skill_view == 1, true, 13)
+        if game.skill_view == 1:
+            status_job_skills(y); return
+    else: txt("레벨업 +1 · 라이벌 승리 +1", w - 200, y + 27, 11, muted, 172, HORIZONTAL_ALIGNMENT_RIGHT)
     for i in range(game.SKILLS.size()):
         var entry = game.SKILLS[i]
         var id = String(entry.id)
@@ -774,6 +780,36 @@ func status_skills(y: float) -> void:
             button("skillup_" + id, "강화", Rect2(w - 92, r.position.y + 12, 68, 38), true, game.skill_points > 0 and lv < game.SKILL_MAX, 13)
         else:
             txt("레벨 " + str(int(entry.need)) + "에 배워요", 28, r.position.y + 46, 11, muted)
+
+# 직업 기술: 차수마다 두 개씩 새로 생기고 Lv.1 부터 키운다. 하나를 마스터하면 다음 차수로 전직한다.
+func status_job_skills(y: float) -> void:
+    var tone = Color(String(game.JOBS[game.job].color))
+    for i in range(6):
+        var info = game.ult_info(i)
+        var open = game.ult_open(i)
+        var id = game.job_skill_id(i)
+        var lv = game.sk(id)
+        var r = Rect2(12, y + 52 + i * 62, w - 24, 56)
+        plate(r, tone if open else Color("8d8578"), cream if open else Color("e6e0d2"), 15, 3)
+        var head = str(int(info.tier)) + "차  " + String(info.name)
+        txt(head, 28, r.position.y + 22, 15, ink if open else muted)
+        if open:
+            txt("Lv." + str(lv) + (" · 마스터" if lv >= game.SKILL_MAX else ""), 28 + font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 8, r.position.y + 22, 12, rose)
+            txt("기력 " + str(int(info.energy)) + " · " + String(info.line) + " · 위력 +" + str(int(round((game.job_mul(i) - 1.0) * 100))) + "%", 28, r.position.y + 40, 10, muted)
+            for k in range(game.SKILL_MAX): panel(Rect2(28 + k * 13, r.position.y + 46, 10, 4), tone if k < lv else Color("e0d8c6"), 2)
+            button("jskill_" + str(i), "강화", Rect2(w - 92, r.position.y + 9, 68, 38), true, game.skill_points > 0 and lv < game.SKILL_MAX, 13)
+        else: txt(game.ult_lock(i) + " · " + String(info.line), 28, r.position.y + 41, 10, muted)
+    var ay = y + 52 + 6 * 62 + 2
+    var t = game.job_rank()
+    if t >= 3:
+        plate(Rect2(12, ay, w - 24, 48), tone)
+        txt("3차 전직 완료 · " + game.job_name(), 28, ay + 30, 15)
+        return
+    var need = game.advance_need()
+    plate(Rect2(12, ay, w - 24, 58), gold if need == "" else Color("8d8578"))
+    txt(str(t + 1) + "차 전직 → " + String(game.JOBS[game.job].names[t]), 28, ay + 24, 15)
+    txt("조건: 레벨 " + str((t + 1) * 10) + " · " + str(t) + "차 기술 하나 마스터" if need != "" else "준비 완료! 새 기술 2개와 기술 포인트 3개", 28, ay + 44, 10, muted if need != "" else rose)
+    button("job_advance", "전직", Rect2(w - 92, ay + 10, 68, 38), true, need == "", 13)
 
 func status_stats(y: float) -> void:
     plate(Rect2(12, y, w - 24, 76), ink)
@@ -794,7 +830,7 @@ func status_stats(y: float) -> void:
         ["이동 속도", str(int(game.speed_mul() * 100)) + "%", String(game.slot_gear(2).name) + " · 기념품 " + str(game.souvenirs()) + " / 10"],
     ]
     var can_job = game.level >= game.JOB_LEVEL
-    row(Rect2(12, y + 84, w - 24, 52), game.job_name(), (str(game.job_rank()) + "차 · 패시브 " + str(game.job_rank()) + "개 · 직업 기술 " + str(int(game.ult_open(0)) + int(game.ult_open(1)) + int(game.ult_open(2))) + " / 3 열림" if game.job > 0 else ("전직해서 고유 기술을 배워요" if can_job else "레벨 " + str(game.JOB_LEVEL) + "에 전직할 수 있어요")), Color(String(game.JOBS[game.job].color)), "", "")
+    row(Rect2(12, y + 84, w - 24, 52), game.job_name(), (str(game.job_rank()) + "차 · 패시브 " + str(game.job_rank()) + "개 · 직업 기술 " + str(game.job_open_count()) + " / 6" if game.job > 0 else ("레벨 " + str(game.JOB_LEVEL) + "에 전직할 수 있어요" if not can_job else ("전직해서 새 기술을 배워요" if game.base_mastered() else "기본 기술 하나를 Lv.10까지 올리면 전직"))), Color(String(game.JOBS[game.job].color)), "", "")
     button("openjobs", "전직" if game.job == 0 else "변경", Rect2(w - 96, y + 91, 72, 38), game.job == 0 and can_job, can_job, 13)
     for i in range(rows.size()):
         row(Rect2(12, y + 140 + i * 56, w - 24, 52), rows[i][0], rows[i][2], Color("6d8a62"), rows[i][1], "")
