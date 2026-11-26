@@ -7,7 +7,11 @@ func box(c, x, y, w, h, color) -> void:
     c.draw_rect(Rect2(roundf(x), roundf(y), w, h), Color(color))
 
 func art_id(g) -> String:
+    if g.shadow_battle == 1: return "ghost"
+    if g.shadow_battle == 2: return "wraith"
     if g.legend_battle: return "legend" + str(g.foe_city())
+    if g.extra_mob >= 0 and g.wild_battle and not g.tower_battle: return String(g.area_mob().art)
+    if g.city_index == 0 and g.wild_battle and not g.tower_battle: return ["ghost", "bird", "mime"][g.wild_index]
     if g.tower_battle: return String(g.CityData.CITIES[g.foe_city()].mobs[g.wild_index].art)
     return g.city().mobs[g.wild_index].art if g.wild_battle else g.city().boss.art
 
@@ -27,9 +31,13 @@ func sprite(c, foot: Vector2, hit: bool) -> void:
             for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
                 if not cells.has(p + d): outline[p + d] = "35434e"
         tiles[id] = [cells, outline, minp, maxp]
-    var item = tiles[id]; var scale_px = 5; var o = (foot - Vector2( (item[2].x + item[3].x) * 0.5, item[3].y) * scale_px).round()
-    for layer in [item[1], item[0]]:
-        for p in layer: c.draw_rect(Rect2(o + Vector2(p) * scale_px, Vector2.ONE * scale_px), Color("fff2c8") if hit else Color(layer[p]))
+    var tint = c.game.foe_tint()
+    var shade = Color(tint) if tint != "" else Color.WHITE
+    var item = tiles[id]; var scale_px = 7 if c.game.shadow_battle == 2 else 5; var o = (foot - Vector2( (item[2].x + item[3].x) * 0.5, item[3].y) * scale_px).round()
+    for li in range(2):
+        var layer = item[1] if li == 0 else item[0]
+        var body = li == 1 and tint != ""
+        for p in layer: c.draw_rect(Rect2(o + Vector2(p) * scale_px, Vector2.ONE * scale_px), Color("fff2c8") if hit else (Color(layer[p]).lerp(shade, 0.5) if body else Color(layer[p])))
 
 func background(c, floor_y: float) -> void:
     var g = c.game; var pal = g.city().pal; var w = c.w

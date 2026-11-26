@@ -238,6 +238,11 @@ func draw(c: Control) -> void:
     var weapon_tier = int(g.slot_gear(0).tier)
     if weapon_tier > 0:
         mine["B"] = ["", "7c8791", "d83d70", "c9951a"][weapon_tier]; mine["Y"] = ["", "c3ccd4", "ff7fa6", "ffe27a"][weapon_tier]
+    if g.shadow_battle > 0 and g.state != "battle_won":
+        # 그림자: 검보라 연기가 피어오른다
+        for i in range(14):
+            var rise = fmod(g.clock_time * 40.0 + i * 23.0, 150.0)
+            c.draw_rect(Rect2(foe.x - 70 + (i * 37) % 140, foe.y - rise, 14, 14), Color(0.25, 0.15, 0.4, 0.5 * (1.0 - rise / 150.0)))
     if g.wild_battle and g.wild_grade > 0 and g.state != "battle_won":
         var tone = Color(g.GRADES[g.wild_grade].color)
         var mid = foe - Vector2(0, 58)
@@ -256,7 +261,7 @@ func draw(c: Control) -> void:
         if phase == "morph": c.draw_rect(Rect2(foe.x - 90, foe.y - 160, 180, 180), Color(1.0, 0.5, 0.3, 0.35 * absf(sin(t * 14.0))))
     if g.state != "battle_won":
         var flash = foe_hit and fx_age < 0.1 and g.effects_on
-        if g.city_index > 0 or g.legend_battle or g.tower_battle: regional.sprite(c, foe, flash)
+        if g.city_index > 0 or g.legend_battle or g.tower_battle or g.extra_mob >= 0 or g.wild_grade == 4 or g.shadow_battle > 0: regional.sprite(c, foe, flash)
         elif g.wild_battle:
             var enemy_palette = { "O": "35434e", "G": "94a7b5", "L": "c6d4d8", "D": "62778c", "P": "72878b", "B": "c7934d", "Y": "fae1a7", "R": "cc7382", "W": "fff6e4", "E": "35434e"}
             if g.wild_index == 0: enemy_palette["L"] = "d1cddc"
@@ -282,7 +287,7 @@ func draw(c: Control) -> void:
             var cf = g.tier("coffee")
             for i in range(3 + cf): block(c, boy.x - 22 + i * (44.0 / (2 + cf)), boy.y - 142 - fmod(g.clock_time * (22 + cf * 6) + i * 7, 16 + cf * 6), 5, 9 + cf * 2, ["c98b4b", "e8974d", "ff7a2a", "ffd84a"][cf])
     props.draw(c, boy, foe)
-    if g.city_index > 0: regional.effects(c, boy, foe)
+    if g.city_index > 0 or g.extra_mob >= 0 or g.shadow_battle > 0: regional.effects(c, boy, foe)
     # 직업 기술 컷인: 화면을 가로지르는 띠에 기술 이름이 미끄러져 들어온다
     if phase == "player" and g.battle_choice == "ult" and g.job > 0 and t < 0.6:
         var tint = Color(String(g.JOBS[g.job].color))

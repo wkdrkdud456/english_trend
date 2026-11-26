@@ -123,27 +123,27 @@ func draw(c) -> void:
                     gy += 64
             else:
                 c.txt("가방에 넣어 두고 필요할 때 써요.", 24, sy, 12, c.muted)
-                var zy = sy + 16 + g.ITEMS.size() * 74
-                c.plate(Rect2(16, zy, w - 32, 66), c.ink if g.coins >= 150 else Color("b4ada0"), c.cream, 15, 3)
-                c.draw_colored_polygon(PackedVector2Array([Vector2(48, zy + 16), Vector2(62, zy + 32), Vector2(48, zy + 50), Vector2(34, zy + 32)]), Color("7fd0e8"))
-                c.draw_colored_polygon(PackedVector2Array([Vector2(48, zy + 16), Vector2(55, zy + 32), Vector2(48, zy + 50)]), Color("b8ecf8"))
-                c.txt("강화석", 80, zy + 28, 17)
-                c.txt("장비 강화에 써요 (내 정보 → 장비)", 80, zy + 50, 11, c.muted)
-                c.txt("보유 " + str(g.stones), w - 196, zy + 32, 12, c.muted, 70, HORIZONTAL_ALIGNMENT_RIGHT)
-                c.button("buystone", "150원", Rect2(w - 118, zy + 13, 94, 42), false, g.coins >= 150, 14)
+                var zy = sy + 12 + g.ITEMS.size() * 52
+                c.plate(Rect2(16, zy, w - 32, 48), c.ink if g.coins >= 150 else Color("b4ada0"), c.cream, 13, 3)
+                c.draw_colored_polygon(PackedVector2Array([Vector2(46, zy + 8), Vector2(58, zy + 24), Vector2(46, zy + 40), Vector2(34, zy + 24)]), Color("7fd0e8"))
+                c.draw_colored_polygon(PackedVector2Array([Vector2(46, zy + 8), Vector2(52, zy + 24), Vector2(46, zy + 40)]), Color("b8ecf8"))
+                c.txt("강화석", 78, zy + 21, 15)
+                c.txt("장비 강화에 써요 (내 정보 → 장비)", 78, zy + 39, 10, c.muted)
+                c.txt("보유 " + str(g.stones), w - 196, zy + 28, 12, c.muted, 70, HORIZONTAL_ALIGNMENT_RIGHT)
+                c.button("buystone", "150원", Rect2(w - 118, zy + 6, 94, 36), false, g.coins >= 150, 14)
                 for i in range(g.ITEMS.size()):
                     var entry2 = g.ITEMS[i]
                     var iid = String(entry2.id)
                     var count = g.bag_count(iid)
                     var full = count >= int(entry2.cap)
                     var can = g.coins >= int(entry2.cost) and not full
-                    var iy = sy + 16 + i * 74
-                    c.plate(Rect2(16, iy, w - 32, 66), c.ink if can else Color("b4ada0"), c.cream if can else Color("ece6da"), 15, 3)
-                    c.item_icon(iid, Vector2(48, iy + 32))
-                    c.txt(String(entry2.name), 80, iy + 28, 17)
-                    c.txt(String(entry2.line), 80, iy + 50, 11, c.muted)
-                    c.txt("보유 " + str(count), w - 196, iy + 32, 12, c.muted, 70, HORIZONTAL_ALIGNMENT_RIGHT)
-                    c.button("buyitem_" + iid, "가득" if full else str(int(entry2.cost)) + "원", Rect2(w - 118, iy + 13, 94, 42), false, can, 14)
+                    var iy = sy + 12 + i * 52
+                    c.plate(Rect2(16, iy, w - 32, 48), c.ink if can else Color("b4ada0"), c.cream if can else Color("ece6da"), 13, 3)
+                    c.item_icon(iid, Vector2(46, iy + 24))
+                    c.txt(String(entry2.name), 78, iy + 21, 15)
+                    c.txt(String(entry2.line), 78, iy + 39, 10, c.muted)
+                    c.txt("보유 " + str(count), w - 196, iy + 28, 12, c.muted, 70, HORIZONTAL_ALIGNMENT_RIGHT)
+                    c.button("buyitem_" + iid, "가득" if full else str(int(entry2.cost)) + "원", Rect2(w - 118, iy + 6, 94, 36), false, can, 14)
             c.button("food_close", "고마워요, 다시 산책", Rect2(26, h - 86, w - 52, 60), true)
         "vista":
             c.chip(d.labels[t.vista] + " · 풍경 수집", Rect2(24, 32, w - 48, 40))
@@ -160,6 +160,11 @@ func ending(c) -> void:
     c.para(d.memory, 26, y + 62, w - 52, 19, c.ink, 1.55)
     var last = g.route_pos() >= 9
     var next_name = String(g.CityData.CITIES[g.route_city(g.route_pos() + 1)].name)
+    if last and g.final_done < g.cycle:
+        c.button("final_battle", "마지막 결전 · 망각과 마주하기", Rect2(24, h - 300, w - 48, 62), true)
+        c.button("passport", "여권 · 도시별 앨범", Rect2(24, h - 228, w - 48, 60))
+        c.button("wander", String(d.name) + "에서 조금 더 걷기", Rect2(24, h - 156, w - 48, 60), false, true, 15)
+        return
     if last: c.centered("열 도시의 끝. 우리의 내일은 이제 시작.", h - 273, 15, c.rose)
     c.button("passport" if last else "next_city", "열 도시의 추억 돌아보기" if last else "다음 도시, " + next_name + "(으)로 →", Rect2(24, h - 228, w - 48, 62), true)
     c.button("wander" if last else "passport", String(d.name) + "에서 조금 더 걷기" if last else "여권 · 도시별 앨범", Rect2(24, h - 154, w - 48, 60))

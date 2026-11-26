@@ -216,7 +216,7 @@ func draw(c: Control, boy: Vector2, foe: Vector2) -> void:
             for i in range(6): box(c, boy + Vector2(56, -118 + i * 20 + fmod(g.clock_time * 30, 20) * 0.2), Vector2(6, 14), glass)
     if phase == "player" and g.battle_choice == "heal" and t < 0.28:
         candy(c, hand + Vector2(-5, - minf(t * 60, 25)))
-    if phase == "enemy" and g.city_index == 0 and not g.legend_battle:
+    if phase == "enemy" and g.city_index == 0 and not g.legend_battle and g.extra_mob < 0 and g.shadow_battle == 0 and not g.tower_battle:
         var u = clampf( (t - 0.06) / 0.24, 0, 1)
         var dest = boy - Vector2(0, 55)
         if not g.wild_battle:

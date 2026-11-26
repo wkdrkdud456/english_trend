@@ -43,6 +43,33 @@ const PET_ROLE = [
     { "key": "care", "tag": "회복", "desc": "야근 버티기와 뽀뽀사탕 회복이 늘어요" },
     { "key": "legend", "tag": "전설", "desc": "기력·설거지·회복을 모두 올려 줘요" },
 ]
+# 골목·자연 구역에만 사는 도시별 친구 세 마리 (있는 그림에 색을 입힌다)
+#   trick: steal 훔치기 · shield 짝수 턴 방어 · poison 중독 · drain 기력 흡수 · split 체력 절반에 회복 · swift 두 번 공격
+const AREA_MOBS = [
+    [{ "name": "크루아상 박쥐", "art": "bird", "tint": "e0a050", "attack": "버터 날개", "trick": "swift", "role": "energy"}, { "name": "센강 수달", "art": "squirrel", "tint": "8a6a4c", "attack": "물장구 연타", "trick": "steal", "role": "care"}, { "name": "루브르 액자 유령", "art": "ghost", "tint": "e5b33c", "attack": "액자 가두기", "trick": "shield", "role": "dish"}],
+    [{ "name": "말차 슬라임", "art": "hotspring", "tint": "7fae5a", "attack": "쌉싸름 끈적", "trick": "poison", "role": "care"}, { "name": "닌자 고양이", "art": "streetcat", "tint": "3a3f4a", "attack": "그림자 할퀴기", "trick": "swift", "role": "dish"}, { "name": "종이우산 요괴", "art": "fairy", "tint": "c85068", "attack": "우산 회전", "trick": "shield", "role": "energy"}],
+    [{ "name": "황금 풍뎅이", "art": "scorpion", "tint": "e5b33c", "attack": "모래 굴리기", "trick": "split", "role": "energy"}, { "name": "사막여우 상인", "art": "fox", "tint": "e8c27a", "attack": "바가지 씌우기", "trick": "steal", "role": "dish"}, { "name": "피라미드 수호석", "art": "gladiator", "tint": "d0a862", "attack": "돌기둥 강타", "trick": "shield", "role": "care"}],
+    [{ "name": "젤라또 골렘", "art": "snowtroll", "tint": "f4a6c0", "attack": "녹는 주먹", "trick": "split", "role": "care"}, { "name": "스쿠터 폭주족", "art": "taxi", "tint": "5fa55a", "attack": "골목 질주", "trick": "swift", "role": "energy"}, { "name": "카푸치노 정령", "art": "fairy", "tint": "a8703a", "attack": "카페인 폭격", "trick": "drain", "role": "dish"}],
+    [{ "name": "피자 쥐", "art": "tuberat", "tint": "e5b33c", "attack": "치즈 늘이기", "trick": "steal", "role": "care"}, { "name": "브로드웨이 팬텀", "art": "wraith", "tint": "c8323c", "attack": "커튼콜", "trick": "shield", "role": "energy"}, { "name": "빌딩 비둘기 떼", "art": "bird", "tint": "6f7f8f", "attack": "빌딩풍 급강하", "trick": "swift", "role": "dish"}],
+    [{ "name": "퍼핀 무리", "art": "bird", "tint": "f08a3c", "attack": "부리 연타", "trick": "swift", "role": "energy"}, { "name": "간헐천 정령", "art": "hotspring", "tint": "8fe8ff", "attack": "증기 분출", "trick": "poison", "role": "dish"}, { "name": "빙하 거북", "art": "koala", "tint": "a8dcec", "attack": "얼음 등껍질", "trick": "shield", "role": "care"}],
+    [{ "name": "올리브 도둑 갈매기", "art": "bird", "tint": "fdfaf0", "attack": "올리브 낚아채기", "trick": "steal", "role": "energy"}, { "name": "파란 돔 미믹", "art": "phonebox", "tint": "3f7fc0", "attack": "돔 덮치기", "trick": "split", "role": "dish"}, { "name": "와인통 정령", "art": "windmill", "tint": "8a3a5a", "attack": "포도즙 세례", "trick": "drain", "role": "care"}],
+    [{ "name": "근위병 인형", "art": "gladiator", "tint": "c8323c", "attack": "털모자 박치기", "trick": "shield", "role": "dish"}, { "name": "홍차 주전자 요괴", "art": "hotspring", "tint": "c9a66b", "attack": "뜨거운 홍차", "trick": "poison", "role": "care"}, { "name": "이층버스 망령", "art": "taxi", "tint": "c8323c", "attack": "정류장 무시", "trick": "swift", "role": "energy"}],
+    [{ "name": "에뮤 폭주", "art": "kangaroo", "tint": "6b5846", "attack": "긴 다리 질주", "trick": "swift", "role": "energy"}, { "name": "부메랑 앵무", "art": "bird", "tint": "5fae5a", "attack": "돌아오는 부메랑", "trick": "drain", "role": "dish"}, { "name": "해파리 서퍼", "art": "octopus", "tint": "c9a8f6", "attack": "찌릿 촉수", "trick": "poison", "role": "care"}],
+    [{ "name": "떡볶이 정령", "art": "fairy", "tint": "c8323c", "attack": "매운맛 폭탄", "trick": "poison", "role": "dish"}, { "name": "치킨 배달 유령", "art": "delivery", "tint": "e8974d", "attack": "반반 무 많이", "trick": "steal", "role": "energy"}, { "name": "PC방 좀비", "art": "wzombie", "tint": "4a8fd0", "attack": "밤샘 레이드", "trick": "drain", "role": "care"}],
+]
+const TRICK_LINE = { "steal": "도둑: 맞으면 사탕이나 돈을 훔쳐 가요", "shield": "철벽: 짝수 턴마다 방어 자세", "poison": "독: 맞으면 3턴 동안 중독", "drain": "흡수: 맞으면 기력 −1", "split": "분열: 체력 절반에서 한 번 회복", "swift": "날쌤: 두 번 연속 공격", "flee": "도망: 3턴이 지나면 달아나요"}
+# 망각의 그림자 — 기억을 가져간 것. 세 도시에서 사진을 가로막고, 마지막 도시 뒤에서 기다린다.
+const SHADOW_AT = [2, 5, 8]
+const SHADOW_TALK = [
+    { "meet": [["망각의 그림자", "기억은 무거워. 내려놓으면 편해. 야근하던 밤처럼, 아무것도 느끼지 않게 해 줄게."], ["소현", "…저게 동훈이 기억을 가져간 거야?"], ["동훈", "아니. 내가 놓아 버린 거야. 이번엔 안 놔."]], "win": [["망각의 그림자", "…사진 한 장으로 뭐가 달라지는데."], ["동훈", "달라져. 같이 찍으면."], ["소현", "그림자가 흩어졌어. 사진 찍으러 가자!"]]},
+    { "meet": [["망각의 그림자", "벌써 반이나 왔네. 그런데 내일 회사 가면 다 잊을걸?"], ["동훈", "잊으면 또 찾으러 오면 돼. 소현이랑."]], "win": [["망각의 그림자", "…너, 처음보다 무거워졌어. 붙잡고 있는 게 많아서."], ["소현", "그림자가 아까보다 작아졌어."]]},
+    { "meet": [["망각의 그림자", "마지막으로 묻지. 정말 바뀔 수 있어? 또 미루지 않을 자신 있어?"], ["동훈", "자신은 없어. 그래도 매일 고를 거야. 오늘을."]], "win": [["망각의 그림자", "…마지막 도시 뒤에서 기다리지. 그때는 진짜 나를 보게 될 거야."], ["소현", "진짜 모습…? 동훈아, 끝까지 같이 가자."]]},
+]
+const FINAL_TALK = { "meet": [["망각", "나는 네가 미뤄 온 모든 ‘나중에’야. 생일 케이크, 불은 라면, 지운 문자."], ["동훈", "그럼 오늘 다 갚을게."], ["소현", "같이 갚자. 반반씩."]], "win": [["망각", "…‘오늘’이라는 말, 오랜만에 듣는군."], ["소현", "끝났어…?"], ["동훈", "아니. 이제 시작이야. 내일 아침은 내가 차릴게. 설거지도."], ["소현", "그 말, 이번엔 사진 말고 매일 확인할 거야."]]}
+# 장비 드롭 등급
+const LOOT_GRADES = [{ "tag": "일반", "color": "8d969e", "mul": 1.0}, { "tag": "희귀", "color": "3f8fd0", "mul": 1.35}, { "tag": "영웅", "color": "8a5fc0", "mul": 1.75}, { "tag": "전설", "color": "e0a020", "mul": 2.3}]
+const CITY_WORD = ["바게트", "대나무", "파피루스", "대리석", "네온", "빙하", "에게해", "안개", "파도", "한옥"]
+const BATTLE_ITEMS = ["candy", "bread", "spicy", "icewater", "firework", "charm", "instantpot"]
 # ── 장비 / 가방 ────────────────────────────────────────
 const GEAR = [
     { "id": "g0", "slot": 0, "tier": 0, "name": "낡은 수세미", "line": "집에서 쓰던 그것", "cost": 0, "atk": 0, "hp": 0, "heal": 0, "spd": 0},
@@ -84,6 +111,21 @@ const TRAITS = {
     "regen": { "name": "되살아나는 ", "line": "재생: 턴마다 체력 4% 회복"},
 }
 var battle_trait = ""
+var extra_mob = -1              # 구역 몬스터 번호 (-1 = 기본 몬스터)
+var shadow_battle = 0           # 1 = 망각의 그림자, 2 = 최종 결전
+var final_done = -1             # 최종 결전을 이긴 회차
+var win_streak = 0              # 쉬지 않고 이긴 야생 대결 수 (보상이 오른다)
+var battle_poison = 0
+var battle_spicy = 0
+var battle_luck = 0.0
+var split_done = false
+var battle_item = ""
+var pet_used: Array = []
+var loot: Dictionary = {}       # 떨어진 장비 id → 장비 (GEAR 와 같은 모양 + grade)
+var loot_seq = 0
+var last_drop = ""              # 이번 승리에서 얻은 장비
+var last_item = ""              # 이번 승리에서 얻은 소모품
+var gear_page = 0
 var boss_phase = 0              # 2회차 라이벌은 한 번 쓰러지면 각성해서 다시 일어난다
 var auto_battle = false         # 도전의 탑: 알아서 싸우고 올라간다
 var auto_wait = 0.0
@@ -206,6 +248,12 @@ const ITEMS = [
     { "id": "drink", "name": "기력 드링크", "line": "다음 대결을 기력 1칸으로 시작", "cost": 70, "cap": 5},
     { "id": "treat", "name": "펫 간식", "line": "동행의 친밀도를 1 올려요", "cost": 90, "cap": 5},
     { "id": "film", "name": "기념 필름", "line": "추억 사진 보상 +30원", "cost": 110, "cap": 9},
+    { "id": "bread", "name": "붕어빵", "line": "대결 중 체력을 조금 회복", "cost": 20, "cap": 9},
+    { "id": "spicy", "name": "매운 떡볶이", "line": "3턴 동안 주는 피해 +40%", "cost": 90, "cap": 5},
+    { "id": "icewater", "name": "얼음물", "line": "기력 +2 · 안개와 중독을 씻어 내요", "cost": 70, "cap": 5},
+    { "id": "firework", "name": "폭죽", "line": "방어를 무시하는 고정 피해", "cost": 120, "cap": 5},
+    { "id": "charm", "name": "행운 부적", "line": "이번 대결 치명타 +25%", "cost": 100, "cap": 3},
+    { "id": "instantpot", "name": "즉석 냄비", "line": "기력 없이 냄비를 불려 둬요", "cost": 110, "cap": 5},
 ]
 var owned_gear: Array = ["g0", "a0", "s0", "k0"]
 var equipped: Array = ["g0", "a0", "s0", "k0"]
@@ -234,6 +282,7 @@ const GRADES = [
     { "tag": "엘리트", "prefix": "엘리트 ", "hp": 1.5, "atk": 1.2, "gold": 2.0, "xp": 2.0, "color": "3f8fa8"},
     { "tag": "레어", "prefix": "레어 ", "hp": 2.1, "atk": 1.4, "gold": 3.5, "xp": 3.0, "color": "8a5fc0"},
     { "tag": "전설", "prefix": "전설의 ", "hp": 3.0, "atk": 1.65, "gold": 7.0, "xp": 5.0, "color": "e0a020"},
+    { "tag": "황금", "prefix": "황금 ", "hp": 0.9, "atk": 0.6, "gold": 12.0, "xp": 6.0, "color": "e5b33c"},
 ]
 var wild_grade = 0
 # ── 세부 구역과 기억 조각 ─────────────────────────────────
@@ -482,7 +531,151 @@ func exp_needed() -> int:
 func gear_of(id: String) -> Dictionary:
     for entry in GEAR:
         if entry.id == id: return entry
+    if loot.has(id): return loot[id]
     return GEAR[0]
+
+func roll_grade(min_grade: int) -> int:
+    var r = randf()
+    var grade = 3 if r < 0.04 else (2 if r < 0.16 else (1 if r < 0.45 else 0))
+    return maxi(grade, min_grade)
+
+# 도시와 회차에 맞춰 장비 하나를 만든다. 등급이 높을수록 수치와 덤 효과가 붙는다.
+func make_loot(min_grade: int) -> String:
+    var grade = roll_grade(min_grade)
+    var gm = float(LOOT_GRADES[grade].mul)
+    var p = route_pos() + cycle * 10
+    var word = String(CITY_WORD[city_index])
+    var kind = randi_range(0, 4)
+    loot_seq += 1
+    var id = "r" + str(loot_seq)
+    var e = { "id": id, "slot": 0, "tier": grade, "grade": grade, "cost": 0, "name": ""}
+    match kind:
+        0:
+            e["atk"] = maxi(1, int(round((0.8 + p * 0.3) * gm))); e["name"] = word + " 수세미"
+            if grade >= 2: e["crit"] = 3 * grade
+        1:
+            e["slot"] = 1; e["hp"] = int(round((5.0 + p * 3.0) * gm)); e["name"] = word + " 앞치마"
+            if grade >= 2: e["heal"] = grade
+        2:
+            e["slot"] = 2; e["spd"] = mini(45, int(round((8.0 + p * 1.5) * gm))); e["name"] = word + " 신발"
+            if grade >= 1: e["hp"] = int(round((2.0 + p) * gm))
+        3:
+            e["slot"] = 3; e["icon"] = "slot3"; e["icon_tier"] = 6; e["crit"] = int(round((3.0 + p * 0.6) * gm)); e["name"] = word + " 부적"
+            if grade == 3: e["en"] = 1
+        _:
+            e["icon"] = "slot3"; e["icon_tier"] = maxi(1, grade); e["soak"] = int(round((6.0 + p * 3.0) * gm)); e["name"] = word + " 냄비"
+            if grade == 3: e["fuse"] = 1
+    e["name"] = ["", "빛나는 ", "영웅의 ", "전설의 "][grade] + String(e["name"])
+    e["line"] = loot_line(e)
+    loot[id] = e; owned_gear.append(id)
+    trim_loot()
+    return id
+
+func loot_line(e: Dictionary) -> String:
+    var parts: PackedStringArray = []
+    for pair in [["atk", "설거지 +"], ["soak", "냄비 +"], ["hp", "체력 +"], ["heal", "회복 +"], ["spd", "속도 +"], ["crit", "치명타 +"], ["en", "기력 +"]]:
+        if int(e.get(pair[0], 0)) > 0: parts.append(String(pair[1]) + str(int(e[pair[0]])) + ("%" if pair[0] in ["soak", "spd", "crit"] else ""))
+    if int(e.get("fuse", 0)) > 0: parts.append("1턴 폭발")
+    return LOOT_GRADES[int(e.grade)].tag + " · " + " · ".join(parts)
+
+func equipped_has(id: String) -> bool:
+    for one in equipped:
+        if String(one) == id: return true
+    return false
+
+# 떨어진 장비는 30개까지 — 넘치면 가장 낮은 등급의 오래된 것부터 강화석으로 바꾼다
+func trim_loot() -> void:
+    while loot.size() > 30:
+        var worst = ""
+        for key in loot:
+            if equipped_has(String(key)): continue
+            if worst == "" or int(loot[key].grade) < int(loot[worst].grade): worst = String(key)
+        if worst == "": return
+        gain_stones(1 + int(loot[worst].grade)); loot.erase(worst); owned_gear.erase(worst)
+
+func salvage(id: String) -> void:
+    if not loot.has(id) or equipped_has(id): return
+    var got = [1, 2, 4, 8][clampi(int(loot[id].grade), 0, 3)]
+    loot.erase(id); owned_gear.erase(id); gear_lv.erase(id); gain_stones(got)
+    sfx("coin"); save_progress(); toast("분해했어요. 강화석 +" + str(got) + "  (보유 " + str(stones) + "개)")
+
+func area_mob() -> Dictionary:
+    return AREA_MOBS[city_index][clampi(extra_mob, 0, 2)]
+
+func foe_trick() -> String:
+    if wild_grade == 4: return "flee"
+    if extra_mob >= 0 and wild_battle: return String(area_mob().trick)
+    return ""
+
+# 상대 그림에 입힐 색
+func foe_tint() -> String:
+    if wild_grade == 4: return "ffd84a"
+    if shadow_battle == 1: return "3a2a6a"
+    if shadow_battle == 2: return "1f1a22"
+    if extra_mob >= 0 and wild_battle: return String(area_mob().tint)
+    return ""
+
+func ready_chip() -> String:
+    if shadow_battle == 2: return "최종 결전 · 망각"
+    if shadow_battle == 1: return "망각의 그림자가 가로막았다!"
+    if wild_grade == 4: return "황금 몬스터 출현!!"
+    return ""
+
+func ready_line() -> String:
+    if shadow_battle == 2: return "모든 ‘나중에’가 모인 마지막 상대예요.\n한 번 쓰러뜨려도 다시 일어나요.\n이기면 전설 장비와 다음 회차가 열려요."
+    if shadow_battle == 1: return "동훈의 기억을 가져간 그림자예요.\n이기면 사진을 찍을 수 있고 영웅 장비를 얻어요."
+    if wild_grade == 4: return "3턴 안에 쓰러뜨리지 못하면 달아나요!\n보상 ×12 · 강화석 5개 · 영웅 장비 확정"
+    if extra_mob >= 0 and wild_battle and not tower_battle: return "이 구역에만 사는 친구예요.\n" + String(TRICK_LINE[foe_trick()]) + ("\n연승 " + str(win_streak) + " · 보상 +" + str(mini(win_streak, 10) * 10) + "%" if win_streak > 0 else "")
+    return ""
+
+func pet_role(p: Dictionary) -> Dictionary:
+    var i = int(p.i)
+    if i >= 4:
+        var key = String(AREA_MOBS[int(p.c)][clampi(i - 4, 0, 2)].role)
+        for role in PET_ROLE:
+            if String(role.key) == key: return role
+    return PET_ROLE[clampi(i, 0, 3)]
+
+func pet_tint(p: Dictionary) -> String:
+    return String(AREA_MOBS[int(p.c)][clampi(int(p.i) - 4, 0, 2)].tint) if int(p.i) >= 4 else ""
+
+# 친구 기술: 대결마다 친구 한 명당 한 번, 턴을 쓰지 않는다
+func pet_skill_name(p: Dictionary) -> String:
+    if int(p.i) == 3: return "전설의 포효"
+    return { "energy": "응원하기", "dish": "몸통 박치기", "care": "핥아 주기"}.get(String(pet_role(p).key), "응원하기")
+
+func pet_skill_line(p: Dictionary) -> String:
+    if int(p.i) == 3: return "큰 피해 · 방어 해제"
+    return { "energy": "기력 +2", "dish": str(pet_hit(p)) + " 피해", "care": "체력 +" + str(pet_heal(p))}.get(String(pet_role(p).key), "")
+
+func pet_hit(p: Dictionary) -> int:
+    return int((pet_power(p) * 6 + (route_pos() + cycle * 10) * 7 + 6) * (1.0 + 0.25 * int(p.get("g", 0))))
+
+func pet_heal(p: Dictionary) -> int:
+    return int(PARTY_HP * 0.15) + pet_power(p) * 3
+
+func use_pet(n: int) -> void:
+    if state != "battle" or battle_phase != "choose" or n < 0 or n >= pet_team.size() or pet_used.has(n): return
+    var p = pets[int(pet_team[n])]
+    pet_used.append(n); battle_menu = "main"
+    var name = pet_name(p)
+    if int(p.i) == 3:
+        var roar = amp(int(soak_damage() * 0.8) + pet_hit(p)); battle_enemy_guard = false
+        battle_hp = maxi(0, battle_hp - roar)
+        battle_result = name + "의 전설의 포효! " + str(roar) + " 피해!"; battle_impact("boom", "enemy", roar)
+    else:
+        match String(pet_role(p).key):
+            "energy":
+                battle_energy = mini(3, battle_energy + 2)
+                battle_result = name + "이(가) 응원해요! 기력 +2"; battle_fx_note = "응원!"; battle_impact("buff", "party", 0)
+            "dish":
+                var bump = amp(pet_hit(p))
+                battle_hp = maxi(0, battle_hp - bump)
+                battle_result = name + "의 몸통 박치기! " + str(bump) + " 피해"; battle_impact("sponge", "enemy", bump)
+            _:
+                var lick = mini(pet_heal(p), PARTY_HP - health); health += lick
+                battle_result = name + "이(가) 핥아 줬어요. 체력 +" + str(lick); battle_impact("heal", "party", lick)
+    if battle_hp == 0: win_battle()
 
 func gear_sum(key: String) -> int:
     var total = 0
@@ -634,7 +827,7 @@ func strike_hits() -> int:
     return (4 if sk("strike") >= SKILL_MAX else 3) + (1 if job == 1 and job_rank() >= 3 else 0)
 
 func crit_rate() -> float:
-    return (8 + gear_sum("crit") + (10 if job == 1 else 0)) / 100.0
+    return (8 + gear_sum("crit") + (10 if job == 1 else 0)) / 100.0 + battle_luck
 
 # 회차가 오를수록 상대가 강해진다
 # 상대 체력·피해 배율. 1회차는 도시마다 가파르게, 2회차부터는 높은 데서 시작해 완만하게 오른다
@@ -703,6 +896,7 @@ func amp(damage: int) -> int:
     # 퐁퐁과 커피는 곱하지 않고 더한다 (둘을 겹쳐도 한 방에 끝나지 않게)
     var boost = 1.0
     if battle_vuln > 0: boost += soap_mul() - 1.0
+    if battle_spicy > 0: boost += 0.4
     if battle_charge: boost += coffee_mul() - 1.0
     value *= boost
     return maxi(1, int(round(value)))
@@ -724,11 +918,12 @@ func pet_bonus(key: String) -> int:
     var total = 0
     for index in pet_team:
         var p = pets[int(index)]
-        if PET_ROLE[int(p.i)].key == key or int(p.i) == 3: total += pet_power(p)
+        if String(pet_role(p).key) == key or int(p.i) == 3: total += pet_power(p)
     return total
 
 func pet_art(p: Dictionary) -> String:
     if int(p.i) == 3: return "legend" + str(int(p.c))
+    if int(p.i) >= 4: return String(AREA_MOBS[int(p.c)][clampi(int(p.i) - 4, 0, 2)].art)
     return String(CityData.CITIES[int(p.c)].mobs[int(p.i)].art)
 
 func sk(id: String) -> int:
@@ -773,6 +968,9 @@ func foe_title() -> String:
     return ("각성한 " if boss_phase == 1 else "") + String(TRAITS[battle_trait].name) + foe_name()
 
 func wild_name() -> String:
+    if shadow_battle == 2: return "망각"
+    if shadow_battle == 1: return "망각의 그림자"
+    if extra_mob >= 0 and wild_battle and not tower_battle: return String(GRADES[wild_grade].prefix) + String(area_mob().name)
     if tower_battle:
         return str(tower_floor) + "층 · " + String(LEGENDS[foe_city()].name if legend_battle else CityData.CITIES[foe_city()].mobs[wild_index].name)
     if legend_battle: return String(LEGENDS[city_index].name)
@@ -804,6 +1002,7 @@ func look(girl: bool) -> Dictionary:
 
 func pet_name(p: Dictionary) -> String:
     if int(p.i) == 3: return String(LEGENDS[int(p.c)].name)
+    if int(p.i) >= 4: return String(AREA_MOBS[int(p.c)][clampi(int(p.i) - 4, 0, 2)].name)
     return CityData.CITIES[int(p.c)].mobs[int(p.i)].name
 
 func gain_exp(amount: int) -> void:
@@ -1288,7 +1487,9 @@ func side_interact() -> void:
             0:
                 coins += 60 + route_pos() * 25; toast("상자에서 여행비 " + str(60 + route_pos() * 25) + "원을 찾았어요!")
             1:
-                bag_add("candy", 2); bag_add("drink", 1); toast("상자에서 뽀뽀사탕 2개와 기력 드링크를 찾았어요!")
+                bag_add("candy", 2); bag_add("drink", 1)
+                var found_gear = make_loot(0)
+                toast("상자에서 뽀뽀사탕 2개, 기력 드링크, 그리고 " + String(loot[found_gear].name) + "을(를) 찾았어요!")
             2:
                 coins += 90 + route_pos() * 30; toast("상자에서 여행비 " + str(90 + route_pos() * 30) + "원을 찾았어요!")
             _:
@@ -1380,6 +1581,8 @@ func interact() -> void:
             show_dialogue( [ [city().boss.name, city().boss.intro], ["소현", city().rule], ["동훈", "알았어. 다음 행동을 보고 기술을 고를게."]], "battle_ready"); return
         show_dialogue( [ ["피에르", "한 수씩 겨뤄 볼까? 내가 힘을 모으면, 방어할 차례야!"], ["동훈", "소현아, 맡겨 둬. 설거지만큼은 자신 있어!"]], "battle_ready")
     else:
+        if shadow_here():
+            meet_shadow(false); return
         if city_index > 0:
             show_dialogue( [ ["동훈", city().memory], ["소현", "오늘의 약속도 사진으로 남기자."]], "photo"); return
         show_dialogue( [ ["동훈", "여기, 같이 오기로 했던 곳이지? 빵 냄새가 나니까 생각났어."], ["소현", "응. 다 기억하지 못해도 괜찮아. 오늘부터 다시 쌓으면 되니까."]], "photo")
@@ -1399,9 +1602,17 @@ func action(id: String) -> void:
     if id.begins_with("tab_"):
         sheet_tab = clampi(int(id.trim_prefix("tab_")), 0, 6); sfx("click"); return
     if id.begins_with("gearslot_"):
-        gear_slot = clampi(int(id.trim_prefix("gearslot_")), 0, 3); sfx("click"); return
+        gear_slot = clampi(int(id.trim_prefix("gearslot_")), 0, 3); gear_page = 0; sfx("click"); return
     if id.begins_with("job_"):
         pick_job(int(id.trim_prefix("job_"))); return
+    if id.begins_with("bitem_"):
+        choose_battle(id); return
+    if id.begins_with("petskill_"):
+        use_pet(int(id.trim_prefix("petskill_"))); return
+    if id.begins_with("salvage_"):
+        salvage(String(id.trim_prefix("salvage_"))); return
+    if id.begins_with("gearpage_"):
+        gear_page = maxi(0, gear_page + (1 if id == "gearpage_next" else -1)); sfx("click"); return
     if id.begins_with("jskill_"):
         job_skill_up(int(id.trim_prefix("jskill_"))); return
     if id.begins_with("skillview_"):
@@ -1490,6 +1701,10 @@ func action(id: String) -> void:
                 battle_menu = { "fight_menu": "fight", "bag_menu": "bag", "battle_back": "main"}[id]
                 if id == "fight_menu" and job > 0: battle_menu = "job"
         "strike", "guard", "heal", "team", "soak", "soap", "coffee": choose_battle(id)
+        "pet_menu":
+            if state == "battle" and battle_phase == "choose": battle_menu = "pets"
+        "final_battle":
+            if state == "ending" and route_pos() >= 9 and final_done < cycle: meet_shadow(true)
         "base_menu":
             if state == "battle" and battle_phase == "choose": battle_menu = "fight"
         "job_advance": advance_job()
@@ -1556,10 +1771,13 @@ func begin_battle() -> void:
     if (cycle >= 1 and (wild_grade >= 1 or not wild_battle or legend_battle)) or (tower_battle and tower_floor >= 10):
         battle_trait = ["hard", "lid", "rage", "regen"][(city_index + wild_index + tower_floor + (0 if wild_battle else 2)) % 4 if not wild_battle or tower_battle else randi_range(0, 3)]
     if tower_battle: battle_max_hp = int(60.0 * pow(1.14, tower_floor) * (1.6 if legend_battle else 1.0))
+    elif shadow_battle == 2: battle_max_hp = int(BOSS_HP * (pow(BOSS_GROW, 9) if cycle == 0 else pow(BOSS_GROW, 5.5 + cycle) * pow(1.13, 9)) * 1.6)
+    elif shadow_battle == 1: battle_max_hp = int(boss_hp * 1.25)
     elif legend_battle: battle_max_hp = int(boss_hp * 1.4)
     elif wild_battle: battle_max_hp = int((34 + wild_index * 4) * foe_hp_scale() * float(GRADES[wild_grade].hp))
     else: battle_max_hp = int(boss_hp)
     battle_bomb = 0; battle_vuln = 0; battle_charge = false; battle_reflect = false; ward_turns = 0; bomb_mul = 1.0; pops.clear(); shake = 0
+    battle_poison = 0; battle_spicy = 0; battle_luck = 0.0; split_done = false; pet_used = []; last_drop = ""; last_item = ""
     battle_hp = battle_max_hp; health = PARTY_HP; perfects = 0; battle_hits = 0
     battle_turn = 1; battle_energy = mini(3, pet_bonus("energy") + next_energy + gear_sum("en")); battle_berries = bag_count("candy"); battle_guard = false
     next_energy = 0
@@ -1584,6 +1802,11 @@ func enemy_heavy() -> bool:
 
 func enemy_attack_name() -> String:
     if battle_intent == "kick": return "냄비 엎기 · 폭발 절반 (버티면 막아요)"
+    if shadow_battle > 0:
+        return { "brace": "웅크리기 · 다음 피해 절반", "rest": "숨 고르기 · 반격 없음"}.get(battle_intent, ("망각의 파도" if enemy_heavy() else "잊게 만드는 손길"))
+    if extra_mob >= 0 and wild_battle and not tower_battle:
+        var own = String(area_mob().attack)
+        return { "brace": "방어 자세 · 다음 피해 절반", "rest": "숨 고르기 · 반격 없음", "sand": "모래 끼얹기 · 추가 피해 2", "chill": "찬바람 · 기력 1 감소", "gust": "돌풍 · 기력 1 감소", "mist": "안개 · 다음 설거지 약화"}.get(battle_intent, ("힘껏 " if enemy_heavy() else "") + own)
     if legend_battle:
         var move = String(LEGENDS[foe_city()].attack)
         return { "brace": "웅크리기 · 다음 피해 절반", "rest": "숨 고르기 · 반격 없음"}.get(battle_intent, ("분노의 " if enemy_heavy() else "") + move)
@@ -1601,6 +1824,7 @@ func enemy_damage() -> int:
     if battle_trait == "rage" and battle_hp * 2 < battle_max_hp: base = int(round(base * 1.4))
     if boss_phase == 1: base = int(round(base * 1.25))
     if legend_battle: base = int(round(base * 1.2))
+    if shadow_battle > 0: base = int(round(base * (1.15 if shadow_battle == 1 else 1.3)))
     elif wild_battle: base = int(round((10.0 + wild_index if enemy_heavy() else 5.0 + wild_index * 0.5) * grow * float(GRADES[wild_grade].atk)))
     return base
 
@@ -1609,8 +1833,14 @@ func choose_battle(choice: String) -> void:
     if state != "battle" or battle_phase != "choose": return
     if choice == "team" and (battle_energy < 3 or coins < 40): return
     if choice == "heal" and (battle_berries <= 0 or health >= PARTY_HP): return
+    if choice.begins_with("bitem_"):
+        var what = String(choice.trim_prefix("bitem_"))
+        if bag_count(what) <= 0 or what not in BATTLE_ITEMS or what == "candy": return
+        if what == "instantpot" and battle_bomb > 0: return
+        if what == "charm" and battle_luck > 0: return
+        battle_item = what; bag_add(what, -1); choice = "item"
     if choice == "ult" and (not ult_open(ult_index) or battle_energy < int(ult_info().energy)): return
-    if choice not in ["strike", "guard", "heal", "team", "soak", "soap", "coffee", "ult"]: return
+    if choice not in ["strike", "guard", "heal", "team", "soak", "soap", "coffee", "ult", "item"]: return
     if choice in ["soak", "soap", "coffee"] and not skill_open(choice): return
     if choice in ["soak", "soap"] and battle_energy < 1: return
     if choice == "soak" and battle_bomb > 0: return
@@ -1626,8 +1856,8 @@ func choose_battle(choice: String) -> void:
         battle_energy -= int(ult_info().energy)
         if ult_kind() == "ward":
             battle_guard = true; battle_reflect = true; ward_turns = int(ult_info().get("hits", 1))
-    battle_result = { "ult": "「" + (String(ult_info().name) if job > 0 else "") + "」!  " + job_name() + "의 직업 기술!", "strike": "설거지 연타! 수세미 " + str(strike_hits()) + "개, 갑니다!", "guard": "야근 버티기! 방어하면서 체력을 채워요.", "heal": "뽀뽀사탕! 동훈의 체력을 회복해요.", "team": "월급 박치기! 여행비 40원을 던졌다!", "soak": "냄비 불리기! 눌어붙은 냄비를 물에 담가 둔다…", "soap": "퐁퐁 뿌리기! 바닥이 미끌미끌해졌다!", "coffee": "커피 수혈! 눈이 번쩍 뜨인다!"}[choice]
-    battle_quote = { "ult": [["", "", ""], ["헹굼까지 한 번에!", "건조는 자연 건조야!", "그릇이 뽀득뽀득!"], ["뜸 들일 시간 없어!", "김 빠진다, 물러서!", "밥 다 됐다!"], ["저 먼저 들어가 보겠습니다!", "내일 하겠습니다!", "여섯 시 정각입니다!"]][job], "strike": ["이 정도 설거지는 매일 해!", "퐁퐁 묻었다!", "손목 나가겠네…"], "guard": ["야근보단 낫지.", "버티는 건 자신 있어.", "새벽 세 시도 버텼어."], "team": ["이번 달 월급이다!", "카드값… 아니, 받아라!", "돈으로 되는 일도 있어!"], "heal": ["당 충전 완료!", "하나만 더 먹을까…", "조금 살 것 같다."], "soak": ["불려야 잘 닦여.", "지금은 건드리지 마.", "기다림도 기술이야."], "soap": ["한 방울이면 충분해.", "거품 조심해!", "미끄러우니까 뛰지 마."], "coffee": ["샷 추가요.", "이제 좀 살겠다.", "오늘 세 잔째야…"]}[choice][randi_range(0, 2)]
+    battle_result = { "item": String(item_of(battle_item).name) + "!", "ult": "「" + (String(ult_info().name) if job > 0 else "") + "」!  " + job_name() + "의 직업 기술!", "strike": "설거지 연타! 수세미 " + str(strike_hits()) + "개, 갑니다!", "guard": "야근 버티기! 방어하면서 체력을 채워요.", "heal": "뽀뽀사탕! 동훈의 체력을 회복해요.", "team": "월급 박치기! 여행비 40원을 던졌다!", "soak": "냄비 불리기! 눌어붙은 냄비를 물에 담가 둔다…", "soap": "퐁퐁 뿌리기! 바닥이 미끌미끌해졌다!", "coffee": "커피 수혈! 눈이 번쩍 뜨인다!"}[choice]
+    battle_quote = { "item": ["이럴 때 쓰려고 챙겼지.", "가방 정리한 보람이 있네.", "아껴 둔 거야!"], "ult": [["", "", ""], ["헹굼까지 한 번에!", "건조는 자연 건조야!", "그릇이 뽀득뽀득!"], ["뜸 들일 시간 없어!", "김 빠진다, 물러서!", "밥 다 됐다!"], ["저 먼저 들어가 보겠습니다!", "내일 하겠습니다!", "여섯 시 정각입니다!"]][job], "strike": ["이 정도 설거지는 매일 해!", "퐁퐁 묻었다!", "손목 나가겠네…"], "guard": ["야근보단 낫지.", "버티는 건 자신 있어.", "새벽 세 시도 버텼어."], "team": ["이번 달 월급이다!", "카드값… 아니, 받아라!", "돈으로 되는 일도 있어!"], "heal": ["당 충전 완료!", "하나만 더 먹을까…", "조금 살 것 같다."], "soak": ["불려야 잘 닦여.", "지금은 건드리지 마.", "기다림도 기술이야."], "soap": ["한 방울이면 충분해.", "거품 조심해!", "미끄러우니까 뛰지 마."], "coffee": ["샷 추가요.", "이제 좀 살겠다.", "오늘 세 잔째야…"]}[choice][randi_range(0, 2)]
     hud.release_all(); chime(880 if choice in ["team", "ult"] else 540)
 
 func battle_impact(kind: String, target_side: String, amount: int, crit: bool = false) -> void:
@@ -1745,6 +1975,8 @@ func battle_tick(dt: float) -> void:
                 battle_charge = true; battle_energy = mini(3, battle_energy + 2)
                 battle_result = "기력 +2! 다음 공격이 " + str(snappedf(coffee_mul(), 0.1)) + "배로 들어가요."
                 battle_fx_note = "각성!"; battle_impact("buff", "party", 0)
+            elif battle_choice == "item":
+                use_battle_item()
             elif battle_choice == "heal":
                 var recovered = mini(candy_heal(), PARTY_HP - health); health += recovered
                 battle_result = "뽀뽀사탕으로 체력 " + str(recovered) + " 회복!"
@@ -1775,6 +2007,20 @@ func battle_tick(dt: float) -> void:
             if battle_reflect:
                 back = int((enemy_damage() * (1.0 + 0.5 * job_rank()) + guard_heal()) * (job_mul() if job == 3 else 1.0)); damage = 0
                 battle_hp = maxi(0, battle_hp - back); battle_hits += 1
+            var trick_note = ""
+            if damage > 0 and not battle_guard and not battle_reflect:
+                match foe_trick():
+                    "steal":
+                        if battle_berries > 0:
+                            battle_berries -= 1; bag_add("candy", -1); trick_note = " · 사탕을 훔쳐 갔어요!"
+                        elif coins >= 15:
+                            coins -= 15; trick_note = " · 여행비 15원을 훔쳐 갔어요!"
+                    "drain":
+                        battle_energy = maxi(0, battle_energy - 1); trick_note = " · 기력 −1"
+                    "poison":
+                        battle_poison = 3; trick_note = " · 중독! 3턴 동안 체력이 줄어요"
+                    "swift":
+                        damage = int(damage * 1.35); trick_note = " · 두 번 연속 공격!"
             health = maxi(0, health - damage)
             if battle_reflect:
                 battle_result = "반격을 흘려보내고 " + str(back) + " 피해로 되돌려줬어요."
@@ -1785,18 +2031,21 @@ func battle_tick(dt: float) -> void:
                 battle_result = ("냄비를 엎었다! 폭발이 절반으로 줄어요 · " if spilled else ("냄비를 지켜 냈어요! " if battle_bomb > 0 else "허공을 걷어찼어요 · ")) + str(damage) + " 피해"
                 battle_impact("guard" if battle_guard else "regional", "party", damage)
             else:
-                battle_result = ("잘 막았어요! " if battle_guard else "상대의 반격! ") + str(damage) + " 피해" + (" · 기력 −1" if not battle_guard and battle_intent in ["chill", "gust"] else " · 다음 설거지 −2" if battle_fog else "")
-                battle_impact("guard" if battle_guard else ("regional" if city_index > 0 else ( ["haunt", "peck", "wall"][wild_index] if wild_battle else "baguette")), "party", damage)
+                battle_result = ("잘 막았어요! " if battle_guard else "상대의 반격! ") + str(damage) + " 피해" + trick_note + (" · 기력 −1" if not battle_guard and battle_intent in ["chill", "gust"] else " · 다음 설거지 −2" if battle_fog else "")
+                battle_impact("guard" if battle_guard else ("regional" if city_index > 0 or extra_mob >= 0 else ( ["haunt", "peck", "wall"][wild_index] if wild_battle else "baguette")), "party", damage)
 
         if battle_phase_time < 0.6: return
         if health == 0:
-            state = "battle_lost"; battle_phase = "done"; sfx("lose"); return
+            state = "battle_lost"; battle_phase = "done"; sfx("lose"); win_streak = 0; return
         if battle_hp == 0:
             win_battle(); return
         ward_turns = maxi(0, ward_turns - 1); battle_reflect = ward_turns > 0
         battle_phase = "recover"; battle_phase_time = 0
     elif battle_phase == "recover":
         if battle_phase_time < 0.55: return
+        if foe_trick() == "split" and not split_done and battle_hp > 0 and battle_hp * 2 < battle_max_hp:
+            split_done = true; battle_hp = mini(battle_max_hp, battle_hp + int(battle_max_hp * 0.3))
+            pop("분열!", "enemy", "b6f09a", true); battle_result = wild_name() + "이(가) 둘로 갈라지며 체력을 되찾았어요!"
         battle_vuln = maxi(0, battle_vuln - 1)
         if battle_bomb > 0:
             battle_bomb -= 1
@@ -1818,8 +2067,45 @@ func battle_tick(dt: float) -> void:
         if battle_hp == 0: win_battle(); return
         next_turn()
 
+func use_battle_item() -> void:
+    var what = battle_item
+    match what:
+        "bread":
+            var bite = mini(8 + (route_pos() + cycle * 10) * 4 + level, PARTY_HP - health); health += bite
+            battle_result = "붕어빵! 체력 " + str(bite) + " 회복"; battle_impact("heal", "party", bite)
+        "spicy":
+            battle_spicy = 4
+            battle_result = "매운 떡볶이! 3턴 동안 주는 피해 +40%"; battle_fx_note = "화끈!"; battle_impact("buff", "party", 0)
+        "icewater":
+            battle_energy = mini(3, battle_energy + 2); battle_fog = false; battle_poison = 0
+            battle_result = "얼음물! 기력 +2 · 머리가 맑아졌어요"; battle_fx_note = "시원!"; battle_impact("buff", "party", 0)
+        "firework":
+            var boom = 25 + (route_pos() + cycle * 8) * 18
+            battle_hp = maxi(0, battle_hp - boom); battle_hits += 1
+            battle_result = "폭죽 발사! " + str(boom) + " 피해"; battle_impact("boom", "enemy", boom)
+        "charm":
+            battle_luck = 0.25
+            battle_result = "행운 부적! 이번 대결 치명타 +25%"; battle_fx_note = "행운!"; battle_impact("buff", "party", 0)
+        _:
+            battle_bomb = fuse_turns()
+            battle_result = "즉석 냄비! " + str(fuse_turns()) + "턴 뒤 " + str(soak_damage()) + " 피해로 터져요"; battle_fx_note = "불리는 중"; battle_impact("buff", "party", 0)
+
+# 황금 몬스터는 세 턴을 버티면 달아난다
+func golden_escape() -> void:
+    var name = wild_name()
+    restore_from_wild()
+    sfx("bad"); toast(name + "이(가) 반짝이며 달아났어요! 다음엔 더 빨리 쓰러뜨려요.")
+    save_progress()
+
 func next_turn() -> void:
+    if wild_grade == 4 and battle_turn >= 3:
+        golden_escape(); return
     battle_turn += 1; battle_guard = false; battle_phase = "choose"; battle_phase_time = 0; refresh_intent()
+    battle_spicy = maxi(0, battle_spicy - 1)
+    if foe_trick() == "shield" and battle_turn % 2 == 0: battle_enemy_guard = true
+    if battle_poison > 0:
+        var sting = maxi(1, int(PARTY_HP * 0.04)); battle_poison -= 1
+        health = maxi(1, health - sting); pop("중독 -" + str(sting), "party", "b48ae8")
     if battle_trait == "regen" and battle_hp > 0: battle_hp = mini(battle_max_hp, battle_hp + maxi(1, int(battle_max_hp * 0.04)))
     if job == 3 and job_rank() >= 3 and health < PARTY_HP: health = mini(PARTY_HP, health + maxi(1, int(ceil(PARTY_HP * 0.03))))
     battle_result = "상대가 힘을 모아요. 방어할까요?" if enemy_heavy() else "다음 행동을 골라주세요."
@@ -1831,19 +2117,48 @@ func boss_awaken() -> void:
     battle_max_hp = int(battle_max_hp * 0.5); battle_hp = battle_max_hp
     battle_vuln = 0; battle_enemy_guard = false
     battle_trait = ["rage", "regen", "hard", "lid"][city_index % 4]
-    battle_result = String(city().boss.name) + "이(가) 각성했다! 체력을 되찾고 더 사나워졌어요."
+    battle_result = (wild_name() if wild_battle else String(city().boss.name)) + "이(가) 각성했다! 체력을 되찾고 더 사나워졌어요."
     battle_phase = "morph"; battle_phase_time = 0
     sfx("roar"); shake = 16; flash = 0.9
     pop("각성!", "enemy", "ff7a5a", true)
 
 func win_battle() -> void:
-    if not wild_battle and cycle >= 1 and boss_phase == 0:
+    if ((not wild_battle and cycle >= 1) or shadow_battle == 2) and boss_phase == 0:
         boss_awaken(); return
     battle_reward = int((15 + route_pos() * 4 + perfects * 5) * float(GRADES[wild_grade].gold)) if wild_battle else (80 + route_pos() * 20 + perfects * 10)
     if legend_battle: battle_reward = 300 + route_pos() * 80
     battle_reward = int(battle_reward * cycle_mul(0.5))
     if tower_battle: battle_reward = 20 + tower_floor * 10
+    if shadow_battle == 1: battle_reward = 200 + route_pos() * 60
+    if shadow_battle == 2: battle_reward = 1500 + cycle * 500
+    if wild_battle and not tower_battle and shadow_battle == 0 and not legend_battle:
+        battle_reward = int(battle_reward * (1.0 + 0.1 * mini(win_streak, 10)))
     state = "battle_won"; battle_phase = "done"; sfx("win"); win_time = 0
+    roll_drops()
+
+# 승리 화면에 띄울 전리품: 장비 한 점(확률)과 소모품 하나(확률)
+func roll_drops() -> void:
+    var chance = 0.0
+    var floor_grade = 0
+    if shadow_battle == 2:
+        chance = 1.0; floor_grade = 3
+    elif shadow_battle == 1 or legend_battle or wild_grade == 4:
+        chance = 1.0; floor_grade = 2
+    elif tower_battle:
+        chance = 1.0 if tower_floor % 5 == 0 else 0.15; floor_grade = 1 if tower_floor % 5 == 0 else 0
+    elif not wild_battle:
+        chance = 1.0; floor_grade = 1
+    else:
+        chance = [0.12, 0.25, 0.45, 0.8, 1.0][clampi(wild_grade, 0, 4)]
+    if randf() < chance:
+        last_drop = make_loot(floor_grade)
+        if int(loot[last_drop].grade) >= 3:
+            flash = 1.0; shake = 10; sfx("job")
+        elif int(loot[last_drop].grade) == 2: sfx("egg")
+    if randf() < 0.3:
+        last_item = String(BATTLE_ITEMS[randi_range(1, BATTLE_ITEMS.size() - 1)])
+        if bag_count(last_item) < int(item_of(last_item).cap): bag_add(last_item, 1)
+        else: last_item = ""
 
 # 자동 전투가 고르는 행동: 위험하면 지키고, 기력이 차면 큰 기술, 아니면 불리고 두드린다
 func auto_pick() -> String:
@@ -1886,6 +2201,7 @@ func start_tower() -> void:
 
 func next_floor() -> void:
     meet_wild()
+    extra_mob = -1
     tower_battle = true
     legend_battle = tower_floor % 5 == 0
     wild_index = (tower_floor * 7) % 3
@@ -1960,6 +2276,10 @@ func meet_wild(legend: bool = false) -> void:
         if roll < (0.02 + city_index * 0.003) * boost: wild_grade = 3
         elif roll < (0.09 + city_index * 0.006) * boost: wild_grade = 2
         elif roll < (0.28 + city_index * 0.01) * boost: wild_grade = 1
+    extra_mob = -1; shadow_battle = 0
+    if not legend:
+        if area_index > 0 and randf() < 0.6: extra_mob = randi_range(0, 2)
+        if randf() < 0.03 + area_index * 0.015: wild_grade = 4
     rival = creatures[wild_index]; story_rival.visible = false
     hero.position = Vector3(-0.7, 0.12, -3.6); partner.position = Vector3(0.65, 0.12, -3.6)
     hero.rotation.y = PI; partner.rotation.y = PI
@@ -1967,24 +2287,33 @@ func meet_wild(legend: bool = false) -> void:
     state = "battle_ready"; joystick = Vector2.ZERO; hud.release_all()
     grass_steps = 0
     if legend: sfx("roar"); shake = 14
-    else: chime(880 + wild_grade * 180)
+    elif wild_grade == 4: sfx("egg"); flash = 0.6
+    else: chime(880 + mini(wild_grade, 3) * 180)
 
 func restore_from_wild() -> void:
     rival.visible = false; rival = story_rival
     hero.position = battle_return; partner.position = partner_return
-    perfects = story_perfects; wild_battle = false; wild_grade = 0; legend_battle = false; tower_battle = false; auto_battle = false
+    perfects = story_perfects; wild_battle = false; wild_grade = 0; legend_battle = false; tower_battle = false; extra_mob = -1; shadow_battle = 0; auto_battle = false
     encounter_grace = 5.0; grass_steps = 0; encounter_at = randf_range(9.0, 16.0)
     follow_path = battle_follow_path.duplicate(); follow_anchor = battle_follow_anchor
     state = "explore"; update_target(); set_camera(1, true)
 
 func finish_wild_battle() -> void:
+    if shadow_battle > 0:
+        finish_shadow(); return
     if legend_battle:
         finish_legend(); return
+    win_streak += 1
+    if wild_grade == 4: gain_stones(5)
     var reward = battle_reward
     var first = not wild_seen[wild_index]
-    wild_seen[wild_index] = true; wild_wins += 1
+    if extra_mob < 0: wild_seen[wild_index] = true
+    wild_wins += 1
     coins += reward; var name = wild_name()
-    var caught_index = wild_index
+    var caught_index = wild_index if extra_mob < 0 else 4 + extra_mob
+    if extra_mob >= 0:
+        var seen = tour.record().get("extra_seen", [false, false, false])
+        first = not bool(seen[extra_mob]); seen[extra_mob] = true; tour.record()["extra_seen"] = seen
     var caught_city = city_index
     var caught_grade = wild_grade
     var bonus_xp = int((8 + route_pos() * 3 + perfects * 2) * float(GRADES[wild_grade].xp))
@@ -1994,9 +2323,38 @@ func finish_wild_battle() -> void:
     gain_exp(bonus_xp)
     if caught_grade >= 2 and bag_count("candy") < 9: bag_add("candy", 1)
     gain_stones(caught_grade)
-    befriend(caught_city, caught_index, name, caught_grade)
+    befriend(caught_city, caught_index, name, mini(caught_grade, 3))
     tour.wild_victory()
     save_progress()
+
+# 망각의 그림자와 최종 결전
+func meet_shadow(final: bool) -> void:
+    meet_wild()
+    shadow_battle = 2 if final else 1; extra_mob = -1; wild_grade = 3; wild_index = 0
+    sfx("roar"); shake = 16
+    var lines = (FINAL_TALK.meet if final else SHADOW_TALK[SHADOW_AT.find(route_pos())].meet).duplicate()
+    show_dialogue(lines, "battle_ready")
+
+func finish_shadow() -> void:
+    var final = shadow_battle == 2
+    var prize = battle_reward
+    var which = SHADOW_AT.find(route_pos())
+    coins += prize
+    restore_from_wild()
+    if final:
+        final_done = cycle; skill_points += 5; gain_stones(15); gain_exp(600)
+        flash = 1.0; save_progress()
+        var lines = FINAL_TALK.win.duplicate()
+        lines.append(["소현", "여행비 " + str(prize) + "원, 기술 포인트 5개, 강화석 15개! 그리고… " + str(cycle + 2) + "회차 여행이 열렸어."])
+        show_dialogue(lines, "ending"); return
+    tour.record()["shadow"] = true; skill_points += 1; gain_stones(4); gain_exp(150 + route_pos() * 30)
+    save_progress()
+    var after = SHADOW_TALK[maxi(0, which)].win.duplicate()
+    after.append(["소현", "여행비 " + str(prize) + "원과 기술 포인트를 얻었어. 이제 사진 찍자!"])
+    show_dialogue(after, "explore")
+
+func shadow_here() -> bool:
+    return SHADOW_AT.has(route_pos()) and not bool(tour.record().get("shadow", false))
 
 # 전설을 이기면 반드시 친구가 된다
 func finish_legend() -> void:
@@ -2035,7 +2393,7 @@ func befriend(c: int, i: int, name: String, grade: int = 0) -> void:
     if pet_team.size() < team_max(): pet_team.append(pets.size() - 1)
     spawn_pet()
     chime(1318)
-    toast(name + "이(가) 따라오기로 했어요! " + String(PET_ROLE[i].desc))
+    toast(name + "이(가) 따라오기로 했어요! " + String(pet_role(pets[pets.size() - 1]).desc))
 
 # 구버전 버튼 호환: 첫 번째 자리를 다음 친구로
 func cycle_pet() -> void:
@@ -2079,7 +2437,7 @@ func move_pet(dt: float) -> void:
         pet_node.position = Vector3(pet_spots[0].x, world.surface_height(pet_spots[0]) + 0.015, pet_spots[0].z)
 
 func leave_battle() -> void:
-    tour.trial = -1
+    tour.trial = -1; win_streak = 0
     if wild_battle: restore_from_wild()
     else:
         state = "explore"; hero.position = battle_return; partner.position = partner_return; rival.position = tour.v(city().boss_at); reset_follow_path(); update_target()
@@ -2157,7 +2515,7 @@ func save_progress() -> void:
     if state in ["intro", "tutorial"]: return
     if not ui_ready or (state == "title" and not has_save): return
     tour.store_current()
-    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "job_tier": job_tier, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones}
+    var data = { "version": 3, "city": city_index, "cities": tour.records, "completed": tour.completed, "unlocked": tour.unlocked, "coins": coins, "meal": tour.meal, "time": game_time, "sound": sound_on, "effects": effects_on, "wide_view": overview, "tutorial_seen": tutorial_seen, "level": level, "xp": xp, "pets": pets, "pet_active": pet_active, "owned_gear": owned_gear, "equipped": equipped, "bag": bag, "next_energy": next_energy, "pet_team": pet_team, "skill_lv": skill_lv, "skill_points": skill_points, "job": job, "job_tier": job_tier, "cycle": cycle, "tower_best": tower_best, "gear_lv": gear_lv, "stones": stones, "loot": loot, "loot_seq": loot_seq, "final_done": final_done}
     var temp = SAVE_FILE + ".tmp"; var file = FileAccess.open(temp, FileAccess.WRITE)
     save_ok = file != null
     if not file: return
@@ -2205,6 +2563,16 @@ func load_progress() -> void:
     # 예전 세이브는 레벨로 정해지던 차수를 그대로 이어받는다
     job_tier = clampi(int(data.get("job_tier", (3 if level >= 30 else (2 if level >= 20 else 1)))), 1, 3) if job > 0 else 0
     cycle = clampi(int(data.get("cycle", 0)), 0, 99)
+    loot = {}; loot_seq = maxi(0, int(data.get("loot_seq", 0))); final_done = int(data.get("final_done", -1))
+    var saved_loot = data.get("loot", {})
+    if saved_loot is Dictionary:
+        for key in saved_loot:
+            var one = saved_loot[key]
+            if not one is Dictionary or not one.has("slot") or not one.has("grade"): continue
+            var fixed = {}
+            for field in one: fixed[String(field)] = one[field] if field in ["id", "name", "line", "icon"] else int(one[field])
+            fixed["id"] = String(key)
+            loot[String(key)] = fixed
     owned_gear = ["g0", "a0", "s0", "k0"]
     var saved_gear = data.get("owned_gear", [])
     if saved_gear is Array:
@@ -2228,7 +2596,7 @@ func load_progress() -> void:
         for entry in saved_pets:
             if not entry is Dictionary: continue
             var c = clampi(int(entry.get("c", 0)), 0, 9)
-            var i = clampi(int(entry.get("i", 0)), 0, 3)
+            var i = clampi(int(entry.get("i", 0)), 0, 6)
             pets.append({ "c": c, "i": i, "lv": clampi(int(entry.get("lv", 1)), 1, 5), "g": clampi(int(entry.get("g", 0)), 0, 3)})
     pet_active = clampi(int(data.get("pet_active", -1)), -1, pets.size() - 1)
     pet_team = []
@@ -2292,7 +2660,7 @@ func use_item(id: String) -> void:
             if p.is_empty(): toast("함께 걷는 친구들과 이미 최고로 친해요."); return
             p.lv = int(p.lv) + 1; bag_add(id, -1)
             toast(pet_name(p) + "와 더 친해졌어요!  친밀도 " + str(p.lv) + "/5")
-        "candy": toast("뽀뽀사탕은 대결 중에 가방에서 꺼내 써요.")
+        "candy", "bread", "spicy", "icewater", "firework", "charm", "instantpot": toast(String(item_of(id).name) + "은(는) 대결 중에 가방에서 꺼내 써요."); return
         _: toast("추억 사진을 찍을 때 자동으로 쓰여요.")
     chime(680); save_progress()
 
@@ -2313,6 +2681,7 @@ func restart() -> void:
     skill_lv = {}
     for entry in SKILLS: skill_lv[entry.id] = 1
     owned_gear = ["g0", "a0", "s0", "k0"]; equipped = ["g0", "a0", "s0", "k0"]; bag = { "candy": 3}; next_energy = 0; sheet_tab = 0
+    loot = {}; loot_seq = 0; final_done = -1; win_streak = 0; extra_mob = -1; shadow_battle = 0
     job = 0; job_tier = 0; skill_view = 0; cycle = 0; legend_battle = false; gear_slot = 0; tower_battle = false; tower_best = 0; pet_page = 0; gear_lv = {}; stones = 0
     rebuild_city(); photo_file = tour.current_photo_path(); PARTY_HP = party_max(); spawn_pet()
     rival = story_rival; wild_wins = 0; wild_seen = [false, false, false]

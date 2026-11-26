@@ -139,14 +139,16 @@ func mob_size(art: String) -> Vector2:
         bounds[art] = [lo, hi]
     return bounds[art][1] - bounds[art][0]
 
-func mob(c: Control, art: String, foot: Vector2, s: float, dim: float = 0.0) -> void:
+func mob(c: Control, art: String, foot: Vector2, s: float, dim: float = 0.0, tint: String = "") -> void:
     if not has_art(art): return
     var size = mob_size(art)
     var lo = bounds[art][0]
     var o = Vector2(roundf(foot.x - size.x * s / 2.0), roundf(foot.y - size.y * s))
     var grey = Color("6b7480")
     for part in parts_of(art):
-        c.draw_rect(Rect2(o + (Vector2(part[0], part[1]) - lo) * s, Vector2(part[2], part[3]) * s + Vector2(0.6, 0.6)), Color(part[4]).lerp(grey, dim) if dim > 0.0 else Color(part[4]))
+        var tone = Color(part[4])
+        if tint != "": tone = tone.lerp(Color(tint), 0.5)
+        c.draw_rect(Rect2(o + (Vector2(part[0], part[1]) - lo) * s, Vector2(part[2], part[3]) * s + Vector2(0.6, 0.6)), tone.lerp(grey, dim) if dim > 0.0 else tone)
 
 # 도시의 상징 건물 — 그림 데이터로 그린다
 func landmark(c: Control, d: Dictionary) -> void:
@@ -248,7 +250,7 @@ func postcard(c: Control, rect: Rect2, city: int, g) -> void:
         var friend = g.pets[int(g.pet_team[n])]
         var fa = g.pet_art(friend)
         var fs = ps * 12.0 / maxf(1.0, maxf(mob_size(fa).x, mob_size(fa).y))
-        mob(c, fa, Vector2(mid + (-22 - n * 13) * ps if n != 1 else mid + 22 * ps, feet), fs)
+        mob(c, fa, Vector2(mid + (-22 - n * 13) * ps if n != 1 else mid + 22 * ps, feet), fs, 0.0, g.pet_tint(friend))
 
 
 func shadow(c: Control, foot: Vector2, w: float, h: float = 6.0) -> void:
@@ -725,7 +727,7 @@ func pet_draw(c: Control, d: Dictionary, t: float) -> void:
     var s = u * 0.058
     shadow(c, foot, 18 * s, 4 * s)
     var bob = absf(sin(t * 5.0 + d.x * 2.0)) * 2.0
-    mob(c, d.art, foot - Vector2(0, bob), s)
+    mob(c, d.art, foot - Vector2(0, bob), s, 0.0, String(d.get("tint", "")))
     var grade = int(d.get("grade", 0))
     if grade > 0:
         var spark = Color(d.tone)
@@ -774,7 +776,7 @@ func draw(c: Control, g) -> void:
     for n in range(0 if riding else mini(g.pet_spots.size(), g.pet_team.size())):
         var friend = g.pets[int(g.pet_team[n])]
         var fg = int(friend.get("g", 0))
-        items.append({ "t": "pet", "x": g.pet_spots[n].x, "z": g.pet_spots[n].z, "art": g.pet_art(friend), "grade": fg, "tone": g.GRADES[fg].color})
+        items.append({ "t": "pet", "x": g.pet_spots[n].x, "z": g.pet_spots[n].z, "art": g.pet_art(friend), "tint": g.pet_tint(friend), "grade": fg, "tone": g.GRADES[fg].color})
     if g.story_rival and g.story_rival.visible:
         items.append({ "t": "rival", "x": g.story_rival.position.x, "z": g.story_rival.position.z})
     items.sort_custom(_by_depth)
