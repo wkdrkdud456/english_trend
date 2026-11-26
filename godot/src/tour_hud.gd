@@ -92,7 +92,7 @@ func draw(c) -> void:
             c.txt(d.shop, 24, 76, 26)
             c.icon_coin(Vector2(w - 96, 64), 10)
             c.txt(str(g.coins) + "원", w - 80, 71, 18, c.rose)
-            c.tabs(["shoptab_0", "shoptab_1", "shoptab_2"], ["도시락", "장비", "소모품"], g.shop_tab, 96, 0)
+            c.tabs(["shoptab_0", "shoptab_1", "shoptab_2", "shoptab_3"], ["도시락", "장비", "소모품", "뽑기"], g.shop_tab, 96, 0)
             var sy = 152
             if g.shop_tab == 0:
                 var cost = 12 + g.city_index * 2
@@ -121,6 +121,29 @@ func draw(c) -> void:
                     if have: c.txt("보유 중", w - 110, gy + 34, 13, Color("3f7a32"), 86, HORIZONTAL_ALIGNMENT_RIGHT)
                     else: c.button("buygear_" + id, str(int(entry.cost)) + "원", Rect2(w - 112, gy + 9, 88, 40), false, afford, 14)
                     gy += 64
+            elif g.shop_tab == 3:
+                # 뽑기 기계: 캡슐이 굴러 나온다
+                var mx = w / 2.0
+                var my = sy + 70
+                c.draw_circle(Vector2(mx, my), 66, Color("c9e6f2"))
+                for k in range(14):
+                    var cap = Vector2(mx - 48 + (k * 37) % 96, my - 34 + (k * 23) % 64 + sin(g.clock_time * 3.0 + k) * 2.0)
+                    c.draw_circle(cap, 9, [Color("c85068"), Color("e5b33c"), Color("3f8fd0"), Color("8a5fc0"), Color("5fae5a")][k % 5])
+                    c.draw_circle(cap - Vector2(3, 3), 3, Color(1, 1, 1, 0.7))
+                c.draw_rect(Rect2(mx - 80, my + 52, 160, 56), Color("c8323c"))
+                c.draw_rect(Rect2(mx - 80, my + 52, 160, 8), Color("e8548c"))
+                c.draw_rect(Rect2(mx - 20, my + 72, 40, 24), Color("343b41"))
+                c.draw_circle(Vector2(mx + 50, my + 84), 11, Color("ffd84a"))
+                var cost = g.gacha_cost()
+                c.button("gacha_1", "1회 " + str(cost) + "원", Rect2(16, sy + 186, (w - 44) / 2.0, 48), false, g.coins >= cost, 14)
+                c.button("gacha_10", "10회 " + str(cost * 9) + "원", Rect2(28 + (w - 44) / 2.0, sy + 186, (w - 44) / 2.0, 48), true, g.coins >= cost * 9, 14)
+                c.txt("장비 · 강화석 · 전투 물건 · 10회는 희귀 이상 1개 확정", 16, sy + 252, 11, c.muted, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
+                for k in range(g.gacha_results.size()):
+                    var res = g.gacha_results[k]
+                    var cell = Rect2(16 + (k % 2) * ((w - 40) / 2.0 + 8), sy + 264 + int(k / 2) * 40, (w - 40) / 2.0, 36)
+                    var tone = Color(String(res.c))
+                    c.plate(cell, tone, c.cream, 10, 2)
+                    c.txt(String(res.t), cell.position.x + 8, cell.position.y + 23, 11, tone.darkened(0.3) if int(res.g) >= 0 else c.ink, cell.size.x - 12)
             else:
                 c.txt("가방에 넣어 두고 필요할 때 써요.", 24, sy, 12, c.muted)
                 var zy = sy + 12 + g.ITEMS.size() * 52

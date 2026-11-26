@@ -288,6 +288,27 @@ func draw(c: Control) -> void:
             for i in range(3 + cf): block(c, boy.x - 22 + i * (44.0 / (2 + cf)), boy.y - 142 - fmod(g.clock_time * (22 + cf * 6) + i * 7, 16 + cf * 6), 5, 9 + cf * 2, ["c98b4b", "e8974d", "ff7a2a", "ffd84a"][cf])
     props.draw(c, boy, foe)
     if g.city_index > 0 or g.extra_mob >= 0 or g.shadow_battle > 0: regional.effects(c, boy, foe)
+    # 타이밍 표시: 줄어드는 고리가 안쪽 고리와 겹칠 때 톡!
+    if active and g.effects_on and not g.auto_battle:
+        if phase == "player":
+            var lands = g.land_times()
+            for k in range(lands.size()):
+                var cue_left = float(lands[k]) - g.battle_phase_time
+                if cue_left < -0.05 or cue_left > 0.45: continue
+                var mark = float(g.tap_marks.get(k, 0.0))
+                var cue_col = Color("ffd84a") if mark >= 1.5 else (Color("fff4cd") if mark > 1.0 else (Color(1, 1, 1, 0.35) if mark == 1.0 else Color(1, 1, 1, 0.9)))
+                var cue_mid = foe - Vector2(0, 55)
+                c.draw_arc(cue_mid, 22 + maxf(0.0, cue_left) * 170.0, 0, TAU, 32, cue_col, 4)
+                c.draw_arc(cue_mid, 22, 0, TAU, 24, Color(1, 1, 1, 0.5), 2)
+        elif phase in ["windup", "enemy"]:
+            var cue_left2 = g.enemy_land()
+            if cue_left2 > -0.05 and cue_left2 < 0.5:
+                var cue_col2 = Color("8fd9ff")
+                if g.guard_tap < 0: cue_col2 = Color(1, 1, 1, 0.35)
+                elif g.guard_tap > 0: cue_col2 = Color("ffd84a") if g.guard_tap < 0.5 else Color("fff4cd")
+                var cue_mid2 = boy - Vector2(0, 60)
+                c.draw_arc(cue_mid2, 24 + maxf(0.0, cue_left2) * 150.0, 0, TAU, 32, cue_col2, 4)
+                c.draw_arc(cue_mid2, 24, 0, TAU, 24, Color(1, 1, 1, 0.5), 2)
     # 직업 기술 컷인: 화면을 가로지르는 띠에 기술 이름이 미끄러져 들어온다
     if phase == "player" and g.battle_choice == "ult" and g.job > 0 and t < 0.6:
         var tint = Color(String(g.JOBS[g.job].color))

@@ -735,6 +735,25 @@ func pet_draw(c: Control, d: Dictionary, t: float) -> void:
             var spin = t * 2.2 + i * TAU / 3.0
             c.draw_rect(Rect2(foot.x + cos(spin) * 14 * s - 2, foot.y - 12 * s + sin(spin) * 7 * s - 2, 4, 4), spark)
 
+# 돌아다니는 몬스터: 등급이 높을수록 빛나고, 들키면 머리 위에 느낌표
+func roamer(c: Control, d: Dictionary, g) -> void:
+    var foot = at(d.x, d.z)
+    var s = u * 0.06 * (1.15 if int(d.grade) == 4 else 1.0)
+    var t = g.clock_time
+    shadow(c, foot, 20 * s, 5 * s)
+    var bob = absf(sin(t * (10.0 if bool(d.chase) else 4.0) + float(d.x) * 1.7)) * 2.5
+    var grade = int(d.grade)
+    if grade > 0:
+        var spark = Color(String(g.GRADES[grade].color))
+        for i in range(3 + grade):
+            var spin = t * 2.4 + i * TAU / float(3 + grade)
+            c.draw_rect(Rect2(foot.x + cos(spin) * 16 * s - 2, foot.y - 12 * s + sin(spin) * 7 * s - 2, 4, 4), spark)
+    mob(c, String(d.art), foot - Vector2(0, bob), s, 0.0, String(d.tint))
+    if bool(d.chase):
+        var top = foot.y - mob_size(String(d.art)).y * s - 14
+        block(c, foot.x - 7, top - 18, 14, 20, out); block(c, foot.x - 5, top - 16, 10, 16, Color("fff4cd"))
+        block(c, foot.x - 1, top - 14, 3, 8, Color("c8323c")); block(c, foot.x - 1, top - 4, 3, 3, Color("c8323c"))
+
 func marker(c: Control, g) -> void:
     var p = at(g.target.x, g.target.z)
     var rad = 20 * k * (0.86 + sin(g.clock_time * 3.4) * 0.14)
@@ -777,6 +796,9 @@ func draw(c: Control, g) -> void:
         var friend = g.pets[int(g.pet_team[n])]
         var fg = int(friend.get("g", 0))
         items.append({ "t": "pet", "x": g.pet_spots[n].x, "z": g.pet_spots[n].z, "art": g.pet_art(friend), "tint": g.pet_tint(friend), "grade": fg, "tone": g.GRADES[fg].color})
+    for r in g.roamers:
+        if on_screen(float(r.x), float(r.z), 2.0):
+            items.append({ "t": "roamer", "x": float(r.x), "z": float(r.z), "art": g.roamer_art(r), "tint": g.roamer_tint(r), "grade": int(r.grade), "chase": bool(r.chase)})
     if g.story_rival and g.story_rival.visible:
         items.append({ "t": "rival", "x": g.story_rival.position.x, "z": g.story_rival.position.z})
     items.sort_custom(_by_depth)
@@ -813,6 +835,7 @@ func draw(c: Control, g) -> void:
                 if not bool(g.tour.record().shard): shard(c, d, g.clock_time)
             "npc": person(c, at(d.x, d.z), true, { "O": out, "S": Color("f1c9a0"), "G": Color("f1c9a0"), "H": Color("b9b2a8"), "C": Color("b9b2a8"), "T": tone("a1", 0.3), "D": Color("5a5248"), "E": Color("3a3430")})
             "pet": pet_draw(c, d, g.clock_time)
+            "roamer": roamer(c, d, g)
             "girl": person(c, at(d.x, d.z), true, girl_look, hop)
             "boy": person(c, at(d.x, d.z), false, boy_look, hop2)
             "rival":
