@@ -189,10 +189,22 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
         if float(s.pos[i]) >= dist: s.done[i] = s.t - (float(s.pos[i]) - dist) / v
     return left == 0
 
+# 여덟 마리뿐이라 직접 끼워 넣기 정렬 (작은 값이 앞)
+func sort_index(keys: Array) -> Array:
+    var idx = [0, 1, 2, 3, 4, 5, 6, 7]
+    for i in range(1, 8):
+        var j = i
+        while j > 0 and float(keys[int(idx[j - 1])]) > float(keys[int(idx[j])]):
+            var tmp = idx[j - 1]; idx[j - 1] = idx[j]; idx[j] = tmp
+            j -= 1
+    return idx
+
 func finish_order(s: Dictionary) -> Array:
-    var order = range(8)
-    order.sort_custom(func(a, b): return float(s.done[a]) < float(s.done[b]))
-    return order
+    var keys = []
+    for k in range(8):
+        var done = float(s.done[k])
+        keys.append(done if done >= 0.0 else 100000.0 - float(s.pos[k]))
+    return sort_index(keys)
 
 # 배당: 미리 50번 돌려 본 우승 확률 70% + 최근 전적 인기 30%
 func ensure_odds(rc: Dictionary) -> void:
@@ -378,6 +390,7 @@ func start_race() -> void:
     var rng = RandomNumberGenerator.new(); rng.seed = int(rc.seed)
     live = { "s": sim_new(rc, rng), "rng": rng, "gate": 2.8, "leader": -1, "said": {}, "lines": ["출발 준비 중… 게이트에 들어갑니다."], "end": -1.0, "say_t": 0.0, "dust": []}
     speedup = 1.0; screen = "race"; game.sfx("click")
+    game.crumb("경주 시작 " + str(ri + 1) + "R " + str(rc.dist) + "m"); game.write_crumb(false)
 
 func say(text: String) -> void:
     live.lines.append(text)
@@ -399,6 +412,7 @@ func tick(dt: float) -> void:
         live.gate = before - dt
         if int(ceil(before)) != int(ceil(float(live.gate))) and float(live.gate) > 0.0: game.sfx("click")
         if float(live.gate) <= 0.0:
+            game.crumb("게이트 열림"); game.write_crumb(false)
             say("출발했습니다! " + str(rc.dist) + "m, 여덟 마리가 일제히 뛰쳐나갑니다!"); game.sfx("roar", 1.4)
         return
     var s = live.s
@@ -418,14 +432,11 @@ func tick(dt: float) -> void:
 
 func lead_order(s: Dictionary) -> Array:
     # 들어온 말은 들어온 순서대로, 달리는 말은 앞선 순서대로
-    var keyed = []
+    var keys = []
     for k in range(8):
         var done = float(s.done[k])
-        keyed.append([done - 100000.0 if done >= 0.0 else - float(s.pos[k]), k])
-    keyed.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
-    var order = []
-    for one in keyed: order.append(int(one[1]))
-    return order
+        keys.append(done - 100000.0 if done >= 0.0 else - float(s.pos[k]))
+    return sort_index(keys)
 
 func commentary(rc: Dictionary, s: Dictionary, dt: float) -> void:
     live.say_t = float(live.say_t) - dt
@@ -436,6 +447,7 @@ func commentary(rc: Dictionary, s: Dictionary, dt: float) -> void:
     for mark in [700, 400, 200]:
         if left < mark and not live.said.has(mark) and float(rc.dist) > mark + 100:
             live.said[mark] = true
+            game.crumb("남은 " + str(mark) + "m"); game.write_crumb(false)
             match mark:
                 700: say("3·4코너를 돕니다. 바깥쪽 말들은 멀리 돌아야 해요. 선두는 " + name + "!")
                 400: say("결승 직선 400m! " + name + " 앞장, 이제부터 진짜 승부입니다!")
@@ -471,6 +483,7 @@ func margin_text(gap_m: float) -> String:
     return "대차"
 
 func finish_race() -> void:
+    game.crumb("결승 정산 시작"); game.write_crumb(false)
     var rc = race()
     var s = live.s
     var order = finish_order(s)
@@ -506,6 +519,7 @@ func finish_race() -> void:
     best_hit = maxf(best_hit, top_hit)
     settle = { "rows": rows, "paid": paid, "spent": spent}
     slip = []; live = {}; screen = "result"
+    game.crumb("정산 끝"); game.write_crumb(false)
     game.set_crowd(-80.0); game.sfx("cheer")
     if paid > spent and top_hit >= 20.0:
         game.flash = 1.0; game.shake = 12; game.sfx("job")

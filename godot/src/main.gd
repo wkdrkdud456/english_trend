@@ -3089,12 +3089,12 @@ func set_crowd(db: float) -> void:
     if db <= -60.0 or not sound_on:
         if crowd.playing: crowd.stop()
         return
-    if not crowd.playing:
+    if crowd.stream == null:
         var stream = load_wav("fx_crowd")
         if stream == null: return
-        stream.loop_mode = AudioStreamWAV.LOOP_FORWARD; stream.loop_begin = 0; stream.loop_end = int(stream.data.size() / 2)
-        crowd.stream = stream; crowd.play()
-    crowd.volume_db = lerpf(crowd.volume_db, db, 0.15)
+        crowd.stream = stream
+    crowd.volume_db = clampf(lerpf(crowd.volume_db, db, 0.15), -60.0, 0.0)
+    if not crowd.playing: crowd.play()
 
 func pop(text: String, side: String, color: String, big: bool = false) -> void:
     pops.append({ "t": text, "side": side, "age": 0.0, "big": big, "color": color, "dx": randf_range(-14, 14)})
