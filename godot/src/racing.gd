@@ -147,10 +147,11 @@ func jockey_at(slot: int) -> Dictionary:
 
 # ── 경주 모형 (파이썬 시뮬레이터로 맞춘 값: 1번 인기 약 36% 우승) ──
 func sim_new(rc: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-    var s = { "pos": [], "st": [], "noise": [], "nt": [], "form": [], "done": [], "t": 0.0, "v": [], "phase": []}
+    var s = { "pos": [], "st": [], "noise": [], "nt": [], "form": [], "done": [], "t": 0.0, "v": [], "phase": [], "lane": [], "blk": [], "ev": []}
     for k in range(8):
         var h = horses[int(rc.field[k])]
-        s.pos.append(0.0); s.noise.append(0.0); s.nt.append(0.0); s.done.append(-1.0); s.v.append(0.0); s.phase.append(randf() * 4.0)
+        s.pos.append(0.0); s.noise.append(0.0); s.nt.append(0.0); s.done.append(-1.0); s.v.append(16.0); s.phase.append(randf() * 4.0)
+        s.lane.append(float(k)); s.blk.append(0.0)
         s.form.append(rng.randfn(0.0, 0.2))
         s.st.append((0.55 + float(h.sta) / 220.0) * pow(1400.0 / float(rc.dist), 0.6) * 40.0)
     return s
@@ -160,6 +161,10 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
     var dist = float(rc.dist)
     var wet = float(rc.track)
     var left = 0
+    # 한 걸음 전 모습을 기준으로 막힘·칸 이동을 따진다
+    var pp = s.pos.duplicate()
+    var pl = s.lane.duplicate()
+    var pv = s.v.duplicate()
     for i in range(8):
         if float(s.done[i]) >= 0.0: continue
         left += 1
@@ -173,7 +178,7 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
         var v = 16.4 + (float(h.spd) - 75.0) * 0.005 + float(s.form[i])
         if prog < 0.35: v += [1.0, 0.5, 0.0, -0.5][int(h.style)] * a * 0.18
         elif prog > 0.65: v += [-0.4, 0.15, 0.5, 1.0][int(h.style)] * a * 0.18 * (0.4 if corner else (1.3 if home else 1.0))
-        if corner: v -= float(i) * 0.02
+        if corner: v -= float(pl[i]) * 0.03     # 바깥 칸일수록 코너를 멀리 돈다
         v -= absf(dist - float(h.best)) / 1000.0 * 0.3
         v += wet / 3.0 * float(h.wet) / 10.0 * 0.3
         v += float(rc.cond[i]) * 0.03 + (skill - 70.0) * 0.002 - float(rc.wt[i]) * 0.004
@@ -183,6 +188,37 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
         v += float(s.noise[i])
         if float(s.st[i]) <= 0.0: v -= 0.4 * (1.25 - float(h.guts) / 100.0)
         elif dist - float(s.pos[i]) < 250.0: v += (float(h.guts) - 70.0) * 0.0015
+        # 바로 앞 같은 칸에 말이 있으면 막힌다
+        var ahead = -1
+        var gap = 99.0
+        for j in range(8):
+            if j == i or float(s.done[j]) >= 0.0: continue
+            var dp = float(pp[j]) - float(pp[i])
+            if dp > 0.0 and dp < 2.6 and absf(float(pl[j]) - float(pl[i])) < 0.8 and dp < gap:
+                gap = dp; ahead = j
+        var was = float(s.blk[i])
+        if ahead >= 0 and v > float(pv[ahead]):
+            v = float(pv[ahead]) + 0.05; s.blk[i] = was + dt
+            if was < 0.6 and float(s.blk[i]) >= 0.6 and prog > 0.15: s.ev.append(["block", i, ahead])
+        else: s.blk[i] = maxf(0.0, was - dt)
+        # 가고 싶은 칸: 출발 직후엔 일직선, 그다음엔 각자 인코스로
+        var want = float(pl[i])
+        if prog >= 0.06:
+            want = [0.0, 0.6, 1.4, 2.4][int(h.style)]
+            if home and int(h.style) >= 2: want = float(pl[i]) + 1.5
+            if float(s.blk[i]) > 0.4: want = float(pl[i]) + 1.2
+        want = clampf(want, 0.0, 7.5)
+        var move = clampf(want - float(pl[i]), -0.9 * dt, 0.9 * dt)
+        if move != 0.0:
+            var nl = float(pl[i]) + move
+            var free = true
+            for j in range(8):
+                if j == i or float(s.done[j]) >= 0.0: continue
+                if absf(float(pp[j]) - float(pp[i])) < 2.4 and absf(float(pl[j]) - nl) < 0.75 and (float(pl[j]) - float(pl[i])) * move > 0.0:
+                    free = false; break
+            if free:
+                s.lane[i] = nl
+                if move > 0.0 and home and was > 0.0 and int(nl) != int(float(pl[i])): s.ev.append(["out", i, 0])
         s.st[i] = float(s.st[i]) - dt * (maxf(0.0, v - 15.8) * 0.8 + 0.45)
         s.v[i] = v
         s.pos[i] = float(s.pos[i]) + v * dt
@@ -318,6 +354,8 @@ func press(id: String) -> void:
         if bet_pick.has(slot): bet_pick.erase(slot)
         elif bet_pick.size() < int(BETS[bet_type].n): bet_pick.append(slot)
         game.sfx("click"); return
+    if arg.begins_with("deposit_"):
+        deposit(int(arg.trim_prefix("deposit_"))); return
     if arg.begins_with("amount_"):
         bet_amount = int(arg.trim_prefix("amount_")); game.sfx("click"); return
     match arg:
@@ -350,6 +388,15 @@ func press(id: String) -> void:
             flash_note("번 돈 " + fmt(travel * 10) + "원을 여행비 " + fmt(travel) + "원으로 바꿨어요! (10 : 1)")
         "angry": get_angry()
 
+# 본편 여행비를 경마장 지갑에 넣는다 (바꿀 때와 같은 10 : 1)
+func deposit(travel: int) -> void:
+    if travel <= 0: return
+    if game.coins < travel:
+        game.sfx("bad"); flash_note("여행비가 모자라요. 본편에서 더 모아 오세요! (지금 " + fmt(game.coins) + "원)"); return
+    game.coins -= travel; money += travel * 10
+    game.sfx("chest"); game.save_progress(); save_data()
+    flash_note("여행비 " + fmt(travel) + "원을 넣었어요. 경마장 지갑 +" + fmt(travel * 10) + "원!")
+
 func get_angry() -> void:
     anger_t = 1.0; anger_n += 1
     anger_line = String(ANGRY[randi_range(0, ANGRY.size() - 1)])
@@ -363,7 +410,7 @@ func flash_note(text: String) -> void:
 func buy() -> void:
     if bet_pick.size() != int(BETS[bet_type].n): flash_note("말을 " + str(int(BETS[bet_type].n)) + "마리 골라 주세요."); return
     if money < bet_amount:
-        game.sfx("bad"); flash_note("지갑에 돈이 모자라요."); return
+        game.sfx("bad"); flash_note("지갑에 돈이 모자라요. 아래 버튼으로 여행비를 넣을 수 있어요."); return
     var o = odds(race(), bet_type, bet_pick)
     money -= bet_amount; bought += 1
     slip.append({ "type": bet_type, "picks": bet_pick.duplicate(), "amount": bet_amount, "odds": o})
@@ -444,6 +491,18 @@ func commentary(rc: Dictionary, s: Dictionary, dt: float) -> void:
     var top = int(order[0])
     var left = float(rc.dist) - float(s.pos[top])
     var name = str(top + 1) + "번 " + String(horse_at(top).name)
+    if not live.said.has("rail") and float(s.pos[top]) > float(rc.dist) * 0.09:
+        live.said["rail"] = true
+        say("출발 직후엔 일직선! 이제 다들 안쪽 난간, 인코스로 파고듭니다. 바깥 게이트는 불리해요!"); return
+    while not s.ev.is_empty():
+        var e = s.ev.pop_front()
+        if float(live.say_t) > 0.6: continue
+        var who = str(int(e[1]) + 1) + "번 " + String(horse_at(int(e[1])).name)
+        if String(e[0]) == "block":
+            say(who + ", 앞이 막혔습니다! " + str(int(e[2]) + 1) + "번 뒤에 갇혔어요!")
+        else:
+            say(who + ", 바깥으로 빠져나와 추격합니다!"); swell = 0.6
+        live.say_t = 2.0; return
     for mark in [700, 400, 200]:
         if left < mark and not live.said.has(mark) and float(rc.dist) > mark + 100:
             live.said[mark] = true
@@ -642,10 +701,14 @@ func draw_lobby(c) -> void:
     for rc2 in races:
         if not bool(rc2.done): all_done = false
     c.txt("최고 잔고 " + fmt(best_money) + "원 · 최고 적중 " + str(snappedf(best_hit, 0.1)) + "배 · 적중 " + str(hits) + " / " + str(bought), 20, by + 14, 11, Color("cfe0d2"), w - 40, HORIZONTAL_ALIGNMENT_CENTER)
-    if all_done: c.button("rc_newday", "하루 마감 · 다음 날로", Rect2(20, by + 26, w - 40, 50), true, true, 15)
-    elif money < 100: c.button("rc_allowance", "소현이한테 용돈 받기 (+5,000원)", Rect2(20, by + 26, w - 40, 50), true, allowance_day != day, 14)
     var profit = money - BANK
     var bw0 = (w - 52) / 2.0
+    if all_done: c.button("rc_newday", "하루 마감 · 다음 날로", Rect2(20, by + 26, w - 40, 50), true, true, 15)
+    else:
+        c.button("rc_deposit_100", "여행비 100 넣기 (+1,000원)", Rect2(20, by + 26, bw0, 50), money < 1000, game.coins >= 100, 11)
+        if money < 100 and allowance_day != day: c.button("rc_allowance", "소현이 용돈 (+5,000원)", Rect2(32 + bw0, by + 26, bw0, 50), true, true, 12)
+        else: c.button("rc_deposit_1000", "여행비 1,000 넣기 (+10,000원)", Rect2(32 + bw0, by + 26, bw0, 50), false, game.coins >= 1000, 11)
+        c.txt("내 여행비 " + fmt(game.coins) + "원 · 여행비 1원 = 경마장 10원", 20, by + 92, 11, Color("cfe0d2"), w - 40, HORIZONTAL_ALIGNMENT_CENTER)
     c.button("rc_exchange", "여행비로 바꾸기" + (" (" + fmt(maxi(0, int(profit / 10))) + "원)" if profit >= 100 else ""), Rect2(20, c.h - 70, bw0, 50), profit >= 100, profit >= 100, 12)
     c.button("rc_exit", "경마장 나가기", Rect2(32 + bw0, c.h - 70, bw0, 50), false, true, 14)
 
@@ -780,7 +843,10 @@ func draw_bet(c) -> void:
     for k in range(AMOUNTS.size()):
         c.button("rc_amount_" + str(AMOUNTS[k]), fmt(AMOUNTS[k]), Rect2(12 + k * (aw + 6), y, aw, 38), bet_amount == AMOUNTS[k], money >= AMOUNTS[k], 12)
     y += 46
-    c.button("rc_buy", fmt(bet_amount) + "원 마권 구입", Rect2(12, y, w - 24, 50), true, ready and money >= bet_amount, 16)
+    if money < bet_amount:
+        var need = int(ceil((bet_amount - money) / 10.0 / 100.0)) * 100
+        c.button("rc_deposit_" + str(need), "돈이 모자라요 · 여행비 " + fmt(need) + " 넣기 (+" + fmt(need * 10) + "원)", Rect2(12, y, w - 24, 50), true, game.coins >= need, 13)
+    else: c.button("rc_buy", fmt(bet_amount) + "원 마권 구입", Rect2(12, y, w - 24, 50), true, ready, 16)
     y += 58
     for k in range(mini(slip.size(), int((c.h - 150 - y) / 22.0))):
         var b = slip[k]
@@ -849,11 +915,13 @@ func draw_race(c) -> void:
     if float(live.gate) > 0.0:
         var gx = (0.0 - cam) * ppm
         for k in range(9): c.draw_rect(Rect2(gx, top + 4 + k * lane_h, 18, 8), Color("9aa4ad"))
-    # 말 (뒤쪽 칸부터)
-    for k in range(8):
+    # 말: 안쪽 칸(화면 위)부터 그려야 겹칠 때 바깥 말이 앞에 보인다
+    var lane_keys = []
+    for k in range(8): lane_keys.append(float(s.lane[k]))
+    for k in sort_index(lane_keys):
         var h = horse_at(k)
         var x = (float(s.pos[k]) - cam) * ppm
-        var foot = Vector2(x, top + 34 + k * lane_h + bow(x, w))
+        var foot = Vector2(x, top + 34 + float(s.lane[k]) * lane_h + bow(x, w))
         if x < -60 or x > w + 60: continue
         var running = float(live.gate) <= 0.0 and float(s.done[k]) < 0.0
         var frame = int(float(s.phase[k])) if running or float(live.end) >= 0.0 else 1
