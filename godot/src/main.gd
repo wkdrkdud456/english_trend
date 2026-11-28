@@ -331,6 +331,7 @@ var cycle = 0                   # 몇 회차인가 (0 = 첫 여행)
 # ── 소리 ───────────────────────────────────────────────
 var bgm: AudioStreamPlayer
 var bgm_name = ""
+var crowd: AudioStreamPlayer
 var sfx_pool: Array = []
 var sfx_next = 0
 var sounds: Dictionary = {}
@@ -576,6 +577,7 @@ func _ready() -> void:
     hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     audio = AudioStreamPlayer.new(); audio.volume_db = -15; add_child(audio)
     bgm = AudioStreamPlayer.new(); bgm.volume_db = -13; add_child(bgm)
+    crowd = AudioStreamPlayer.new(); crowd.volume_db = -80; add_child(crowd)
     for i in range(4):
         var voice = AudioStreamPlayer.new(); voice.volume_db = -7; add_child(voice); sfx_pool.append(voice)
     load_progress()
@@ -3033,7 +3035,7 @@ func sfx(name: String, pitch: float = 1.0) -> void:
 func want_bgm() -> String:
     if not sound_on or not ui_ready: return ""
     var now = previous_state if state == "pause" else state
-    if now == "racing": return "battle" if racing.screen == "race" else "city7"
+    if now == "racing": return "race" if racing.screen == "race" else "city7"
     if now in ["battle", "battle_ready"]: return "boss" if legend_battle or not wild_battle else "battle"
     if now in ["battle_won", "battle_lost"]: return ""
     return "city" + str(city_index)
@@ -3047,6 +3049,19 @@ func update_bgm() -> void:
     if stream == null: return
     stream.loop_mode = AudioStreamWAV.LOOP_FORWARD; stream.loop_begin = 0; stream.loop_end = int(stream.data.size() / 2)
     bgm.stream = stream; bgm.pitch_scale = 1.07 if legend_battle else 1.0; bgm.play()
+
+# 경마장 관중 소리: 크기만 바꾸며 계속 돈다
+func set_crowd(db: float) -> void:
+    if crowd == null: return
+    if db <= -60.0 or not sound_on:
+        if crowd.playing: crowd.stop()
+        return
+    if not crowd.playing:
+        var stream = load_wav("fx_crowd")
+        if stream == null: return
+        stream.loop_mode = AudioStreamWAV.LOOP_FORWARD; stream.loop_begin = 0; stream.loop_end = int(stream.data.size() / 2)
+        crowd.stream = stream; crowd.play()
+    crowd.volume_db = lerpf(crowd.volume_db, db, 0.15)
 
 func pop(text: String, side: String, color: String, big: bool = false) -> void:
     pops.append({ "t": text, "side": side, "age": 0.0, "big": big, "color": color, "dx": randf_range(-14, 14)})

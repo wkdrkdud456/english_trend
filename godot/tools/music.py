@@ -3,7 +3,7 @@
   python3.13 tools/music.py      →  godot/audio/*.wav  (16kHz · 16bit · mono)
 numpy 가 필요하다.
 """
-import os, struct, math
+import os, struct, math, sys
 import numpy as np
 
 SR = 16000
@@ -283,7 +283,7 @@ def fx():
 
 SONGS = { 'city0': paris, 'city1': kyoto, 'city2': cairo, 'city3': rome, 'city4': newyork, 'city5': iceland, 'city6': santorini, 'city7': london, 'city8': sydney, 'city9': seoul, 'battle': battle, 'boss': boss}
 
-if __name__ == '__main__':
+if __name__ == '__main__' and '--race' not in sys.argv:
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'audio')
     os.makedirs(out_dir, exist_ok=True)
     size = 0
@@ -294,3 +294,94 @@ if __name__ == '__main__':
         path = os.path.join(out_dir, 'fx_' + name + '.wav')
         save(path, v / max(1e-6, np.max(np.abs(v))) * 0.8); size += os.path.getsize(path)
     print('합계 %.1f MB' % (size / 1e6))
+
+
+# ══ 경마장 ══════════════════════════════════════════════════
+def biquad_bp(x, f, q):
+    """대역 통과 필터 (모음의 포먼트를 흉내 낸다)"""
+    w0 = 2 * math.pi * f / SR; alpha = math.sin(w0) / (2 * q)
+    b0, b1, b2 = alpha, 0.0, -alpha
+    a0, a1, a2 = 1 + alpha, -2 * math.cos(w0), 1 - alpha
+    y = np.zeros_like(x); x1 = x2 = y1 = y2 = 0.0
+    for i in range(len(x)):
+        v = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0
+        x2, x1 = x1, x[i]; y2, y1 = y1, v; y[i] = v
+    return y
+
+
+def race_song():
+    """경주 음악: 빠르고 쉼 없는 베이스, 떨리는 현, 계속 올라가는 선율"""
+    s = Song(168, 32)
+    roots = ['D2', 'D2', 'Bb1', 'Bb1', 'C2', 'C2', 'A1', 'A1']
+    for bar, r in enumerate(roots):
+        base = midi(r)
+        for e in range(8):
+            jump = [0, 12, 0, 7, 0, 12, 3, 7][e]
+            s.add(tone('bass', hz(base + jump), s.spb * 0.4), bar * 4 + e * 0.5, 0.55)
+    chords = [['D3', 'F3', 'A3'], ['D3', 'F3', 'A3'], ['Bb2', 'D3', 'F3'], ['Bb2', 'D3', 'F3'], ['C3', 'E3', 'G3'], ['C3', 'E3', 'G3'], ['A2', 'C#3', 'E3'], ['A2', 'C#3', 'E3']]
+    for bar, ch in enumerate(chords):
+        for name in ch:
+            w = tone('pad', hz(midi(name) + 12), s.spb * 4)
+            t = np.arange(len(w)) / SR
+            s.add(w * (0.55 + 0.45 * np.sin(2 * np.pi * 13 * t)), bar * 4, 0.2)
+    s.drums('k.hhs.hhk.hks.hs', 0.25, 0.5, 4)
+    s.line('square', 'D5:0.5 F5:0.5 A5:0.5 D6:0.5 C6:0.5 A5:0.5 F5:0.5 A5:0.5 | Bb4:0.5 D5:0.5 F5:0.5 Bb5:0.5 A5:0.5 F5:0.5 D5:0.5 F5:0.5 | C5:0.5 E5:0.5 G5:0.5 C6:0.5 Bb5:0.5 G5:0.5 E5:0.5 G5:0.5 | A4:0.5 C#5:0.5 E5:0.5 A5:0.5 C#6:0.5 E6:0.5 A6:1', 0.34)
+    s.line('square', 'D5:2 E5:2 | F5:2 G5:2 | G5:2 A5:2 | A5:2 C#6:2', 0.22, 0, 1)
+    return s
+
+
+def crowd_loop(seconds=8.0, rng=None):
+    """관중석의 웅성임: 여러 목소리를 흉내 낸 띠 잡음이 출렁인다 (이음매 없이 반복)"""
+    rng = rng or np.random.default_rng(11)
+    n = int(seconds * SR); t = np.arange(n) / SR
+    out = np.zeros(n)
+    for k in range(14):
+        voice = biquad_bp(rng.uniform(-1, 1, n), rng.uniform(400, 1400), 2.5)
+        rate = rng.integers(1, 4) / seconds
+        out += voice * (0.6 + 0.4 * np.sin(2 * np.pi * rate * t + rng.uniform(0, 6.28)))
+    out += biquad_bp(rng.uniform(-1, 1, n), 2600, 1.2) * 0.4
+    return out
+
+
+def cheer(rng=None):
+    """결승선 함성: 커졌다가 길게 잦아든다"""
+    rng = rng or np.random.default_rng(12)
+    n = int(2.6 * SR); t = np.arange(n) / SR
+    roar = crowd_loop(2.6, rng) * 1.6
+    for k in range(8):
+        f = rng.uniform(500, 1100)
+        voice = biquad_bp(np.sign(np.sin(2 * np.pi * (f * 0.25) * t * (1 + 0.04 * np.sin(2 * np.pi * 5 * t)))) * 0.5, f, 4)
+        roar += voice * 0.6
+    env = np.clip(t * 6, 0, 1) * np.exp(-np.maximum(0, t - 0.6) * 1.2)
+    return roar * env
+
+
+def shout(f0, vowel, rng=None):
+    """동훈의 고함: 거친 톱니파 목소리 + 모음 포먼트 + 숨소리, 끝을 올렸다가 내린다"""
+    rng = rng or np.random.default_rng(int(f0))
+    n = int(0.85 * SR); t = np.arange(n) / SR
+    glide = f0 * (1 + 0.35 * np.clip(t * 5, 0, 1) - 0.25 * np.clip((t - 0.45) * 3, 0, 1)) * (1 + 0.03 * np.sin(2 * np.pi * 7 * t))
+    phase = np.cumsum(glide) / SR
+    src = 2 * (phase % 1.0) - 1 + rng.uniform(-0.35, 0.35, n)
+    f1, f2, f3 = vowel
+    v = biquad_bp(src, f1, 5) * 1.0 + biquad_bp(src, f2, 6) * 0.7 + biquad_bp(src, f3, 8) * 0.35
+    v = np.tanh(v * 6)
+    env = np.clip(t * 30, 0, 1) * np.clip((0.85 - t) * 6, 0, 1)
+    return v * env
+
+
+def race_audio(out_dir):
+    s = race_song(); s.render(os.path.join(out_dir, 'race.wav'))
+    print('race    %5.1f초' % (s.n / SR))
+    loop = crowd_loop()
+    fade = int(0.5 * SR)
+    loop[:fade] = loop[:fade] * np.linspace(0, 1, fade) + loop[-fade:] * np.linspace(1, 0, fade)
+    loop = loop[:-fade]
+    save(os.path.join(out_dir, 'fx_crowd.wav'), loop / np.max(np.abs(loop)) * 0.7)
+    c = cheer(); save(os.path.join(out_dir, 'fx_cheer.wav'), c / np.max(np.abs(c)) * 0.8)
+    for k, (f0, vowel) in enumerate([(210, (800, 1200, 2500)), (250, (700, 1100, 2400)), (190, (500, 900, 2400))]):
+        v = shout(f0, vowel); save(os.path.join(out_dir, 'fx_shout%d.wav' % k), v / np.max(np.abs(v)) * 0.85)
+
+
+if __name__ == '__main__' and '--race' in sys.argv:
+    race_audio(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'audio'))

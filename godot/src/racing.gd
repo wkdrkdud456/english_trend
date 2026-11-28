@@ -35,6 +35,11 @@ const BETS = [
     { "id": "tri", "name": "삼쌍승", "n": 3, "order": true, "take": 0.27, "line": "1착 → 2착 → 3착 순서대로"},
 ]
 const AMOUNTS = [100, 500, 1000, 5000, 10000]
+# 주로: 한 바퀴 1400m = 결승 직선 400 · 3·4코너 300 · 맞은편 직선 400 · 1·2코너 300 (반시계 방향)
+const LAP = 1400.0
+const SEG_NAME = ["결승 직선", "3·4코너", "맞은편 직선", "1·2코너"]
+const ANGRY = ["야!! 달려!!!", "그거 내 월급이야!!", "채찍 좀 써!!!", "왜 거기서 멈춰!!", "소현이 이름 걸었다고!!", "으아아악!!", "제발 제발 제발!!", "아니 왜 안쪽으로 가!!", "지금이야 지금!!!", "다리가 네 개인데 왜!!"]
+const BANK = 10000              # 이만큼은 경마장 밑천으로 남기고, 그 위로 번 돈만 바꿀 수 있다
 
 var game
 var horses: Array = []          # 능력치(고정) + 기록(저장)
@@ -59,6 +64,11 @@ var live: Dictionary = {}
 var speedup = 1.0
 var note = ""
 var note_t = 0.0
+var anger_t = 0.0
+var anger_n = 0
+var anger_line = ""
+var bend = 0.0                  # 화면 속 주로가 휘어진 정도 (코너에서 1)
+var swell = 0.0                 # 관중 함성이 잠깐 커지는 정도
 
 func _init(owner) -> void:
     game = owner
@@ -83,6 +93,17 @@ func make_horses() -> void:
         horses.append(h)
     jwins = []
     for j in JOCKEYS: jwins.append(0)
+
+# 결승선까지 남은 거리로 지금 어느 구간인지 (0 결승 직선 · 1 코너 · 2 맞은편 직선 · 3 코너)
+func seg(to_go: float) -> int:
+    var d = fposmod(to_go, LAP)
+    if d < 400.0: return 0
+    if d < 700.0: return 1
+    if d < 1100.0: return 2
+    return 3
+
+func curve_at(to_go: float) -> bool:
+    return seg(to_go) % 2 == 1
 
 func recent_avg(h: Dictionary, n: int = 3) -> float:
     var list = h.recent
@@ -145,16 +166,20 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
         var h = horses[int(rc.field[i])]
         var skill = float(JOCKEYS[int(rc.jock[i])].skill)
         var prog = float(s.pos[i]) / dist
+        var to_go = dist - float(s.pos[i])
+        var corner = curve_at(to_go)
+        var home = to_go < 400.0
         var a = float(h.acc) / 100.0
         var v = 16.4 + (float(h.spd) - 75.0) * 0.005 + float(s.form[i])
         if prog < 0.35: v += [1.0, 0.5, 0.0, -0.5][int(h.style)] * a * 0.18
-        elif prog > 0.65: v += [-0.4, 0.15, 0.5, 1.0][int(h.style)] * a * 0.18
+        elif prog > 0.65: v += [-0.4, 0.15, 0.5, 1.0][int(h.style)] * a * 0.18 * (0.4 if corner else (1.3 if home else 1.0))
+        if corner: v -= float(i) * 0.02
         v -= absf(dist - float(h.best)) / 1000.0 * 0.3
         v += wet / 3.0 * float(h.wet) / 10.0 * 0.3
         v += float(rc.cond[i]) * 0.03 + (skill - 70.0) * 0.002 - float(rc.wt[i]) * 0.004
         s.nt[i] = float(s.nt[i]) - dt
         if float(s.nt[i]) <= 0.0:
-            s.nt[i] = 0.5; s.noise[i] = float(s.noise[i]) * 0.6 + rng.randfn(0.0, 0.3 * (1.3 - skill / 100.0))
+            s.nt[i] = 0.5; s.noise[i] = float(s.noise[i]) * 0.6 + rng.randfn(0.0, 0.3 * (1.3 - skill / 100.0) * (1.7 if home else 1.0))
         v += float(s.noise[i])
         if float(s.st[i]) <= 0.0: v -= 0.4 * (1.25 - float(h.guts) / 100.0)
         elif dist - float(s.pos[i]) < 250.0: v += (float(h.guts) - 70.0) * 0.0015
@@ -297,6 +322,22 @@ func press(id: String) -> void:
             if money < 100 and allowance_day != day:
                 allowance_day = day; money += 5000; save_data(); flash_note("소현이가 용돈 5,000원을 줬어요. “적당히 해!”")
         "exit": game.action("racing_exit")
+        "exchange":
+            var profit = money - BANK
+            if profit < 100:
+                flash_note("밑천 " + fmt(BANK) + "원보다 번 돈이 있어야 바꿀 수 있어요."); return
+            var travel = int(profit / 10)
+            money -= travel * 10; game.coins += travel
+            game.sfx("chest"); game.save_progress(); save_data()
+            flash_note("번 돈 " + fmt(travel * 10) + "원을 여행비 " + fmt(travel) + "원으로 바꿨어요! (10 : 1)")
+        "angry": get_angry()
+
+func get_angry() -> void:
+    anger_t = 1.0; anger_n += 1
+    anger_line = String(ANGRY[randi_range(0, ANGRY.size() - 1)])
+    if anger_n % 4 == 0: anger_line = "소현: 진정해… 말은 못 들어."
+    game.sfx("shout" + str(randi_range(0, 2)), randf_range(0.92, 1.1))
+    game.shake = 10.0; swell = 1.0
 
 func flash_note(text: String) -> void:
     note = text; note_t = 2.5
@@ -338,7 +379,14 @@ func say(text: String) -> void:
 
 func tick(dt: float) -> void:
     note_t = maxf(0.0, note_t - dt)
-    if screen != "race" or live.is_empty(): return
+    anger_t = maxf(0.0, anger_t - dt * 0.8)
+    swell = maxf(0.0, swell - dt * 0.7)
+    if screen != "race" or live.is_empty():
+        game.set_crowd(-80.0); return
+    var lead_to_go = float(race().dist) - float(live.s.pos[int(lead_order(live.s)[0])])
+    bend = lerpf(bend, 1.0 if curve_at(lead_to_go) and float(live.gate) <= 0.0 else 0.0, minf(1.0, dt * 1.5))
+    var closeness = clampf(1.0 - lead_to_go / float(race().dist), 0.0, 1.0)
+    game.set_crowd(-30.0 + 16.0 * closeness + (6.0 if lead_to_go < 400.0 else 0.0) + swell * 6.0 if float(live.gate) <= 0.0 else -34.0)
     var rc = race()
     if float(live.gate) > 0.0:
         var before = float(live.gate)
@@ -379,17 +427,20 @@ func commentary(rc: Dictionary, s: Dictionary, dt: float) -> void:
     var top = int(order[0])
     var left = float(rc.dist) - float(s.pos[top])
     var name = str(top + 1) + "번 " + String(horse_at(top).name)
-    for mark in [800, 400, 200]:
+    for mark in [700, 400, 200]:
         if left < mark and not live.said.has(mark) and float(rc.dist) > mark + 100:
             live.said[mark] = true
             match mark:
-                800: say("3코너를 돕니다. 선두는 " + name + "!")
-                400: say("직선 주로에 들어섭니다! " + name + " 앞장, 뒤에서 추격이 시작됩니다!")
+                700: say("3·4코너를 돕니다. 바깥쪽 말들은 멀리 돌아야 해요. 선두는 " + name + "!")
+                400: say("결승 직선 400m! " + name + " 앞장, 이제부터 진짜 승부입니다!")
                 _: say("남은 200m! 막판 스퍼트!")
             game.sfx("good"); return
     if top != int(live.leader) and float(live.say_t) <= 0.0 and s.t > 2.0:
         live.leader = top; live.say_t = 2.2
-        say(name + ", 선두로 나섭니다!")
+        if left < 400.0:
+            say(["뒤집혔습니다! ", "다시 앞으로! ", "엎치락뒤치락! "][randi_range(0, 2)] + name + "!")
+            swell = 1.0; game.sfx("good", 1.2)
+        else: say(name + ", 선두로 나섭니다!")
     if left < 120 and not live.said.has("close"):
         var second = int(order[1])
         if float(s.pos[top]) - float(s.pos[second]) < 2.0:
@@ -449,6 +500,7 @@ func finish_race() -> void:
     best_hit = maxf(best_hit, top_hit)
     settle = { "rows": rows, "paid": paid, "spent": spent}
     slip = []; live = {}; screen = "result"
+    game.set_crowd(-80.0); game.sfx("cheer")
     if paid > spent and top_hit >= 20.0:
         game.flash = 1.0; game.shake = 12; game.sfx("job")
     elif paid > spent: game.sfx("win")
@@ -567,7 +619,10 @@ func draw_lobby(c) -> void:
     c.txt("최고 잔고 " + fmt(best_money) + "원 · 최고 적중 " + str(snappedf(best_hit, 0.1)) + "배 · 적중 " + str(hits) + " / " + str(bought), 20, by + 14, 11, Color("cfe0d2"), w - 40, HORIZONTAL_ALIGNMENT_CENTER)
     if all_done: c.button("rc_newday", "하루 마감 · 다음 날로", Rect2(20, by + 26, w - 40, 50), true, true, 15)
     elif money < 100: c.button("rc_allowance", "소현이한테 용돈 받기 (+5,000원)", Rect2(20, by + 26, w - 40, 50), true, allowance_day != day, 14)
-    c.button("rc_exit", "경마장 나가기", Rect2(20, c.h - 70, w - 40, 50), false, true, 14)
+    var profit = money - BANK
+    var bw0 = (w - 52) / 2.0
+    c.button("rc_exchange", "여행비로 바꾸기" + (" (" + fmt(maxi(0, int(profit / 10))) + "원)" if profit >= 100 else ""), Rect2(20, c.h - 70, bw0, 50), profit >= 100, profit >= 100, 12)
+    c.button("rc_exit", "경마장 나가기", Rect2(32 + bw0, c.h - 70, bw0, 50), false, true, 14)
 
 func trend_text(h: Dictionary) -> String:
     var parts: PackedStringArray = []
@@ -742,16 +797,22 @@ func draw_race(c) -> void:
             c.draw_rect(Rect2(rx, ry, 2, 10), Color(1, 1, 1, 0.45))
     # 주로
     var ground = [Color("c89a68"), Color("b88a5a"), Color("8a6a48"), Color("6f5238")][wet]
-    c.draw_rect(Rect2(0, top, w, lane_h * 8 + 30), ground)
-    for k in range(9): c.draw_rect(Rect2(0, top + 12 + k * lane_h, w, 1), Color(0, 0, 0, 0.08))
-    # 난간과 거리 표지
-    c.draw_rect(Rect2(0, top - 6, w, 4), Color("f4f4f4"))
-    c.draw_rect(Rect2(0, top + lane_h * 8 + 26, w, 4), Color("f4f4f4"))
+    # 코너에서는 주로가 가운데로 휘어 보인다
+    var strip = 12.0
+    var sx = 0.0
+    while sx < w:
+        var by0 = bow(sx, w)
+        c.draw_rect(Rect2(sx, top + by0, strip + 1, lane_h * 8 + 30), ground)
+        for k in range(9): c.draw_rect(Rect2(sx, top + 12 + k * lane_h + by0, strip + 1, 1), Color(0, 0, 0, 0.08))
+        c.draw_rect(Rect2(sx, top - 6 + by0, strip + 1, 4), Color("f4f4f4"))
+        c.draw_rect(Rect2(sx, top + lane_h * 8 + 26 + by0, strip + 1, 4), Color("f4f4f4"))
+        sx += strip
     var first_post = int(floor(cam / 5.0)) * 5
     for m in range(first_post, first_post + 60, 5):
         var px = (m - cam) * ppm
-        c.draw_rect(Rect2(px, top - 14, 3, 12), Color("f4f4f4"))
-        c.draw_rect(Rect2(px, top + lane_h * 8 + 26, 3, 14), Color("f4f4f4"))
+        var pb = bow(px, w)
+        c.draw_rect(Rect2(px, top - 14 + pb, 3, 12), Color("f4f4f4") if not curve_at(float(rc.dist) - m) else Color("f0a050"))
+        c.draw_rect(Rect2(px, top + lane_h * 8 + 26 + pb, 3, 14), Color("f4f4f4"))
         var to_go = int(rc.dist) - m
         if to_go > 0 and to_go % 200 == 0:
             c.panel(Rect2(px - 18, top - 40, 40, 24), Color("fff8e8"), 4, Color("1f1a22"))
@@ -767,7 +828,7 @@ func draw_race(c) -> void:
     for k in range(8):
         var h = horse_at(k)
         var x = (float(s.pos[k]) - cam) * ppm
-        var foot = Vector2(x, top + 34 + k * lane_h)
+        var foot = Vector2(x, top + 34 + k * lane_h + bow(x, w))
         if x < -60 or x > w + 60: continue
         var running = float(live.gate) <= 0.0 and float(s.done[k]) < 0.0
         var frame = int(float(s.phase[k])) if running or float(live.end) >= 0.0 else 1
@@ -782,27 +843,78 @@ func draw_race(c) -> void:
     c.txt("남은 " + str(int(to_finish)) + "m" if float(live.gate) <= 0.0 else "출발 " + str(int(ceil(float(live.gate)))), w - 150, 28, 15, Color("ffd84a"), 136, HORIZONTAL_ALIGNMENT_RIGHT)
     if float(live.gate) > 0.0:
         c.txt(str(int(ceil(float(live.gate)))), 0, top + 150, 80, Color("fff8e8"), w, HORIZONTAL_ALIGNMENT_CENTER)
+    else:
+        var part = seg(to_finish)
+        var hot = part == 0
+        var label = SEG_NAME[part] + (" " + str(int(to_finish)) + "m · 여기서 승부!" if hot else (" · 바깥쪽은 멀리 돌아요" if part % 2 == 1 else ""))
+        c.panel(Rect2(w / 2 - 130, 50, 260, 30), Color("c8323c") if hot else (Color("f08a3c") if part % 2 == 1 else Color("13261ecc")), 10)
+        c.txt(label, w / 2 - 130, 71, 13, Color("fff8e8"), 260, HORIZONTAL_ALIGNMENT_CENTER)
     # 아래쪽: 순위 · 전체 지도 · 중계
     var by = top + lane_h * 8 + 50
     c.panel(Rect2(0, by, w, hgt - by), Color("13261e"), 0)
     c.txt("순위", 14, by + 24, 12, Color("cfe0d2"))
     for k in range(8): cloth(c, int(order[k]), Rect2(56 + k * 44, by + 6, 36, 28))
-    var map_y = by + 50
-    c.draw_rect(Rect2(20, map_y, w - 40, 6), Color("6f8a66"))
+    # 타원 주로 지도: 주황 = 코너, 흰색 = 직선, 노랑 깃발 = 결승선
+    var mid = Vector2(w / 2.0, by + 82)
+    var sc = minf((w - 80) / 591.0, 60.0 / 191.0)
+    var prev = oval_point(0.0, mid, sc)
+    for k in range(1, 71):
+        var d = k * LAP / 70.0
+        var p = oval_point(d, mid, sc)
+        c.draw_line(prev, p, Color("f0a050") if curve_at(d - 1.0) else Color("e8f0e0"), 4)
+        prev = p
+    var fin_p = oval_point(0.0, mid, sc)
+    c.draw_rect(Rect2(fin_p.x - 1, fin_p.y - 12, 3, 14), Color("ffd84a"))
     for k in range(8):
-        var mx = 20 + (w - 40) * clampf(float(s.pos[k]) / float(rc.dist), 0, 1)
-        c.draw_rect(Rect2(mx - 4, map_y - 4, 8, 14), Color(CLOTH[k]))
-    var ly = map_y + 36
+        var hp = oval_point(maxf(0.0, float(rc.dist) - float(s.pos[k])), mid, sc)
+        c.draw_circle(hp, 5, Color("1f1a22")); c.draw_circle(hp, 4, Color(CLOTH[k]))
+    c.txt("결승 직선", fin_p.x - 90, fin_p.y + 18, 10, Color("cfe0d2"), 80, HORIZONTAL_ALIGNMENT_RIGHT)
+    var ly = by + 136
     for line in live.lines:
         c.para(String(line), 18, ly, w - 36, 14, Color("fff8e8"), 1.35); ly += 40
-    var my_y = hgt - 150
+    var my_y = hgt - 108
     if not slip.is_empty():
         var parts: PackedStringArray = []
         for b in slip: parts.append(String(BETS[int(b.type)].name) + " " + pick_text(int(b.type), b.picks))
         c.para("내 마권: " + ", ".join(parts), 18, my_y, w - 36, 11, Color("ffd84a"), 1.35)
-    var bw = (w - 52) / 2.0
-    c.button("rc_fast", "빨리 ×3" if speedup < 2.0 else "보통 속도", Rect2(20, hgt - 70, bw, 50), false, true, 14)
-    c.button("rc_skip", "결과 바로 보기", Rect2(32 + bw, hgt - 70, bw, 50), false, true, 14)
+    var bw = (w - 64) / 3.0
+    c.button("rc_angry", "화내기!", Rect2(20, hgt - 70, bw, 50), true, true, 15)
+    c.button("rc_fast", "빨리 ×3" if speedup < 2.0 else "보통 속도", Rect2(32 + bw, hgt - 70, bw, 50), false, true, 13)
+    c.button("rc_skip", "결과 보기", Rect2(44 + bw * 2, hgt - 70, bw, 50), false, true, 13)
+    draw_anger(c)
+
+func bow(x: float, w: float) -> float:
+    return bend * 26.0 * sin(PI * clampf(x / w, 0.0, 1.0))
+
+func oval_point(to_go: float, mid: Vector2, sc: float) -> Vector2:
+    var d = fposmod(to_go, LAP)
+    var r = 95.5
+    var left_c = mid + Vector2(-200.0, 0) * sc
+    var right_c = mid + Vector2(200.0, 0) * sc
+    if d < 400.0: return mid + Vector2(200.0 - d, r) * sc
+    if d < 700.0:
+        var a = (d - 400.0) / 300.0 * PI
+        return left_c + Vector2(- sin(a), cos(a)) * r * sc
+    if d < 1100.0: return mid + Vector2(-200.0 + (d - 700.0), - r) * sc
+    var a2 = (d - 1100.0) / 300.0 * PI
+    return right_c + Vector2(sin(a2), - cos(a2)) * r * sc
+
+# 화난 동훈: 얼굴이 빨개지고 부들부들 떨며 소리친다
+func draw_anger(c) -> void:
+    if anger_t <= 0.0: return
+    var w = c.w
+    var shake_x = sin(game.clock_time * 70.0) * 4.0 * anger_t
+    var foot = Vector2(64 + shake_x, c.h - 84)
+    var look = game.look(false).duplicate()
+    look["S"] = Color("ffd2a6").lerp(Color("e8483c"), anger_t)
+    look["G"] = look["S"]
+    c.flat_art.sprite(c, c.flat_art.BOY, foot, 4.0, look)
+    for k in range(3):
+        var a = -0.9 + k * 0.5
+        c.draw_line(foot + Vector2(18, -86) + Vector2(cos(a), sin(a)) * 8, foot + Vector2(18, -86) + Vector2(cos(a), sin(a)) * (18 + anger_t * 8), Color("e8483c"), 3)
+    var bubble = Rect2(112, c.h - 190, w - 132, 54)
+    c.panel(bubble, Color("fff8e8"), 14, Color("c8323c"))
+    c.txt(anger_line, bubble.position.x, bubble.position.y + 34, 17 if anger_line.begins_with("소현") else 20, Color("c8323c") if not anger_line.begins_with("소현") else Color("8a5fc0"), bubble.size.x, HORIZONTAL_ALIGNMENT_CENTER)
 
 func draw_result(c) -> void:
     var w = c.w
@@ -849,6 +961,9 @@ func draw_result(c) -> void:
                 var fall = fposmod(game.clock_time * (90.0 + (k % 5) * 30.0) + k * 47.0, c.h)
                 c.draw_rect(Rect2(fposmod(k * 83.0, w), fall, 6, 8), Color(CLOTH[k % 8]))
     else: c.txt("이번 경주는 구경만 했어요", 0, c.h - 150, 14, Color("cfe0d2"), w, HORIZONTAL_ALIGNMENT_CENTER)
+    if settle.has("paid") and int(settle.paid) < int(settle.spent):
+        c.button("rc_angry", "분노의 고함", Rect2(w - 150, c.h - 128, 130, 44), true, true, 13)
+    draw_anger(c)
     var bw = (w - 52) / 2.0
     c.button("rc_lobby", "오늘의 경주", Rect2(20, c.h - 70, bw, 50), false, true, 14)
     c.button("rc_next", "다음 경주 →" if ri < 5 else "하루 정리", Rect2(32 + bw, c.h - 70, bw, 50), true, true, 15)
