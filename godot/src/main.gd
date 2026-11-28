@@ -2217,6 +2217,8 @@ func action(id: String) -> void:
         sheet_tab = clampi(int(id.trim_prefix("tab_")), 0, 7); sfx("click"); return
     if id.begins_with("gearslot_"):
         gear_slot = clampi(int(id.trim_prefix("gearslot_")), 0, 3); gear_page = 0; sfx("click"); return
+    if id == "job_advance":
+        advance_job(); return
     if id.begins_with("job_"):
         pick_job(int(id.trim_prefix("job_"))); return
     if id.begins_with("pick_"):
