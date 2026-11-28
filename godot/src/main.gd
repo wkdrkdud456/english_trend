@@ -170,8 +170,14 @@ const GEAR = [
 ]
 const SLOT_NAME = ["무기 (수세미 · 냄비)", "옷", "신발", "부엌 소품"]
 # ── 강화: 여행비와 강화석으로 장비를 +5 까지 올린다 (한 단계마다 효과 +20%) ──
-const ENHANCE_MAX = 5
-const ENHANCE_RATE = [100, 90, 75, 60, 45]
+const ENHANCE_MAX = 10
+# 지금 단계에서 시도할 때: [성공, 유지, 하락, 파괴] %  (+7 부터 파괴 위험)
+const ENHANCE_ODDS = [[100, 0, 0, 0], [90, 10, 0, 0], [80, 20, 0, 0], [70, 30, 0, 0], [60, 40, 0, 0],
+    [50, 35, 15, 0], [40, 35, 25, 0], [35, 30, 25, 10], [30, 25, 30, 15], [25, 20, 35, 20]]
+const ENHANCE_BONUS = [0, 20, 40, 60, 80, 100, 115, 130, 145, 160, 180]   # 효과 +%
+const BASE_GEAR = ["g0", "a0", "s0", "k0"]
+var forge: Dictionary = {}       # 강화 화면 (비어 있으면 닫힘)
+var forge_guard = false          # 파괴 방지권 쓰기
 var gear_lv: Dictionary = {}
 var stones = 0
 # ── 2회차부터 상대에게 붙는 특성 ──
@@ -222,6 +228,12 @@ var slot_reels = [0, 1, 2]
 var slot_spin = -1.0            # 돌아가는 중이면 0 이상
 var slot_bet = 0
 var slot_note = ""
+const SLOT_MULTS = [1, 5, 10, 50]
+var slot_mult = 1                # 판돈 배수
+var slot_stops = [0.6, 0.95, 1.3]
+var slot_win_t = 9.0             # 결과가 나온 뒤 흐른 시간 (연출용)
+var slot_win_kind = 0            # 0 꽝 · 1 두 개 · 2 세 개 · 3 잭팟
+var slot_win_amt = 0
 var boss_phase = 0              # 2회차 라이벌은 한 번 쓰러지면 각성해서 다시 일어난다
 var auto_battle = false         # 도전의 탑: 알아서 싸우고 올라간다
 var auto_wait = 0.0
@@ -847,8 +859,11 @@ func add_pass(points: int) -> void:
         toast("여행 패스 Lv." + str(pass_level) + "!  " + (pass_reward_text(pass_level) if pass_level <= PASS_MAX else "뽑기 티켓 1장"))
 
 # ── 행운의 슬롯 ──
-func slot_cost() -> int:
+func slot_base() -> int:
     return 50 + route_pos() * 20 + cycle * 100
+
+func slot_cost() -> int:
+    return slot_base() * slot_mult
 
 func slot_roll() -> int:
     var r = randi_range(1, 100)
@@ -864,16 +879,21 @@ func spin_slot() -> void:
         sfx("bad"); toast("여행비가 " + str(cost - coins) + "원 모자라요."); return
     coins -= cost; slot_bet = cost
     slot_reels = [slot_roll(), slot_roll(), slot_roll()]
-    slot_spin = 0.0; slot_note = ""
+    # 앞의 두 칸이 같으면 마지막 칸이 애태우며 오래 돈다
+    slot_stops = [0.6, 0.95, 2.3] if int(slot_reels[0]) == int(slot_reels[1]) else [0.6, 0.95, 1.3]
+    slot_spin = 0.0; slot_note = ""; slot_win_t = 9.0; slot_win_kind = 0; slot_win_amt = 0
     stat_add("slot"); sfx("click")
 
 func slot_tick(dt: float) -> void:
-    if slot_spin < 0: return
+    if slot_spin < 0:
+        slot_win_t += dt; return
     var before = slot_spin
     slot_spin += dt
-    for stop in [0.6, 0.95, 1.3]:
-        if before < stop and slot_spin >= stop: sfx("click", 0.8 + stop * 0.3)
-    if slot_spin < 1.4: return
+    for k in range(3):
+        var stop = float(slot_stops[k])
+        if before < stop and slot_spin >= stop: sfx("click", 0.8 + k * 0.25); shake = 3.0
+    if float(slot_stops[2]) > 2.0 and before < 1.0 and slot_spin >= 1.0: sfx("roar", 1.6)
+    if slot_spin < float(slot_stops[2]) + 0.1: return
     slot_spin = -1.0
     var a = int(slot_reels[0])
     var b = int(slot_reels[1])
@@ -891,6 +911,9 @@ func slot_tick(dt: float) -> void:
         win = int(slot_bet * 1.2); sfx("coin"); slot_note = "두 개 맞음 +" + str(win) + "원"
     else:
         slot_note = "아깝다… 한 번 더?"
+    slot_win_t = 0.0; slot_win_amt = win
+    slot_win_kind = 0 if win == 0 else (3 if a == b and b == c and a == 5 else (2 if a == b and b == c else 1))
+    if slot_win_kind == 2 and slot_mult >= 10: shake = 10.0
     coins += win; save_progress()
 
 func check_achievements() -> void:
@@ -1183,33 +1206,99 @@ func gear_sum(key: String) -> int:
     for id in equipped:
         var base = int(gear_of(id).get(key, 0))
         # 강화 한 단계마다 +20% (기력·도화선 같은 개수형 효과는 그대로)
-        total += base if key in ["fuse", "en"] else int(ceil(base * (1.0 + 0.2 * enhance_lv(String(id)))))
+        total += base if key in ["fuse", "en"] else int(ceil(base * (1.0 + ENHANCE_BONUS[enhance_lv(String(id))] / 100.0)))
     return total
 
 func enhance_lv(id: String) -> int:
     return clampi(int(gear_lv.get(id, 0)), 0, ENHANCE_MAX)
 
 func enhance_cost(id: String) -> int:
-    return (enhance_lv(id) + 1) * 120 + int(gear_of(id).tier) * 60
+    var lv = enhance_lv(id)
+    return (lv + 1) * (120 + lv * 25) + int(gear_of(id).tier) * 60
 
 func enhance_stones(id: String) -> int:
-    return enhance_lv(id) + 1
+    return enhance_lv(id) + 1 + maxi(0, enhance_lv(id) - 5)
 
-func enhance(id: String) -> void:
-    if not owned_gear.has(id) or enhance_lv(id) >= ENHANCE_MAX: return
-    if coins < enhance_cost(id): toast("강화하려면 " + str(enhance_cost(id)) + "원이 필요해요."); return
-    if stones < enhance_stones(id): toast("강화석이 " + str(enhance_stones(id) - stones) + "개 모자라요. 등급 높은 상대나 도전의 탑에서 얻어요."); return
-    var chance = mini(100, ENHANCE_RATE[enhance_lv(id)] + (10 if relic("map_scrap") else 0))
+func guard_stones(id: String) -> int:
+    return enhance_lv(id) * 2
+
+# 지금 시도하면 [성공, 유지, 하락, 파괴] — 지도 조각 유물은 성공 +10%, 방지권은 파괴를 하락으로
+func enhance_odds(id: String) -> Array:
+    var o = ENHANCE_ODDS[mini(enhance_lv(id), ENHANCE_MAX - 1)].duplicate()
+    if relic("map_scrap") and o[0] < 100:
+        var add = mini(10, o[1] + o[2])
+        o[0] += add
+        var from_keep = mini(add, int(o[1])); o[1] -= from_keep; o[2] -= add - from_keep
+    if forge_guard and int(o[3]) > 0:
+        o[2] += o[3]; o[3] = 0
+    return o
+
+func open_forge(id: String) -> void:
+    if not owned_gear.has(id): return
+    forge = { "id": id, "phase": "ready", "t": 0.0, "result": "", "from": enhance_lv(id), "to": enhance_lv(id), "name": String(gear_of(id).name), "entry": gear_of(id).duplicate()}
+    sfx("click")
+
+func forge_start() -> void:
+    if forge.is_empty() or String(forge.phase) == "work": return
+    var id = String(forge.id)
+    if not owned_gear.has(id): forge = {}; return
+    if enhance_lv(id) >= ENHANCE_MAX: toast("이미 +" + str(ENHANCE_MAX) + " 최고 단계예요!"); return
+    var need_guard = forge_guard and int(ENHANCE_ODDS[enhance_lv(id)][3]) > 0
+    var st_need = enhance_stones(id) + (guard_stones(id) if need_guard else 0)
+    if coins < enhance_cost(id): sfx("bad"); toast("강화하려면 " + str(enhance_cost(id)) + "원이 필요해요."); return
+    if stones < st_need: sfx("bad"); toast("강화석이 " + str(st_need - stones) + "개 모자라요. 등급 높은 상대나 도전의 탑, 분해로 얻어요."); return
+    var o = enhance_odds(id)
+    coins -= enhance_cost(id); stones -= st_need
     stat_add("enhance")
-    coins -= enhance_cost(id); stones -= enhance_stones(id)
-    if randi_range(1, 100) <= chance:
-        gear_lv[id] = enhance_lv(id) + 1
-        if enhance_lv(id) >= ENHANCE_MAX: stat_add("enhance5")
-        sfx("job"); flash = 0.5
-        toast(String(gear_of(id).name) + " +" + str(enhance_lv(id)) + " 강화 성공!  효과 +" + str(enhance_lv(id) * 20) + "%")
-    else:
-        sfx("bad"); toast("강화 실패… 장비는 그대로예요. (성공 확률 " + str(chance) + "%)")
+    var lv = enhance_lv(id)
+    var roll = randi_range(1, 100)
+    var result = "ok"
+    if roll <= int(o[0]): result = "ok"
+    elif roll <= int(o[0]) + int(o[1]): result = "keep"
+    elif roll <= int(o[0]) + int(o[1]) + int(o[2]): result = "drop"
+    else: result = "boom"
+    var to = lv
+    match result:
+        "ok":
+            to = lv + 1; gear_lv[id] = to
+            if to >= 5: stat_add("enhance5")
+        "drop":
+            to = maxi(0, lv - 1); gear_lv[id] = to
+        "boom":
+            to = -1
+            if BASE_GEAR.has(id):
+                gear_lv[id] = 0; to = 0      # 기본 장비는 사라지지 않고 +0 으로
+            else:
+                for k in range(equipped.size()):
+                    if String(equipped[k]) == id: equipped[k] = BASE_GEAR[k]
+                owned_gear.erase(id); gear_lv.erase(id); loot.erase(id)
+                gain_stones(lv * 2)
+    forge.phase = "work"; forge.t = 0.0; forge.result = result; forge.from = lv; forge.to = to
+    forge["long"] = lv >= 6
     PARTY_HP = party_max(); health = mini(health, PARTY_HP); save_progress()
+    sfx("click", 0.7)
+
+func forge_tick(dt: float) -> void:
+    if forge.is_empty(): return
+    var before = float(forge.t)
+    forge.t = before + dt
+    if String(forge.phase) != "work": return
+    var hits = [0.35, 0.8, 1.25, 1.7, 2.15] if bool(forge.get("long", false)) else [0.35, 0.8, 1.25]
+    for k in range(hits.size()):
+        if before < hits[k] and float(forge.t) >= hits[k]:
+            sfx("crit", 0.8 + k * 0.08); shake = 6.0 + k * 1.5
+    var reveal = float(hits[hits.size() - 1]) + 0.55
+    if float(forge.t) >= reveal: forge_reveal()
+
+func forge_reveal() -> void:
+    forge.phase = "result"; forge.t = 0.0
+    match String(forge.result):
+        "ok":
+            sfx("levelup" if int(forge.to) < 7 else "job"); flash = 0.8 if int(forge.to) >= 7 else 0.4; shake = 8.0 if int(forge.to) >= 7 else 0.0
+            if int(forge.to) >= 7: sfx("win")
+        "keep": sfx("bad")
+        "drop": sfx("lose")
+        "boom": sfx("boom"); shake = 22.0; flash = 0.3
 
 func gain_stones(n: int) -> void:
     if n > 0: stones = mini(999, stones + n)
@@ -1583,6 +1672,7 @@ func _process(dt: float) -> void:
     if state in ["battle", "battle_won", "battle_lost"]: battle_fx_left = maxf(0, battle_fx_left - dt)
     clock_time += dt; scene_time += dt
     toast_time = maxf(0, toast_time - dt); flash = maxf(0, flash - dt * 1.8)
+    forge_tick(dt)
     shake = maxf(0, shake - dt * 26.0); win_time += dt
     for i in range(pops.size() - 1, -1, -1):
         pops[i].age += dt
@@ -2139,6 +2229,9 @@ func action(id: String) -> void:
         pull_gacha(10 if id == "ticket_10" else 1, true); return
     if id == "slot_spin":
         spin_slot(); return
+    if id.begins_with("slotmul_"):
+        if slot_spin < 0: slot_mult = clampi(int(id.trim_prefix("slotmul_")), 1, 50); sfx("click")
+        return
     if id == "goals_open":
         previous_state = state; state = "status"; sheet_tab = 7; joystick = Vector2.ZERO; hud.release_all(); return
     if id.begins_with("bitem_"):
@@ -2160,7 +2253,17 @@ func action(id: String) -> void:
     if id.begins_with("equip_"):
         equip_gear(String(id.trim_prefix("equip_"))); return
     if id.begins_with("enh_"):
-        enhance(String(id.trim_prefix("enh_"))); return
+        open_forge(String(id.trim_prefix("enh_"))); return
+    if id == "forge_go": forge_start(); return
+    if id == "forge_guard": forge_guard = not forge_guard; sfx("click"); return
+    if id == "forge_close": forge = {}; sfx("click"); return
+    if id == "forge_skip":
+        if not forge.is_empty() and String(forge.phase) == "work": forge_reveal()
+        return
+    if id == "forge_again":
+        if not forge.is_empty() and owned_gear.has(String(forge.id)): open_forge(String(forge.id))
+        else: forge = {}
+        return
     if id == "buystone":
         if coins < 150: toast("강화석은 150원이에요.")
         else:

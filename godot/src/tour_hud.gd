@@ -127,30 +127,90 @@ func draw(c) -> void:
                 var gap = 12.0
                 var x0 = (w - reel_w * 3 - gap * 2) / 2.0
                 var ry = sy + 20
-                c.panel(Rect2(x0 - 18, ry - 14, reel_w * 3 + gap * 2 + 36, 150), Color("c8323c"), 18)
+                var spinning = g.slot_spin >= 0
+                var kind = g.slot_win_kind if not spinning else 0
+                var party = not spinning and kind >= 2 and g.slot_win_t < 3.0
+                var frame = Rect2(x0 - 18, ry - 14, reel_w * 3 + gap * 2 + 36, 150)
+                if party and kind == 3:
+                    c.draw_rect(Rect2(0, sy - 20, w, 340), Color.from_hsv(fposmod(g.clock_time * 0.7, 1.0), 0.5, 1.0, 0.35))
+                c.panel(frame, Color("c8323c"), 18)
                 c.panel(Rect2(x0 - 10, ry - 6, reel_w * 3 + gap * 2 + 20, 134), Color("e5b33c"), 12)
+                # 테두리 전구: 돌 때는 빙글빙글, 터지면 번쩍번쩍
+                var bulbs = 22
+                for k in range(bulbs):
+                    var u = float(k) / bulbs
+                    var bp = Vector2()
+                    var per = frame.size.x * 2 + frame.size.y * 2
+                    var dd = u * per
+                    if dd < frame.size.x: bp = frame.position + Vector2(dd, 0)
+                    elif dd < frame.size.x + frame.size.y: bp = frame.position + Vector2(frame.size.x, dd - frame.size.x)
+                    elif dd < frame.size.x * 2 + frame.size.y: bp = frame.position + Vector2(frame.size.x - (dd - frame.size.x - frame.size.y), frame.size.y)
+                    else: bp = frame.position + Vector2(0, frame.size.y - (dd - frame.size.x * 2 - frame.size.y))
+                    var lit = false
+                    if spinning: lit = (k + int(g.clock_time * 24.0)) % 4 == 0
+                    elif party: lit = int(g.clock_time * 10.0) % 2 == k % 2
+                    else: lit = (k + int(g.clock_time * 3.0)) % 6 == 0
+                    c.draw_circle(bp, 5, Color("fff6a0") if lit else Color("7a2a22"))
+                # 손잡이: 누르면 아래로 당겨졌다 돌아온다
+                var lever_x = frame.end.x + 10
+                var pull = clampf(1.0 - absf(g.slot_spin - 0.15) / 0.15, 0.0, 1.0) if spinning and g.slot_spin < 0.3 else 0.0
+                c.draw_rect(Rect2(lever_x, ry + 30, 6, 60), Color("8a8694"))
+                var knob_y = ry + 20 + pull * 70.0
+                c.draw_line(Vector2(lever_x + 3, ry + 60), Vector2(lever_x + 3, knob_y), Color("c9d2d6"), 4)
+                c.draw_circle(Vector2(lever_x + 3, knob_y), 10, Color("c8323c"))
+                var tease = spinning and float(g.slot_stops[2]) > 2.0 and g.slot_spin >= float(g.slot_stops[1])
                 for i in range(3):
                     var box = Rect2(x0 + i * (reel_w + gap), ry, reel_w, 122)
-                    c.panel(box, Color("fffaf0"), 10)
-                    var stop = [0.6, 0.95, 1.3][i]
+                    var stop = float(g.slot_stops[i])
+                    var rolling = spinning and g.slot_spin < stop
+                    c.panel(box, Color("fffaf0") if not (tease and i == 2) else Color("ffe8e0").lerp(Color("ffb0a0"), 0.5 + 0.5 * sin(g.clock_time * 18.0)), 10)
                     var face = int(g.slot_reels[i])
-                    if g.slot_spin >= 0 and g.slot_spin < stop: face = int(g.slot_spin * 22.0 + i * 3) % 6
-                    slot_symbol(c, face, box.get_center(), 30.0)
-                    if g.slot_spin >= 0 and g.slot_spin < stop:
-                        for k in range(3): c.draw_rect(Rect2(box.position.x + 6, box.position.y + 20 + k * 36 + fmod(g.slot_spin * 400.0, 36.0), reel_w - 12, 3), Color(0, 0, 0, 0.12))
+                    var off = 0.0
+                    if rolling:
+                        var speed = 22.0 if not (tease and i == 2) else 22.0 - 14.0 * clampf((g.slot_spin - float(g.slot_stops[1])) / (stop - float(g.slot_stops[1])), 0.0, 1.0)
+                        face = int(g.slot_spin * speed + i * 3) % 6
+                        off = fposmod(g.slot_spin * speed, 1.0) * 30.0 - 15.0
+                    elif spinning or g.slot_win_t < 0.3:
+                        # 멈출 때 살짝 튕긴다
+                        var since = g.slot_spin - stop if spinning else g.slot_win_t + 0.1
+                        if since < 0.25: off = sin(since / 0.25 * PI) * -10.0
+                    var won = not spinning and kind >= 1 and g.slot_win_t < 3.0 and (kind >= 2 or int(g.slot_reels[i]) == pair_face(g))
+                    var sc = 30.0 * (1.0 + (0.12 * absf(sin(g.clock_time * 9.0)) if won else 0.0))
+                    if won: c.draw_circle(box.get_center(), 44, Color(1.0, 0.85, 0.3, 0.35))
+                    slot_symbol(c, face, box.get_center() + Vector2(0, off), sc)
+                    if rolling:
+                        for k in range(4): c.draw_rect(Rect2(box.position.x + 6, box.position.y + 12 + k * 30 + fposmod(g.slot_spin * 600.0, 30.0), reel_w - 12, 3), Color(0, 0, 0, 0.14))
+                        if i == 2 and tease: c.txt("두근두근…!", box.position.x - 40, box.end.y + 16, 13, c.rose, reel_w + 80, HORIZONTAL_ALIGNMENT_CENTER)
+                # 판돈 배수
+                var mw = (w - 80 - 3 * 8) / 4.0
+                for k in range(g.SLOT_MULTS.size()):
+                    var m = int(g.SLOT_MULTS[k])
+                    c.button("slotmul_" + str(m), "×" + str(m) + " · " + str(g.slot_base() * m) + "원", Rect2(40 + k * (mw + 8), sy + 176, mw, 36), g.slot_mult == m, not spinning, 11)
                 var cost = g.slot_cost()
-                c.button("slot_spin", "돌리기 · " + str(cost) + "원", Rect2(40, sy + 172, w - 80, 56), true, g.slot_spin < 0 and g.coins >= cost, 17)
-                if g.slot_note != "" and g.slot_spin < 0:
-                    var big = g.slot_note.begins_with("잭팟") or g.slot_note.begins_with("세 개")
-                    c.txt(g.slot_note, 16, sy + 262, 22 if big else 16, c.rose if big else c.ink, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
+                c.button("slot_spin", ("돌아가는 중…" if spinning else "돌리기 · " + str(cost) + "원"), Rect2(40, sy + 222, w - 80, 56), true, not spinning and g.coins >= cost, 17)
+                if g.slot_note != "" and not spinning:
+                    var big = kind >= 2
+                    var pop = 1.0 + maxf(0.0, 0.4 - g.slot_win_t) * 1.5 + (0.08 * sin(g.clock_time * 10.0) if big and g.slot_win_t < 3.0 else 0.0)
+                    c.txt(g.slot_note, 16, sy + 312, int((24 if big else 16) * pop), c.rose if big else c.ink, w - 32, HORIZONTAL_ALIGNMENT_CENTER)
+                # 동전 분수
+                if not spinning and kind >= 1 and g.slot_win_t < 2.2 and g.effects_on:
+                    var n = [0, 10, 26, 48][kind]
+                    for k in range(n):
+                        var t0 = g.slot_win_t - fposmod(k * 0.037, 0.5)
+                        if t0 < 0: continue
+                        var vx = (fposmod(k * 0.618, 1.0) - 0.5) * 360.0
+                        var vy = -320.0 - fposmod(k * 0.41, 1.0) * 220.0
+                        var cp = Vector2(w / 2.0 + vx * t0, ry + 70 + vy * t0 + 620.0 * t0 * t0)
+                        if cp.y > sy + 360: continue
+                        c.draw_circle(cp, 7, Color("e5b33c")); c.draw_circle(cp + Vector2(-2, -2), 3, Color("fff4b0"))
                 var names = ["수세미", "냄비", "하트", "별", "황금 숟가락", "7"]
-                c.txt("세 개 똑같으면", 24, sy + 300, 12, c.muted)
+                c.txt("세 개 똑같으면 (판돈 ×)", 24, sy + 346, 12, c.muted)
                 for k in range(6):
-                    var py = sy + 316 + int(k / 2) * 46
+                    var py = sy + 360 + int(k / 2) * 42
                     var px = 24 + (k % 2) * ((w - 48) / 2.0)
                     slot_symbol(c, k, Vector2(px + 18, py + 18), 13.0)
                     c.txt(names[k] + "  ×" + str(int(g.SLOT_TRIPLE[k])), px + 42, py + 24, 13, c.ink)
-                c.txt("두 개만 같아도 ×1.2 · 7 세 개면 뽑기 티켓 +3", 24, sy + 462, 11, c.muted)
+                c.txt("두 개만 같아도 ×1.2 · 7 세 개면 뽑기 티켓 +3", 24, sy + 494, 11, c.muted)
             elif g.shop_tab == 3:
                 # 뽑기 기계: 캡슐이 굴러 나온다
                 var mx = w / 2.0
@@ -209,6 +269,13 @@ func draw(c) -> void:
             c.centered("섬을 다른 각도에서 기억해 봐요.", h - 155, 18)
             c.button("vista_capture", "이 풍경 담기 ◎", Rect2(26, h - 133, w - 52, 60), true)
             c.button("vista_close", "뒤로", Rect2(26, h - 63, w - 52, 48), false, true, 14)
+
+# 두 개만 맞았을 때 그 그림
+func pair_face(g) -> int:
+    var r = g.slot_reels
+    if int(r[0]) == int(r[1]) or int(r[0]) == int(r[2]): return int(r[0])
+    if int(r[1]) == int(r[2]): return int(r[1])
+    return -1
 
 func slot_symbol(c, kind: int, p: Vector2, s: float) -> void:
     match kind:

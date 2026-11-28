@@ -147,13 +147,15 @@ func jockey_at(slot: int) -> Dictionary:
 
 # ── 경주 모형 (파이썬 시뮬레이터로 맞춘 값: 1번 인기 약 36% 우승) ──
 func sim_new(rc: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
-    var s = { "pos": [], "st": [], "noise": [], "nt": [], "form": [], "done": [], "t": 0.0, "v": [], "phase": [], "lane": [], "blk": [], "ev": []}
+    var s = { "pos": [], "st": [], "noise": [], "nt": [], "form": [], "done": [], "t": 0.0, "v": [], "phase": [], "lane": [], "blk": [], "ev": [], "empty": [], "st0": []}
     for k in range(8):
         var h = horses[int(rc.field[k])]
         s.pos.append(0.0); s.noise.append(0.0); s.nt.append(0.0); s.done.append(-1.0); s.v.append(16.0); s.phase.append(randf() * 4.0)
-        s.lane.append(float(k)); s.blk.append(0.0)
-        s.form.append(rng.randfn(0.0, 0.2))
-        s.st.append((0.55 + float(h.sta) / 220.0) * pow(1400.0 / float(rc.dist), 0.6) * 40.0)
+        s.lane.append(float(k)); s.blk.append(0.0); s.empty.append(0.0)
+        s.form.append(rng.randfn(0.0, 0.18))
+        # 지구력 통: 거리만큼 달릴 기본 힘 + 지구력이 좋을수록 여유. 앞에서 밀어붙이면 빨리 바닥난다
+        var pool = 0.97 * float(rc.dist) / 16.4 * 0.42 * (0.85 + float(h.sta) / 200.0)
+        s.st.append(pool); s.st0.append(pool)
     return s
 
 func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerator) -> bool:
@@ -176,25 +178,32 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
         var home = to_go < 400.0
         var a = float(h.acc) / 100.0
         var v = 16.4 + (float(h.spd) - 75.0) * 0.005 + float(s.form[i])
-        if prog < 0.35: v += [1.0, 0.5, 0.0, -0.5][int(h.style)] * a * 0.18
-        elif prog > 0.65: v += [-0.4, 0.15, 0.5, 1.0][int(h.style)] * a * 0.18 * (0.4 if corner else (1.3 if home else 1.0))
+        # 각질: 도주·선행은 초반에 밀어붙이고, 선입·추입은 아꼈다가 막판에 터뜨린다
+        var push = 0.0
+        if prog < 0.4: push = [1.2, 0.7, 0.1, -0.3][int(h.style)] * a * 0.55
+        elif prog > 0.62: push = [-0.3, 0.3, 0.9, 2.1][int(h.style)] * a * 0.65 * (0.5 if corner else (1.3 if home else 1.0))
+        if float(s.st[i]) <= 0.0: push = minf(push, 0.0)    # 지친 말은 더 못 짜낸다
+        v += push
         if corner: v -= float(pl[i]) * 0.03     # 바깥 칸일수록 코너를 멀리 돈다
-        v -= absf(dist - float(h.best)) / 1000.0 * 0.3
+        v -= absf(dist - float(h.best)) / 1000.0 * 0.25
         v += wet / 3.0 * float(h.wet) / 10.0 * 0.3
         v += float(rc.cond[i]) * 0.03 + (skill - 70.0) * 0.002 - float(rc.wt[i]) * 0.004
         s.nt[i] = float(s.nt[i]) - dt
         if float(s.nt[i]) <= 0.0:
-            s.nt[i] = 0.5; s.noise[i] = float(s.noise[i]) * 0.6 + rng.randfn(0.0, 0.3 * (1.3 - skill / 100.0) * (1.7 if home else 1.0))
+            s.nt[i] = 0.5; s.noise[i] = float(s.noise[i]) * 0.6 + rng.randfn(0.0, 0.45 * (1.3 - skill / 100.0) * (1.5 if home else 1.0))
         v += float(s.noise[i])
-        if float(s.st[i]) <= 0.0: v -= 0.4 * (1.25 - float(h.guts) / 100.0)
-        elif dist - float(s.pos[i]) < 250.0: v += (float(h.guts) - 70.0) * 0.0015
+        if float(s.st[i]) <= 0.0:
+            # 바닥난 뒤로 점점 더 느려진다 (근성이 좋으면 덜)
+            s.empty[i] = float(s.empty[i]) + dt
+            v -= minf(2.2, float(s.empty[i]) * 0.6) * (1.3 - float(h.guts) / 100.0)
+        elif to_go < 250.0: v += (float(h.guts) - 70.0) * 0.002
         # 바로 앞 같은 칸에 말이 있으면 막힌다
         var ahead = -1
         var gap = 99.0
         for j in range(8):
             if j == i or float(s.done[j]) >= 0.0: continue
             var dp = float(pp[j]) - float(pp[i])
-            if dp > 0.0 and dp < 2.6 and absf(float(pl[j]) - float(pl[i])) < 0.8 and dp < gap:
+            if dp > 0.0 and dp < 2.0 and absf(float(pl[j]) - float(pl[i])) < 0.8 and dp < gap:
                 gap = dp; ahead = j
         var was = float(s.blk[i])
         if ahead >= 0 and v > float(pv[ahead]):
@@ -219,7 +228,10 @@ func sim_step(s: Dictionary, rc: Dictionary, dt: float, rng: RandomNumberGenerat
             if free:
                 s.lane[i] = nl
                 if move > 0.0 and home and was > 0.0 and int(nl) != int(float(pl[i])): s.ev.append(["out", i, 0])
-        s.st[i] = float(s.st[i]) - dt * (maxf(0.0, v - 15.8) * 0.8 + 0.45)
+        var cost = push * 0.75 * (0.7 if int(h.style) == 0 else 1.0) if prog < 0.4 else maxf(0.0, push) * 0.3
+        var before_st = float(s.st[i])
+        s.st[i] = before_st - dt * (0.42 + cost + (0.15 if float(s.blk[i]) > 0.0 else 0.0))
+        if before_st > 0.0 and float(s.st[i]) <= 0.0 and prog < 0.93: s.ev.append(["tired", i, 0])
         s.v[i] = v
         s.pos[i] = float(s.pos[i]) + v * dt
         if float(s.pos[i]) >= dist: s.done[i] = s.t - (float(s.pos[i]) - dist) / v
@@ -498,7 +510,12 @@ func commentary(rc: Dictionary, s: Dictionary, dt: float) -> void:
         var e = s.ev.pop_front()
         if float(live.say_t) > 0.6: continue
         var who = str(int(e[1]) + 1) + "번 " + String(horse_at(int(e[1])).name)
-        if String(e[0]) == "block":
+        if String(e[0]) == "tired":
+            var place = lead_order(s).find(int(e[1]))
+            if place > 3: continue
+            say(who + ", 다리가 무거워집니다! 지구력이 바닥났어요!" if place > 0 else "선두 " + who + ", 지쳤다! 지쳤습니다! 뒤에서 몰려옵니다!")
+            swell = 0.8
+        elif String(e[0]) == "block":
             say(who + ", 앞이 막혔습니다! " + str(int(e[2]) + 1) + "번 뒤에 갇혔어요!")
         else:
             say(who + ", 바깥으로 빠져나와 추격합니다!"); swell = 0.6
@@ -929,6 +946,17 @@ func draw_race(c) -> void:
             for d in range(3): c.draw_rect(Rect2(foot.x - 44 - d * 10 - fposmod(game.clock_time * 80.0 + k * 13 + d * 7, 12), foot.y - 4 - d * 2, 6, 4), Color(1, 1, 1, 0.35))
         horse_sprite(c, foot, 1.8, h, jockey_at(k), k, frame)
         cloth(c, k, Rect2(foot.x + 30, foot.y - 46, 20, 20))
+        # 남은 지구력 막대: 초록 → 노랑 → 빨강, 바닥나면 땀방울
+        if running:
+            var left_st = clampf(float(s.st[k]) / maxf(1.0, float(s.st0[k])), 0.0, 1.0)
+            var bar_c = Color("5cc15a") if left_st > 0.5 else (Color("f0c040") if left_st > 0.2 else Color("e0483c"))
+            c.draw_rect(Rect2(foot.x + 30, foot.y - 24, 22, 4), Color(0, 0, 0, 0.45))
+            c.draw_rect(Rect2(foot.x + 30, foot.y - 24, 22 * left_st, 4), bar_c)
+            if left_st <= 0.0:
+                for d in range(2):
+                    var dy = fposmod(game.clock_time * 40.0 + d * 9.0 + k * 5, 18.0)
+                    c.draw_circle(Vector2(foot.x + 10 + d * 10, foot.y - 52 + dy), 2.5, Color("8fd0ff"))
+                c.txt("헉헉", foot.x - 14, foot.y - 58, 11, Color("fff8e8"))
     # 위쪽 정보
     c.panel(Rect2(0, 0, w, 44), Color("13261ee6"), 0)
     var to_finish = maxf(0.0, float(rc.dist) - lead_m)

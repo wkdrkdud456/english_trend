@@ -232,7 +232,153 @@ func _draw() -> void:
         var y = h * 0.32
         panel(Rect2(24, y, w - 48, 72), Color("294b46ef"), 17)
         para(game.toast_text, 40, y + 28, w - 80, 15, cream, 1.55)
+    if not game.forge.is_empty():
+        buttons.clear(); draw_forge()
     if game.flash > 0: draw_rect(Rect2(0, 0, w, h), Color(1, 0.97, 0.86, game.flash * 0.6))
+
+# ── 강화 화면: 모루 위에 장비를 올리고 망치로 두들긴다 ──
+const FORGE_TONE = { "ok": "ffd84a", "keep": "b9b4aa", "drop": "6fa8ff", "boom": "ff4a3c"}
+func draw_forge() -> void:
+    var f = game.forge
+    var t = float(f.t)
+    var phase = String(f.phase)
+    var result = String(f.result)
+    var shake_v = Vector2(sin(game.clock_time * 91.0), cos(game.clock_time * 73.0)) * game.shake * 0.6 if game.effects_on else Vector2.ZERO
+    var bg = Color("17101a")
+    if phase == "result" and result == "boom": bg = Color("2a0d0d").lerp(Color("17101a"), clampf(t, 0.0, 1.0))
+    draw_rect(Rect2(0, 0, w, h), bg)
+    draw_set_transform(shake_v, 0, Vector2.ONE)
+    var cx = w / 2.0
+    var cy = h * 0.34
+    var lv_from = int(f.from)
+    var lv_now = int(f.to) if phase == "result" else lv_from
+    # 대장간 불빛
+    var heat = 0.35 + (minf(1.0, t / 2.4) * 0.5 if phase == "work" else 0.0) + 0.05 * sin(game.clock_time * 6.0)
+    for k in range(6):
+        draw_circle(Vector2(cx, cy + 10), 190.0 - k * 28.0, Color(1.0, 0.45 + k * 0.06, 0.15, heat * 0.05 * (k + 1)))
+    txt("장비 강화", 0, safe_top + 40, 22, cream, w, HORIZONTAL_ALIGNMENT_CENTER)
+    var title = String(f.name) + (" +" + str(lv_now) if lv_now > 0 else "")
+    if phase == "result" and result == "boom" and int(f.to) < 0: title = String(f.name)
+    txt(title, 0, safe_top + 74, 18, Color(FORGE_TONE.get(result, "ffd84a")) if phase == "result" else gold, w, HORIZONTAL_ALIGNMENT_CENTER)
+    # 성공 빛줄기
+    if phase == "result" and result == "ok":
+        var rays = 14 if lv_now >= 7 else 9
+        for k in range(rays):
+            var a0 = game.clock_time * 0.8 + k * TAU / rays
+            var pts = PackedVector2Array([Vector2(cx, cy), Vector2(cx, cy) + Vector2.from_angle(a0 - 0.09) * 420.0, Vector2(cx, cy) + Vector2.from_angle(a0 + 0.09) * 420.0])
+            draw_colored_polygon(pts, Color(1.0, 0.85, 0.3, 0.16 if lv_now < 7 else 0.26))
+    # 모루
+    var ay = cy + 46
+    draw_rect(Rect2(cx - 92, ay, 184, 26), Color("4a4650"))
+    draw_rect(Rect2(cx - 120, ay, 40, 12), Color("4a4650"))
+    draw_rect(Rect2(cx - 40, ay + 26, 80, 40), Color("37343c"))
+    draw_rect(Rect2(cx - 76, ay + 64, 152, 16), Color("2a272e"))
+    draw_rect(Rect2(cx - 92, ay, 184, 4), Color("8a8694"))
+    # 장비 (파괴되면 조각)
+    var item_p = Vector2(cx, cy + 6)
+    if phase == "work": item_p.y -= absf(sin(t * 7.0)) * 3.0
+    if phase == "result" and result == "boom":
+        for k in range(12):
+            var dir = Vector2.from_angle(k * TAU / 12.0 + 0.3).normalized()
+            var fly = dir * (40.0 + t * 260.0) + Vector2(0, t * t * 260.0)
+            var c0 = item_p + fly
+            var rot = t * (4.0 + k)
+            var pts2 = PackedVector2Array([c0 + Vector2.from_angle(rot) * 12.0, c0 + Vector2.from_angle(rot + 2.2) * 9.0, c0 + Vector2.from_angle(rot + 4.0) * 11.0])
+            draw_colored_polygon(pts2, Color("c8c0b0") if k % 2 == 0 else Color("8a7f70"))
+        if t < 0.4: draw_circle(item_p, 30.0 + t * 300.0, Color(1, 0.5, 0.2, 0.6 - t * 1.5))
+    else:
+        var glow = Color(FORGE_TONE.ok)
+        if lv_now >= 7: glow = Color("ff6ad5")
+        elif lv_now >= 4: glow = Color("6fd8ff")
+        if lv_now > 0:
+            for k in range(3): draw_circle(item_p, 46.0 - k * 9.0 + sin(game.clock_time * 4.0) * 3.0, Color(glow.r, glow.g, glow.b, 0.10 + 0.04 * k))
+        draw_set_transform(shake_v + item_p * (1.0 - 2.4), 0, Vector2(2.4, 2.4))
+        gear_icon(f.entry, item_p)
+        draw_set_transform(shake_v, 0, Vector2.ONE)
+    # 망치질
+    if phase == "work":
+        var hits = [0.35, 0.8, 1.25, 1.7, 2.15] if bool(f.get("long", false)) else [0.35, 0.8, 1.25]
+        var swing = 1.0
+        for k in range(hits.size()):
+            var d = t - float(hits[k])
+            if d >= -0.35 and d < 0.1: swing = clampf(-d / 0.35, 0.0, 1.0)
+            if d >= 0.0 and d < 0.45:
+                for s in range(16):
+                    var ang = -PI * (0.1 + 0.8 * fposmod(s * 0.618 + k * 0.31, 1.0))
+                    var sp = 120.0 + 160.0 * fposmod(s * 0.37 + k * 0.17, 1.0)
+                    var sparkp = item_p + Vector2(cos(ang), sin(ang)) * sp * d + Vector2(0, d * d * 400.0)
+                    draw_rect(Rect2(sparkp, Vector2(4, 4)), Color(1.0, 0.85 - d, 0.3, 1.0 - d * 2.0))
+                if d < 0.08: draw_circle(item_p, 54, Color(1, 1, 0.8, 0.5))
+        var pivot = Vector2(cx + 120, cy - 70)
+        # swing 1 = 들어 올림, 0 = 내려친 순간
+        var head = pivot + Vector2(-110, 70).rotated(swing * -0.9)
+        draw_line(pivot + Vector2(30, -20), head, Color("8a5a32"), 9)
+        draw_rect(Rect2(head - Vector2(26, 16), Vector2(52, 32)), Color("6a6672"))
+        draw_rect(Rect2(head - Vector2(26, 16), Vector2(52, 6)), Color("9a96a4"))
+        var beat = 1.0 + 0.08 * absf(sin(t * 9.0))
+        var tense = "두근두근…" if t > float(hits[hits.size() - 1]) - 0.2 else ["땅!", "땅! 땅!", "땅! 땅! 땅!", "땅! 땅! 땅! 땅!", "땅! 땅! 땅! 땅! 땅!"][clampi(int(t / 0.45), 0, 4)]
+        txt(tense, 0, h * 0.62, int(26 * beat), cream, w, HORIZONTAL_ALIGNMENT_CENTER)
+        txt("화면을 누르면 바로 결과", 0, h - 60, 12, Color("9a8f88"), w, HORIZONTAL_ALIGNMENT_CENTER)
+        draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+        buttons["forge_skip"] = Rect2(0, 0, w, h)
+        return
+    draw_set_transform(Vector2.ZERO, 0, Vector2.ONE)
+    var y = h * 0.56
+    if phase == "result":
+        var pop = 1.0 + maxf(0.0, 0.5 - t) * 1.2
+        var big = ""
+        var line = ""
+        match result:
+            "ok":
+                big = "+" + str(lv_now) + " 강화 성공!" if lv_now < 10 else "+10 전설 달성!!!"
+                line = "효과 +" + str(game.ENHANCE_BONUS[lv_now]) + "%" + ("  · 빛이 달라졌어요!" if lv_now in [4, 7, 10] else "")
+            "keep":
+                big = "강화 실패"; line = "다행히 +" + str(lv_now) + " 그대로 유지돼요."
+            "drop":
+                big = "실패… 단계 하락"; line = "+" + str(lv_from) + "  →  +" + str(lv_now)
+            "boom":
+                big = "파괴!!!"
+                line = "장비가 산산조각 났어요… 파편에서 강화석 +" + str(lv_from * 2) if int(f.to) < 0 else "기본 장비라 사라지진 않았지만 +0 이 됐어요."
+        txt(big, 0, y, int(34 * pop), Color(FORGE_TONE[result]), w, HORIZONTAL_ALIGNMENT_CENTER)
+        para(line, 30, y + 42, w - 60, 15, cream, 1.5)
+        y += 110
+    else:
+        txt("+" + str(lv_from) + "  →  +" + str(lv_from + 1), 0, y, 26, gold, w, HORIZONTAL_ALIGNMENT_CENTER)
+        txt("효과 +" + str(game.ENHANCE_BONUS[lv_from]) + "%  →  +" + str(game.ENHANCE_BONUS[mini(lv_from + 1, game.ENHANCE_MAX)]) + "%", 0, y + 26, 13, cream, w, HORIZONTAL_ALIGNMENT_CENTER)
+        y += 40
+    var id = String(f.id)
+    var alive = game.owned_gear.has(id)
+    var lv = game.enhance_lv(id) if alive else 0
+    if alive and lv < game.ENHANCE_MAX:
+        var o = game.enhance_odds(id)
+        var names = ["성공", "유지", "하락", "파괴"]
+        var tones = ["ffd84a", "b9b4aa", "6fa8ff", "ff4a3c"]
+        var bx = 40.0
+        var bw = w - 80.0
+        var acc = 0.0
+        for k in range(4):
+            if int(o[k]) <= 0: continue
+            draw_rect(Rect2(bx + bw * acc / 100.0, y, bw * int(o[k]) / 100.0, 14), Color(tones[k]))
+            acc += int(o[k])
+        var parts: PackedStringArray = []
+        for k in range(4):
+            if int(o[k]) > 0: parts.append(names[k] + " " + str(int(o[k])) + "%")
+        txt("  ·  ".join(parts), 0, y + 34, 13, cream, w, HORIZONTAL_ALIGNMENT_CENTER)
+        y += 48
+        var risky = int(game.ENHANCE_ODDS[lv][3]) > 0
+        var st_need = game.enhance_stones(id) + (game.guard_stones(id) if game.forge_guard and risky else 0)
+        txt("비용 " + str(game.enhance_cost(id)) + "원 · 강화석 " + str(st_need) + "개   (보유 " + str(game.coins) + "원 · " + str(game.stones) + "개)", 0, y + 8, 12, Color("cfc5b4"), w, HORIZONTAL_ALIGNMENT_CENTER)
+        y += 22
+        if risky:
+            button("forge_guard", ("✔ " if game.forge_guard else "") + "파괴 방지권 (강화석 +" + str(game.guard_stones(id)) + ")", Rect2(40, y, w - 80, 42), game.forge_guard, true, 13)
+            y += 52
+        elif lv >= 5:
+            txt("+7 부터는 파괴될 수 있어요!", 0, y + 12, 12, Color("ff8a7c"), w, HORIZONTAL_ALIGNMENT_CENTER); y += 26
+        var can = game.coins >= game.enhance_cost(id) and game.stones >= st_need
+        button("forge_go" if phase == "ready" else "forge_again", "강화!" if phase == "ready" else "한 번 더!", Rect2(40, h - 140, w - 80, 58), true, can or phase == "result", 20)
+    elif alive:
+        txt("최고 단계 +" + str(game.ENHANCE_MAX) + " 달성!", 0, y + 10, 18, gold, w, HORIZONTAL_ALIGNMENT_CENTER)
+    button("forge_close", "닫기", Rect2(40, h - 74, w - 80, 48), false, true, 15)
 
 func draw_title() -> void:
     panel(Rect2(0, 0, w, 226), Color("fff8e8ef"), 0)
@@ -1042,7 +1188,7 @@ func status_gear(y: float) -> void:
     tabs(["gearslot_0", "gearslot_1", "gearslot_2", "gearslot_3"], ["무기", "옷", "신발", "소품"], game.gear_slot, y, 0)
     var slot = game.gear_slot
     txt(String(game.SLOT_NAME[slot]) + " — 하나만 착용", 16, y + 62, 11, Color("cfc5b4"))
-    txt("강화석 " + str(game.stones) + "개 · 한 단계마다 효과 +20%", w - 236, y + 62, 11, gold, 220, HORIZONTAL_ALIGNMENT_RIGHT)
+    txt("강화석 " + str(game.stones) + "개 · 최대 +10 (효과 +180%)", w - 236, y + 62, 11, gold, 220, HORIZONTAL_ALIGNMENT_RIGHT)
     var cursor = y + 72
     var mine = []
     for id0 in game.owned_gear:
@@ -1062,9 +1208,9 @@ func status_gear(y: float) -> void:
         gear_icon(entry, Vector2(40, cursor + 25))
         txt(String(entry.name) + (" +" + str(lv) if lv > 0 else ""), 70, cursor + 19, 13, rose if lv > 0 else (edge.darkened(0.25) if entry.has("grade") else ink))
         txt(String(entry.line), 70, cursor + 33, 10, muted)
-        if lv >= game.ENHANCE_MAX: txt("강화 완료", 70, cursor + 46, 10, Color("3f7a32"))
-        else: txt(str(game.enhance_cost(id)) + "원 · 강화석 " + str(game.enhance_stones(id)) + " · 성공 " + str(game.ENHANCE_RATE[lv]) + "%", 70, cursor + 46, 10, rose)
-        button("enh_" + id, "강화", Rect2(w - 150, cursor + 7, 58, 36), true, lv < game.ENHANCE_MAX and game.coins >= game.enhance_cost(id) and game.stones >= game.enhance_stones(id), 12)
+        if lv >= game.ENHANCE_MAX: txt("강화 완료 +" + str(game.ENHANCE_MAX), 70, cursor + 46, 10, Color("3f7a32"))
+        else: txt(str(game.enhance_cost(id)) + "원 · 강화석 " + str(game.enhance_stones(id)) + " · 성공 " + str(int(game.enhance_odds(id)[0])) + "%" + (" · 파괴 위험" if int(game.ENHANCE_ODDS[lv][3]) > 0 else ""), 70, cursor + 46, 10, rose)
+        button("enh_" + id, "강화", Rect2(w - 150, cursor + 7, 58, 36), true, lv < game.ENHANCE_MAX, 12)
         if on: txt("착용 중", w - 88, cursor + 30, 11, Color("3f7a32"), 64, HORIZONTAL_ALIGNMENT_CENTER)
         else: button("equip_" + id, "착용", Rect2(w - 88, cursor + 7, 64, 36), false, true, 12)
         if entry.has("grade") and not on: button("salvage_" + id, "분해", Rect2(w - 208, cursor + 7, 54, 36), false, true, 11)
