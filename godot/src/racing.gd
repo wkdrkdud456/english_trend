@@ -199,7 +199,7 @@ func ensure_odds(rc: Dictionary) -> void:
     if not rc.p.is_empty(): return
     var wins = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     var rng = RandomNumberGenerator.new()
-    for m in range(50):
+    for m in range(40):
         rng.seed = int(rc.seed) + 7919 * (m + 1)
         var s = sim_new(rc, rng)
         var guard = 0
@@ -215,6 +215,7 @@ func ensure_odds(rc: Dictionary) -> void:
     var p = []
     for k in range(8): p.append(0.7 * wins[k] / total + 0.3 * form[k] / ftotal)
     rc.p = p
+    rc["oc"] = {}
 
 func p_triple(rc: Dictionary, a: int, b: int, c: int) -> float:
     var p = rc.p
@@ -264,9 +265,14 @@ func bet_prob(rc: Dictionary, type: int, picks: Array) -> float:
 
 func odds(rc: Dictionary, type: int, picks: Array) -> float:
     ensure_odds(rc)
+    # 같은 배당을 매 화면 다시 계산하지 않게 기억해 둔다
+    var key = str(type) + ":" + str(picks)
+    var cache = rc.get("oc", {})
+    if cache.has(key): return float(cache[key])
     var prob = bet_prob(rc, type, picks)
-    var o = floorf((1.0 - float(BETS[type].take)) / maxf(prob, 0.0001) * 10.0) / 10.0
-    return clampf(o, 1.0, 9999.9)
+    var o = clampf(floorf((1.0 - float(BETS[type].take)) / maxf(prob, 0.0001) * 10.0) / 10.0, 1.0, 9999.9)
+    cache[key] = o; rc["oc"] = cache
+    return o
 
 func popularity(rc: Dictionary, slot: int) -> int:
     ensure_odds(rc)
@@ -512,8 +518,13 @@ func finish_race() -> void:
 func save_data() -> void:
     var rec = []
     for h in horses: rec.append([int(h.starts), int(h.wins), int(h.seconds), int(h.thirds), h.recent])
+    var plain = []
+    for one in races:
+        var copy = one.duplicate()
+        copy.erase("oc"); copy["p"] = []
+        plain.append(copy)
     var data = { "day": day, "money": money, "best_money": best_money, "best_hit": best_hit, "bought": bought, "hits": hits,
-        "allowance_day": allowance_day, "horses": rec, "jwins": jwins, "races": races, "ri": ri}
+        "allowance_day": allowance_day, "horses": rec, "jwins": jwins, "races": plain, "ri": ri}
     var f = FileAccess.open(SAVE, FileAccess.WRITE)
     if f:
         f.store_string(JSON.stringify(data)); f.close()
@@ -547,7 +558,7 @@ func load_data() -> void:
                 for x in one.get(key, []): ints.append(int(x))
                 one[key] = ints
             one["dist"] = int(one.get("dist", 1200)); one["track"] = int(one.get("track", 0)); one["weather"] = int(one.get("weather", 0))
-            one["seed"] = int(one.get("seed", 1)); one["done"] = bool(one.get("done", false)); one["p"] = []
+            one["seed"] = int(one.get("seed", 1)); one["done"] = bool(one.get("done", false)); one["p"] = []; one["oc"] = {}
             if one.field.size() != 8: races = []; break
             races.append(one)
         ri = clampi(int(parsed.get("ri", 0)), 0, 5)

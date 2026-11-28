@@ -332,6 +332,12 @@ var cycle = 0                   # 몇 회차인가 (0 = 첫 여행)
 var bgm: AudioStreamPlayer
 var bgm_name = ""
 var crowd: AudioStreamPlayer
+# 튕김 기록: 1초마다 지금 상황을 적어 두고, 정상적으로 내려가면 '깨끗함'으로 표시한다.
+# 다음 실행 때 깨끗하지 않으면 첫 화면에 어디서 꺼졌는지 보여 준다.
+const CRUMB = "user://crumb.json"
+var crumbs: Array = []
+var crumb_t = 0.0
+var last_crash = ""
 var sfx_pool: Array = []
 var sfx_next = 0
 var sounds: Dictionary = {}
@@ -555,6 +561,7 @@ func _ready() -> void:
     readable_font.variation_opentype = { TextServerManager.get_primary_interface().name_to_tag("wght"): 550}
     font = readable_font
     tour = Tour.new(self)
+    read_crumb()
     racing = Racing.new(self)
     var env = WorldEnvironment.new(); environment = env
     var e = Environment.new()
@@ -1555,16 +1562,20 @@ func notify_web_ready() -> void:
 
 func _notification(what: int) -> void:
     if not ui_ready: return
-    if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+    if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
+        write_crumb(true)
         app_paused = true; joystick = Vector2.ZERO; hud.release_all()
         if state in ["explore", "cook", "battle"]:
             previous_state = state; state = "pause"; save_progress()
     elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
-        app_paused = false
+        app_paused = false; write_crumb(false)
 
 func _process(dt: float) -> void:
     if qa_freeze: hud.queue_redraw(); return
     if not ui_ready: return
+    crumb_t += dt
+    if crumb_t > 1.0:
+        crumb_t = 0.0; write_crumb(false)
     var landscape = get_viewport().get_visible_rect().size.x > get_viewport().get_visible_rect().size.y
     if app_paused or landscape:
         joystick = Vector2.ZERO; hud.queue_redraw(); return
@@ -2091,6 +2102,9 @@ func interact() -> void:
         show_dialogue( [ ["동훈", "여기, 같이 오기로 했던 곳이지? 빵 냄새가 나니까 생각났어."], ["소현", "응. 다 기억하지 못해도 괜찮아. 오늘부터 다시 쌓으면 되니까."]], "photo")
 
 func action(id: String) -> void:
+    crumb(id)
+    if id == "crash_ok":
+        last_crash = ""; return
     if id.begins_with("rc_"):
         if state == "racing": racing.press(id)
         return
@@ -3051,6 +3065,25 @@ func update_bgm() -> void:
     bgm.stream = stream; bgm.pitch_scale = 1.07 if legend_battle else 1.0; bgm.play()
 
 # 경마장 관중 소리: 크기만 바꾸며 계속 돈다
+func crumb(text: String) -> void:
+    crumbs.append(text)
+    if crumbs.size() > 10: crumbs.pop_front()
+
+func write_crumb(clean: bool) -> void:
+    var f = FileAccess.open(CRUMB, FileAccess.WRITE)
+    if f == null: return
+    var where = state + ("/" + String(racing.screen) if racing and state == "racing" else "") + (" 이전:" + previous_state if state == "pause" else "")
+    f.store_string(JSON.stringify({ "clean": clean, "where": where, "city": city_index, "area": area_index, "at": Time.get_datetime_string_from_system(), "recent": crumbs, "fps": Engine.get_frames_per_second(), "mem": int(OS.get_static_memory_usage() / 1048576)}))
+    f.close()
+
+func read_crumb() -> void:
+    if not FileAccess.file_exists(CRUMB): return
+    var data = JSON.parse_string(FileAccess.get_file_as_string(CRUMB))
+    if not data is Dictionary or bool(data.get("clean", true)): return
+    var recent: PackedStringArray = []
+    for one in data.get("recent", []): recent.append(String(one))
+    last_crash = "화면 " + String(data.get("where", "?")) + " · 도시 " + str(int(data.get("city", 0)) + 1) + "-" + str(int(data.get("area", 0))) + " · " + String(data.get("at", "")) + " · fps " + str(int(data.get("fps", 0))) + " · 메모리 " + str(int(data.get("mem", 0))) + "MB\n마지막 행동: " + " → ".join(recent)
+
 func set_crowd(db: float) -> void:
     if crowd == null: return
     if db <= -60.0 or not sound_on:

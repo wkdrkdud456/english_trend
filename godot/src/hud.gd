@@ -241,6 +241,12 @@ func draw_title() -> void:
     txt("열 개의 도시.", 26, 157, 43)
     txt("가라! 동훈!  ·  둘의 세계여행", 29, 193, 15, muted)
     chip("%02d / 10     %s" % [game.route_pos() + 1, game.city().english], Rect2(w - 175, 242, 150, 34))
+    if game.last_crash != "":
+        panel(Rect2(16, 236, w - 32, 170), Color("c8323c"), 18)
+        txt("지난번에 갑자기 꺼졌어요", 32, 266, 17, cream)
+        txt("이 화면을 캡처해서 보내 주면 고칠게요", 32, 288, 12, Color("ffe0e0"))
+        para(game.last_crash, 32, 310, w - 64, 10, cream, 1.35)
+        button("crash_ok", "확인", Rect2(w - 110, 248, 80, 34), false, true, 12)
     var y = h - 350
     panel(Rect2(16, y, w - 32, 330), cream, 25)
     txt("잊었던 약속이, 다시 시작되는 곳.", 36, y + 36, 19)
