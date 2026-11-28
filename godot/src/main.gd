@@ -3,6 +3,8 @@ extends Node3D
 const World = preload ("res://scripts/world.gd")
 const Hud = preload ("res://scripts/hud.gd")
 const CityData = preload ("res://scripts/city_data.gd")
+const Racing = preload ("res://scripts/racing.gd")
+var racing
 const Tour = preload ("res://scripts/tour.gd")
 var tour
 var city_index = 0
@@ -552,6 +554,7 @@ func _ready() -> void:
     readable_font.variation_opentype = { TextServerManager.get_primary_interface().name_to_tag("wght"): 550}
     font = readable_font
     tour = Tour.new(self)
+    racing = Racing.new(self)
     var env = WorldEnvironment.new(); environment = env
     var e = Environment.new()
     e.background_mode = Environment.BG_COLOR
@@ -1585,6 +1588,8 @@ func _process(dt: float) -> void:
         update_roamers(dt)
         save_clock += dt
         if save_clock > 6: save_clock = 0; save_progress()
+    elif state == "racing":
+        racing.tick(dt)
     elif state == "ride":
         ride_tick(dt)
     elif state == "food_shop":
@@ -1607,7 +1612,7 @@ func _process(dt: float) -> void:
         world.animate_person(hero, clock_time, 0)
         world.animate_person(partner, clock_time, 0)
     # 2D로 덮이는 화면에서는 3D 렌더링을 꺼서 배터리와 프레임을 아낀다 (사진·엔딩만 입체)
-    var flat_now = hud.flat_backdrop() or state in ["battle", "battle_ready", "battle_won", "battle_lost", "puzzle", "photo", "ending", "passport", "journal"] or (state == "pause" and previous_state == "battle")
+    var flat_now = hud.flat_backdrop() or state in ["battle", "battle_ready", "battle_won", "battle_lost", "puzzle", "photo", "ending", "passport", "journal", "racing"] or (state == "pause" and previous_state == "battle")
     if get_viewport().disable_3d != flat_now: get_viewport().disable_3d = flat_now
     set_camera(dt)
     if not flat_now: world.update_occlusion(camera, [hero, partner], false, dt)
@@ -2084,6 +2089,13 @@ func interact() -> void:
         show_dialogue( [ ["동훈", "여기, 같이 오기로 했던 곳이지? 빵 냄새가 나니까 생각났어."], ["소현", "응. 다 기억하지 못해도 괜찮아. 오늘부터 다시 쌓으면 되니까."]], "photo")
 
 func action(id: String) -> void:
+    if id.begins_with("rc_"):
+        if state == "racing": racing.press(id)
+        return
+    if id == "racing_open":
+        state = "racing"; racing.screen = "lobby"; joystick = Vector2.ZERO; sfx("click"); return
+    if id == "racing_exit":
+        state = "title"; racing.save_data(); return
     if id.begins_with("vista_album_") and state == "journal" and tour.selected == 6:
         tour.vista = clampi(int(id.trim_prefix("vista_album_")), 0, 2); state = "vista_album"; return
     if id.begins_with("city_") and state == "passport":
@@ -3021,6 +3033,7 @@ func sfx(name: String, pitch: float = 1.0) -> void:
 func want_bgm() -> String:
     if not sound_on or not ui_ready: return ""
     var now = previous_state if state == "pause" else state
+    if now == "racing": return "battle" if racing.screen == "race" else "city7"
     if now in ["battle", "battle_ready"]: return "boss" if legend_battle or not wild_battle else "battle"
     if now in ["battle_won", "battle_lost"]: return ""
     return "city" + str(city_index)

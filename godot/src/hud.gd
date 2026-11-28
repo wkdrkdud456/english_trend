@@ -222,6 +222,7 @@ func _draw() -> void:
         "photo": draw_photo()
         "ending": tour_hud.ending(self)
         "puzzle": game.tour.pz.draw(self)
+        "racing": game.racing.draw(self)
         "reward_pick": draw_reward_pick()
         "pause": draw_pause()
         "status": draw_status()
@@ -240,13 +241,14 @@ func draw_title() -> void:
     txt("열 개의 도시.", 26, 157, 43)
     txt("가라! 동훈!  ·  둘의 세계여행", 29, 193, 15, muted)
     chip("%02d / 10     %s" % [game.route_pos() + 1, game.city().english], Rect2(w - 175, 242, 150, 34))
-    var y = h - 290
-    panel(Rect2(16, y, w - 32, 270), cream, 25)
+    var y = h - 350
+    panel(Rect2(16, y, w - 32, 330), cream, 25)
     txt("잊었던 약속이, 다시 시작되는 곳.", 36, y + 36, 19)
     txt("서른 가지 야생 몬스터 · 열 개의 추억 도장", 36, y + 65, 13, muted)
     button("start", "여행 이어가기  →" if game.has_save else "파리로 출발  →", Rect2(32, y + 88, w - 64, 62), true)
     button("intro_replay", "처음 이야기 · 조작법 보기", Rect2(32, y + 160, w - 64, 54), false, true, 14)
-    txt("파리부터 서울까지  ·  터치 / 키보드  ·  자동 저장", 32, y + 248, 12, muted, w - 64, HORIZONTAL_ALIGNMENT_CENTER)
+    button("racing_open", "번외편 · 동훈 경마장", Rect2(32, y + 222, w - 64, 54), false, true, 14)
+    txt("파리부터 서울까지  ·  터치 / 키보드  ·  자동 저장", 32, y + 308, 12, muted, w - 64, HORIZONTAL_ALIGNMENT_CENTER)
 
 func top_bar(subtitle: String = "파리 · 첫 번째 도시") -> void:
     panel(Rect2(18, safe_top, 220, 52), cream, 18)
