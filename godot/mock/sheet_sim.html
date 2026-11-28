@@ -1,0 +1,158 @@
+<!doctype html><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<canvas id=cv width=432 height=864></canvas>
+<script>
+const W=432,H=864,g=document.getElementById('cv').getContext('2d');
+const cream="#fff8e8",ink="#294b46",muted="#788277",gold="#e5b96f",rose="#cf8d77";
+const safe_top=22;
+const GEAR=[
+{id:"g0",slot:0,name:"낡은 수세미",line:"집에서 쓰던 그것",cost:0,atk:0,hp:0,heal:0,spd:0},
+{id:"g1",slot:0,name:"철수세미",line:"설거지 연타 +1",cost:120,atk:1,hp:0,heal:0,spd:0},
+{id:"g2",slot:0,name:"기름때 분쇄기",line:"설거지 연타 +2",cost:340,atk:2,hp:0,heal:0,spd:0},
+{id:"g3",slot:0,name:"전설의 철솔",line:"설거지 연타 +3",cost:720,atk:3,hp:0,heal:0,spd:0},
+{id:"a0",slot:1,name:"면 티셔츠",line:"편한 차림",cost:0,atk:0,hp:0,heal:0,spd:0},
+{id:"a1",slot:1,name:"고무 앞치마",line:"최대 체력 +6",cost:140,atk:0,hp:6,heal:0,spd:0},
+{id:"a2",slot:1,name:"두꺼운 코트",line:"최대 체력 +14",cost:380,atk:0,hp:14,heal:0,spd:0},
+{id:"a3",slot:1,name:"여행자의 외투",line:"최대 체력 +24 · 회복 +3",cost:780,atk:0,hp:24,heal:3,spd:0},
+{id:"s0",slot:2,name:"슬리퍼",line:"그냥 슬리퍼",cost:0,atk:0,hp:0,heal:0,spd:0},
+{id:"s1",slot:2,name:"운동화",line:"이동 속도 +12%",cost:150,atk:0,hp:0,heal:0,spd:12},
+{id:"s2",slot:2,name:"등산화",line:"이동 속도 +22% · 회복 +2",cost:420,atk:0,hp:0,heal:2,spd:22},
+{id:"s3",slot:2,name:"날개 운동화",line:"이동 속도 +35%",cost:840,atk:0,hp:0,heal:0,spd:35}];
+const SLOT_NAME=["설거지 도구","옷","신발"];
+const ITEMS=[
+{id:"candy",name:"뽀뽀사탕",line:"대결에서 체력을 회복해요",cost:40,cap:9},
+{id:"drink",name:"기력 드링크",line:"다음 대결을 기력 1칸으로 시작",cost:70,cap:5},
+{id:"treat",name:"펫 간식",line:"동행의 친밀도를 1 올려요",cost:90,cap:5},
+{id:"film",name:"기념 필름",line:"추억 사진 보상 +30원",cost:110,cap:9}];
+// 상태: 장비를 꽤 모은 중반 세이브
+const G={coins:640,level:7,xp:52,LEVEL_MAX:20,health:41,PARTY_HP:58,
+ owned_gear:["g0","a0","s0","g1","a1","s1","g2","s2"],equipped:["g1","a1","s2"],
+ bag:{candy:5,drink:2,treat:0,film:1},next_energy:1,meal:1,
+ pets:[{i:0,lv:3,n:"에펠탑 유령"},{i:1,lv:1,n:"바게트 도둑 비둘기"},{i:2,lv:5,n:"스시 닌자"}],pet_active:0,
+ stamps:3};
+const PET_ROLE=[{key:"energy",desc:"대결을 기력 1칸으로 시작해요"},{key:"dish",desc:"설거지 연타가 한 대마다 강해져요"},{key:"care",desc:"야근 버티기와 뽀뽀사탕 회복이 늘어요"}];
+function gear_of(id){return GEAR.find(x=>x.id===id)||GEAR[0]}
+function gear_sum(k){return G.equipped.reduce((a,id)=>a+gear_of(id)[k],0)}
+function bag_count(id){return G.bag[id]||0}
+function exp_needed(){return 18+G.level*14}
+function party_max(){return 36+G.stamps*3+(G.level-1)*2+gear_sum("hp")}
+function dish_damage(h){return [3,3,2][h]+Math.floor(G.stamps/3)+Math.floor((G.level-1)/3)+gear_sum("atk")}
+function salary_damage(){return 20+G.stamps*2+(G.level-1)*2+gear_sum("atk")*4}
+function candy_heal(){return 16+G.stamps+(G.level-1)+gear_sum("heal")*2}
+function speed_mul(){return 1+gear_sum("spd")/100}
+let buttons={};
+function RR(x,y,w,h,r){g.beginPath();g.roundRect(x,y,w,h,Math.max(0,r))}
+function panel(x,y,w,h,c,r){g.fillStyle=c;RR(x,y,w,h,r||0);g.fill()}
+function plate(x,y,w,h,border,fill,radius,lip){radius=radius===undefined?16:radius;lip=lip===undefined?3:lip;
+ panel(x+2,y+5,w,h,"rgba(28,18,10,.20)",radius);panel(x,y,w,h,border,radius);
+ panel(x+lip,y+lip,w-lip*2,h-lip*2-1,fill||cream,Math.max(4,radius-lip))}
+function txt(t,x,y,size,col,wid,al){g.font="bold "+size+"px sans-serif";g.fillStyle=col;
+ if(wid===undefined){g.textAlign="left";g.fillText(t,x,y)}
+ else{g.textAlign=al==="c"?"center":al==="r"?"right":"left";g.fillText(t,al==="c"?x+wid/2:al==="r"?x+wid:x,y)}}
+function bar(x,y,w,h,v,fg){panel(x,y,w,h,"#e4d9c2",h/2);if(v>0)panel(x,y,Math.max(h,w*v),h,fg,h/2)}
+function button(id,label,x,y,w,h,primary,enabled,size){size=size||17;
+ const bg=!enabled?"#c7cdbd":(primary?ink:cream);
+ panel(x,y,w,h,bg,18);if(!primary){g.strokeStyle="#d4d8c5";g.lineWidth=1;RR(x,y,w,h,18);g.stroke()}
+ txt(label,x,y+h/2+size*0.36,size,primary?cream:ink,w,"c")}
+function icon_coin(p,s){g.fillStyle="#c79233";g.beginPath();g.arc(p.x,p.y,s,0,7);g.fill();
+ g.fillStyle="#f0c768";g.beginPath();g.arc(p.x,p.y,s*0.78,0,7);g.fill();
+ g.fillStyle="#e0ae4a";g.beginPath();g.arc(p.x,p.y,s*0.42,0,7);g.fill()}
+function sheet_head(title,sub){panel(0,0,W,H,"rgba(29,21,18,.91)");
+ plate(12,safe_top,W-24,62,ink); txt(title,28,safe_top+30,22,ink); txt(sub,28,safe_top+48,11,muted);
+ icon_coin({x:W-92,y:safe_top+28},9); txt(G.coins+"원",W-80,safe_top+34,16,rose);
+ button("close","닫기",W-74,safe_top+70,62,40,false,true,13); return safe_top+70}
+function tabs(labels,active,y,right_pad){const n=labels.length,tw=(W-24-right_pad-(n-1)*6)/n;
+ for(let i=0;i<n;i++){const x=12+i*(tw+6),on=i===active;
+  panel(x+2,y+4,tw,40,"rgba(12,8,5,.35)",13); panel(x,y,tw,40,on?ink:"#6d6054",13);
+  panel(x+3,y+3,tw-6,32,on?ink:cream,10);
+  txt(labels[i],x,y+26,14,on?cream:"#6d6054",tw,"c")}}
+function row(x,y,w,h,title,line,tone,right,tag){plate(x,y,w,h,tone,cream,15,3);
+ txt(title,x+16,y+26,17,ink); txt(line,x+16,y+46,12,muted);
+ if(right)txt(right,x+w-122,y+28,16,tone,110,"r"); if(tag)txt(tag,x+w-122,y+47,11,muted,110,"r")}
+function stats(y){
+ plate(12,y,W-24,76,ink);
+ txt("레벨 "+G.level,28,y+28,18,ink);
+ txt("다음 레벨까지 "+(exp_needed()-G.xp),W-168,y+28,12,muted,140,"r");
+ bar(28,y+40,W-56,11,G.xp/exp_needed(),"#86cc5e");
+ txt("체력 "+G.health+" / "+G.PARTY_HP,28,y+66,11,muted);
+ const rows=[["최대 체력",String(party_max()),"옷 +"+gear_sum("hp")],
+ ["설거지 연타",dish_damage(0)+" / "+dish_damage(1)+" / "+dish_damage(2),"도구 +"+gear_sum("atk")],
+ ["월급 박치기",String(salary_damage()),"기력 3 · 40원"],
+ ["뽀뽀사탕 회복",String(candy_heal()),"가방 "+bag_count("candy")+"개"],
+ ["이동 속도",Math.floor(speed_mul()*100)+"%",gear_of(G.equipped[2]).name]];
+ rows.forEach((r,i)=>row(12,y+88+i*64,W-24,58,r[0],r[2],"#6d8a62",r[1],""));
+ const p=G.pets[G.pet_active], ly=y+88+rows.length*64;
+ row(12,ly,W-24,58,p.n,PET_ROLE[p.i].desc,rose,"친밀도 "+p.lv,"+2")}
+function bagtab(y){
+ txt("대결과 여행에 쓰는 물건이에요. 상점에서 더 살 수 있어요.",16,y+16,11,"#cfc5b4");
+ ITEMS.forEach((e,i)=>{const c=bag_count(e.id),ry=y+30+i*74;
+  plate(12,ry,W-24,66,c>0?ink:"#6d6054",c>0?cream:"#e6e0d2",15,3);
+  txt(e.name,28,ry+28,17,ink); txt(e.line,28,ry+50,11,muted);
+  txt(c+"개",W-162,ry+30,16,c>0?rose:muted,56,"r");
+  button("u"+e.id,"사용",W-88,ry+14,64,38,false,c>0&&(e.id==="drink"||e.id==="treat"),13)});
+ const ny=y+30+ITEMS.length*74;
+ if(G.next_energy>0)txt("기력 드링크를 마셨어요 — 다음 대결은 기력 1칸으로 시작해요.",16,ny+20,11,gold);
+ txt("도시락: "+["없음","뽀뽀사탕 1개 추가","기력 1칸으로 시작","사탕 회복 +4"][G.meal],16,ny+42,11,"#cfc5b4")}
+function geartab(y){
+ txt("칸마다 하나씩 착용해요. 효과는 바로 적용돼요.",16,y+16,11,"#cfc5b4");
+ let cursor=y+20;
+ for(let slot=0;slot<3;slot++){
+  txt(SLOT_NAME[slot],18,cursor+16,12,gold); cursor+=24;
+  for(const e of GEAR){ if(e.slot!==slot)continue; if(!G.owned_gear.includes(e.id))continue;
+   const on=G.equipped[slot]===e.id;
+   plate(12,cursor,W-24,44,on?"#4a8a38":"#8d8578",cream,14,3);
+   txt(e.name,28,cursor+20,15,ink); txt(e.line,28,cursor+37,10,muted);
+   if(on)txt("착용 중",W-104,cursor+27,12,"#3f7a32",80,"r");
+   else button("e"+e.id,"착용",W-92,cursor+4,68,36,false,true,12);
+   cursor+=48}
+  cursor+=6}
+ txt("새 장비는 도시의 앨리 가게에서 팔아요.",16,Math.min(cursor+14,H-30),11,"#cfc5b4")}
+function pettab(y){
+ txt("눌러서 함께 걸을 친구를 골라요. 한 번 더 누르면 혼자 걸어요.",16,y+16,11,"#cfc5b4");
+ const shown=Math.min(G.pets.length,7);
+ for(let i=0;i<shown;i++){const p=G.pets[i],on=G.pet_active===i,ry=y+30+i*64;
+  plate(12,ry,W-24,56,on?rose:"#8d8578",cream,15,3);
+  txt(p.n,28,ry+26,16,ink); txt(PET_ROLE[p.i].desc,28,ry+45,11,muted);
+  txt("친밀도 "+p.lv+"/5",W-170,ry+28,12,muted,80,"r");
+  if(on)txt("동행 중",W-92,ry+34,13,rose,72,"r")}
+ txt("모은 친구 "+G.pets.length+" / 30",16,y+36+shown*64,11,"#cfc5b4")}
+function shop(tab){
+ panel(0,0,W,H,cream);
+ txt("PARIS / 앨리의 가게",26,40,11,muted); txt("앨리 빵집",24,76,26,ink);
+ icon_coin({x:W-96,y:64},10); txt(G.coins+"원",W-80,71,18,rose);
+ tabs(["도시락","장비","소모품"],tab,96,0);
+ const sy=152;
+ if(tab===0){const cost=12;
+  txt("한 번에 한 끼만 포장할 수 있어요. 다음 대결에서 자동으로 먹어요.",24,sy,12,muted);
+  for(let i=0;i<3;i++){const my=sy+20+i*86, ok=G.coins>=cost&&G.meal===0;
+   plate(16,my,W-32,76,ok?ink:"#b4ada0",ok?cream:"#ece6da",15,3);
+   txt(["크루아상","딸기 타르트","쇼콜라 바게트"][i],32,my+32,19,ink);
+   txt(["뽀뽀사탕 1개 추가","기력 1칸으로 시작","이번 대결의 사탕 회복 +4"][i],32,my+54,11,muted);
+   button("m"+i,cost+"원",W-118,my+16,94,44,false,ok,15)}
+  if(G.meal>0)txt("이미 도시락을 챙겼어요.",24,sy+290,13,rose)}
+ else if(tab===1){
+  txt("칸마다 하나씩. 산 장비는 바로 착용돼요.",24,sy,12,muted);
+  let gy=sy+16;
+  for(const e of GEAR){ if(e.cost<=0)continue;
+   const have=G.owned_gear.includes(e.id), afford=G.coins>=e.cost;
+   plate(16,gy,W-32,58,have?"#4a8a38":(afford?ink:"#b4ada0"),(afford||have)?cream:"#ece6da",14,3);
+   txt(e.name,32,gy+26,16,ink); txt(SLOT_NAME[e.slot]+" · "+e.line,32,gy+45,11,muted);
+   if(have)txt("보유 중",W-110,gy+34,13,"#3f7a32",86,"r");
+   else button("b"+e.id,e.cost+"원",W-112,gy+9,88,40,false,afford,14);
+   gy+=64}}
+ else{
+  txt("가방에 넣어 두고 필요할 때 써요.",24,sy,12,muted);
+  ITEMS.forEach((e,i)=>{const c=bag_count(e.id),full=c>=e.cap,can=G.coins>=e.cost&&!full,iy=sy+16+i*74;
+   plate(16,iy,W-32,66,can?ink:"#b4ada0",can?cream:"#ece6da",15,3);
+   txt(e.name,32,iy+28,17,ink); txt(e.line,32,iy+50,11,muted);
+   txt("보유 "+c,W-196,iy+32,12,muted,70,"r");
+   button("i"+e.id,full?"가득":e.cost+"원",W-118,iy+13,94,42,false,can,14)})}
+ button("close","고마워요, 다시 산책",26,H-86,W-52,60,true,true,17)}
+const which=new URLSearchParams(location.search).get('s')||'0';
+if(which.startsWith('shop')) shop(parseInt(which.slice(4)));
+else{const t=parseInt(which);
+ const top=sheet_head("장동훈","레벨 "+G.level+" · 도장 "+G.stamps+" / 10");
+ tabs(["스텟","가방","장비","동행"],t,top,74);
+ const y=top+52;
+ [stats,bagtab,geartab,pettab][t](y)}
+</script>

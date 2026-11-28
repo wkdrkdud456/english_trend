@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.sohyun.games'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.sohyun.games"
+        minSdk 26
+        targetSdk 34
+        versionCode Integer.parseInt(project.findProperty("appVersionCode") ?: "1")
+        versionName project.findProperty("appVersionName") ?: "1.0"
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled false
+            // 서명 키가 없으면 debug 키로 서명해서 바로 설치 가능하게
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // 게임 HTML은 이미 압축률이 낮은 텍스트라 그대로 둔다
+    packagingOptions {
+        jniLibs.useLegacyPackaging false
+    }
+}

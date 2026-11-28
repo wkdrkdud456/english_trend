@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>소현이를 위한 물약 게임 🧪</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            background: linear-gradient(160deg, #2b1055 0%, #7597de 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 12px 30px;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 반짝이는 별 배경 */
+        .stars {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 0.9; transform: scale(1.2); }
+        }
+
+        .wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 1.6em;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 2px 12px rgba(255, 105, 180, 0.6);
+            margin-bottom: 2px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #ffd6e8;
+            font-size: 0.9em;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            width: 100%;
+            justify-content: center;
+        }
+        .stat {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 16px;
+            padding: 7px 18px;
+            text-align: center;
+            color: #fff;
+            min-width: 88px;
+        }
+        .stat .label { font-size: 0.72em; opacity: 0.8; }
+        .stat .value { font-size: 1.3em; font-weight: 800; }
+        .stat-click {
+            cursor: pointer;
+            transition: transform 0.15s, background 0.2s;
+        }
+        .stat-click:active { transform: scale(0.94); background: rgba(255,255,255,0.25); }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-height: 290px;
+            overflow-y: auto;
+            padding: 4px;
+            margin: 14px 0 4px;
+        }
+        .level-btn {
+            padding: 12px 0;
+            border: 2px solid #f3c4d8;
+            border-radius: 12px;
+            background: #fff;
+            color: #b3688a;
+            font-weight: 800;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.12s;
+        }
+        .level-btn:active { transform: scale(0.9); }
+        .level-btn.cleared {
+            background: linear-gradient(135deg, #ffe9a8, #ffd43b);
+            border-color: #ffc93c;
+            color: #8a5a00;
+        }
+        .level-btn.current {
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            border-color: #f857a6;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(248, 87, 166, 0.5);
+        }
+
+        .sound-btn {
+            min-width: 56px;
+            font-size: 1.4em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s;
+        }
+        .sound-btn:active { transform: scale(0.9); }
+
+        /* 아이템 바 */
+        .item-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 6px;
+            justify-content: center;
+        }
+        .item-btn {
+            position: relative;
+            width: 58px;
+            height: 58px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.14);
+            font-size: 1.6em;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .item-btn:active { transform: scale(0.92); }
+        .item-btn.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 16px rgba(255, 215, 0, 0.8);
+            background: rgba(255, 215, 0, 0.25);
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .item-btn.empty {
+            opacity: 0.35;
+            filter: grayscale(0.8);
+        }
+        .item-btn .badge {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            color: #fff;
+            font-size: 0.45em;
+            font-weight: 800;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+        }
+        .item-label {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .item-label span {
+            width: 58px;
+            text-align: center;
+            font-size: 0.62em;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .board {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px 12px;
+            padding: 8px 2px 18px;
+            width: 100%;
+        }
+
+        .tube {
+            position: relative;
+            width: 50px;
+            height: 180px;
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        /* 병이 많을 땐 살짝 작게 */
+        .board.big .tube { width: 44px; height: 158px; }
+        .board.big { gap: 16px 9px; }
+        .tube.selected { transform: translateY(-16px); }
+        .tube.pouring { transform: translateY(-22px) rotate(-8deg); }
+        .tube.receiving { transform: translateY(-4px); }
+        .tube.done .glass {
+            box-shadow: 0 0 18px rgba(255, 235, 130, 0.9), inset 0 0 12px rgba(255,255,255,0.3);
+            border-color: rgba(255, 235, 130, 0.9);
+        }
+        .tube.new-tube {
+            animation: dropIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes dropIn {
+            0% { transform: translateY(-60px) scale(0.5); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .glass {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 3px solid rgba(255, 255, 255, 0.55);
+            border-top-width: 5px;
+            border-radius: 14px 14px 25px 25px;
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.15), 0 6px 14px rgba(0,0,0,0.25);
+            overflow: hidden;
+            transition: box-shadow 0.4s, border-color 0.4s;
+        }
+        .glass::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 6px;
+            width: 6px;
+            height: 75%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.55), rgba(255,255,255,0.05));
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .liquid {
+            position: absolute;
+            left: 0; right: 0; bottom: 0; top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .seg {
+            width: 100%;
+            transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .seg::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        }
+        .seg.mystery::before { display: none; }
+        .seg .qmark {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.85);
+            font-weight: 800;
+            font-size: 15px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            letter-spacing: 2px;
+        }
+        .seg .bubble {
+            position: absolute;
+            background: rgba(255,255,255,0.35);
+            border-radius: 50%;
+            animation: rise 3s infinite ease-in;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0) scale(1); opacity: 0.7; }
+            100% { transform: translateY(-30px) scale(0.5); opacity: 0; }
+        }
+
+        .btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 2px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn {
+            border: none;
+            border-radius: 14px;
+            padding: 12px 20px;
+            font-size: 0.95em;
+            font-weight: 700;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .btn:active { transform: scale(0.94); }
+        .btn-undo { background: linear-gradient(135deg, #ff9a9e, #fad0c4); color: #7a2048; }
+        .btn-restart { background: linear-gradient(135deg, #a18cd1, #fbc2eb); color: #4a2c6b; }
+        .btn-secret {
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            animation: heartbeat 2s infinite;
+        }
+        @keyframes heartbeat {
+            0%, 100% { box-shadow: 0 4px 12px rgba(248, 87, 166, 0.4); }
+            50% { box-shadow: 0 4px 20px rgba(248, 87, 166, 0.9); }
+        }
+        .secret-input {
+            width: 100%;
+            padding: 13px;
+            border-radius: 14px;
+            border: 2px solid #f8a5c8;
+            font-size: 1.15em;
+            text-align: center;
+            outline: none;
+            font-weight: 800;
+            color: #d6336c;
+            background: #fff;
+            letter-spacing: 3px;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .secret-input:focus { border-color: #f857a6; box-shadow: 0 0 10px rgba(248,87,166,0.4); }
+
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(20, 10, 50, 0.9);
+            color: #ffd6e8;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 0.95em;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            z-index: 200;
+            white-space: nowrap;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 승리 오버레이 */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(20, 10, 50, 0.75);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .overlay.show { display: flex; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .win-card {
+            background: linear-gradient(160deg, #fff5fa, #ffe8f0);
+            border-radius: 28px;
+            padding: 36px 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin: 20px;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .win-card .emoji { font-size: 3em; margin-bottom: 8px; }
+        .win-card h2 { color: #d6336c; font-size: 1.5em; margin-bottom: 6px; }
+        .win-card p { color: #9b6b80; margin-bottom: 8px; font-size: 0.95em; }
+        .win-card .reward {
+            background: rgba(248, 87, 166, 0.12);
+            border: 2px dashed #f8a5c8;
+            border-radius: 16px;
+            padding: 10px 16px;
+            margin: 12px 0 18px;
+            color: #d6336c;
+            font-weight: 800;
+            font-size: 1.05em;
+        }
+        .btn-next {
+            background: linear-gradient(135deg, #f857a6, #ff5858);
+            padding: 14px 34px;
+            font-size: 1.05em;
+            border-radius: 16px;
+        }
+
+        .confetti {
+            position: fixed;
+            top: -40px;
+            font-size: 1.6em;
+            z-index: 99;
+            pointer-events: none;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+
+        .hint {
+            color: rgba(255,255,255,0.75);
+            font-size: 0.8em;
+            margin-top: 14px;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+
+    <div class="wrap">
+        <div class="title">🧪 소현이를 위한 물약 게임 💖</div>
+        <div class="subtitle">🧠 두뇌 모드 — 같은 색 물약끼리 병에 모아보세요!</div>
+
+        <div class="stats">
+            <div class="stat stat-click" onclick="openLevelSelect()">
+                <div class="label">레벨 ▾</div>
+                <div class="value" id="level">1</div>
+            </div>
+            <div class="stat">
+                <div class="label">이동</div>
+                <div class="value" id="moves">0</div>
+            </div>
+            <button class="stat sound-btn" id="soundBtn" onclick="toggleSound()">🔊</button>
+        </div>
+
+        <div class="item-bar">
+            <button class="item-btn" id="itemTube" onclick="useExtraTube()">➕<span class="badge" id="cntTube">0</span></button>
+            <button class="item-btn" id="itemRainbow" onclick="useRainbow()">🌈<span class="badge" id="cntRainbow">0</span></button>
+            <button class="item-btn" id="itemEye" onclick="useEye()">👁️<span class="badge" id="cntEye">0</span></button>
+        </div>
+        <div class="item-label">
+            <span>빈 병 추가</span><span>아무데나 붓기</span><span>비밀 보기</span>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="btns">
+            <button class="btn btn-undo" onclick="undo()">↩️ 되돌리기</button>
+            <button class="btn btn-restart" onclick="restart()">🔄 다시하기</button>
+            <button class="btn btn-secret" onclick="openSecret()">💋 비밀 코드</button>
+        </div>
+
+        <div class="hint">병을 눌러 선택하고, 다른 병을 누르면 물약이 이동해요.<br>레벨이 오르면 색이 늘어나 병이 점점 많아져요 🧠<br>레벨 5부터 <b>? 비밀 물약</b>이 살짝 등장! (아래 2칸만)<br>위의 <b>레벨 ▾</b>를 누르면 원하는 레벨을 골라 시작할 수 있어요 🎯</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="overlay" id="secretOverlay">
+        <div class="win-card">
+            <div class="emoji">💋🎁</div>
+            <h2>비밀 코드</h2>
+            <p>힌트: 남편(동훈)한테 <b>뽀뽀 한 번</b> 하면<br>코드를 알려준대요 💕</p>
+            <input type="text" id="secretInput" class="secret-input" placeholder="코드 입력" maxlength="12" autocomplete="off">
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+                <button class="btn btn-next" onclick="submitSecret()">확인 💖</button>
+                <button class="btn btn-restart" onclick="closeSecret()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="levelSelectOverlay">
+        <div class="win-card" style="padding: 30px 28px; max-width: 340px; width: 90%;">
+            <div class="emoji">🎯</div>
+            <h2>레벨 선택</h2>
+            <p>원하는 레벨을 골라 시작하세요!<br>⭐ = 클리어한 레벨</p>
+            <div class="level-grid" id="levelGrid"></div>
+            <button class="btn btn-restart" onclick="closeLevelSelect()" style="margin-top:10px;">닫기</button>
+        </div>
+    </div>
+
+    <div class="overlay" id="gameOverOverlay">
+        <div class="win-card">
+            <div class="emoji">😵💦</div>
+            <h2>게임 오버!</h2>
+            <p>더 이상 물약을 옮길 수 없어요...</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+                <button class="btn btn-undo" id="goUndoBtn" onclick="goUndo()">↩️ 한 수 되돌리기</button>
+                <button class="btn btn-next" id="goTubeBtn" onclick="goTube()">➕ 빈 병으로 부활!</button>
+                <button class="btn btn-next" id="goRainbowBtn" onclick="goRainbow()" style="background:linear-gradient(135deg,#a18cd1,#74a9ff);">🌈 무지개로 부활!</button>
+                <button class="btn btn-restart" onclick="goRestart()">🔄 처음부터 다시</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="winOverlay">
+        <div class="win-card">
+            <div class="emoji">🎉🧪✨</div>
+            <h2>레벨 클리어!</h2>
+            <p id="winText">소현이 최고! 💕</p>
+            <div class="reward" id="rewardText">🎁 아이템 획득!</div>
+            <button class="btn btn-next" onclick="nextLevel()">다음 레벨 ➡️</button>
+        </div>
+    </div>
+
+    <script>
+        const UNIT = 4;
+        const SEG_H = 25;
+        const COLORS = [
+            'linear-gradient(to bottom, #ff8a9b, #ff4d6d)',   // 빨강
+            'linear-gradient(to bottom, #ffc36b, #ff9231)',   // 주황
+            'linear-gradient(to bottom, #ffe97a, #ffd60a)',   // 노랑
+            'linear-gradient(to bottom, #8ce99a, #40c057)',   // 초록
+            'linear-gradient(to bottom, #66d9e8, #22b8cf)',   // 청록
+            'linear-gradient(to bottom, #74a9ff, #3b6cff)',   // 파랑
+            'linear-gradient(to bottom, #c49bff, #9b5de5)',   // 보라
+            'linear-gradient(to bottom, #ff9ede, #f15bb5)',   // 핑크
+            'linear-gradient(to bottom, #d8f5a2, #94d82d)',   // 라임
+            'linear-gradient(to bottom, #d9a679, #a26236)',   // 브라운
+            'linear-gradient(to bottom, #ffffff, #ced4da)',   // 화이트
+            'linear-gradient(to bottom, #c0ebff, #74c0fc)',   // 하늘
+        ];
+        const MYSTERY_BG = 'linear-gradient(to bottom, #6b7280, #374151)';
+
+        // 저장 (파일로 열면 localStorage 차단되는 폰 있음 → 안전 처리)
+        function safeLoad(key, def) {
+            try { const v = localStorage.getItem(key); return v === null ? def : JSON.parse(v); }
+            catch (e) { return def; }
+        }
+        function safeSave(key, val) {
+            try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+        }
+
+        // ── 사운드 (Web Audio — 외부 파일 없이 직접 생성) ──
+        let audioCtx = null;
+        let soundOn = safeLoad('potionSound', true);
+        function actx() {
+            if (!audioCtx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                audioCtx = new AC();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+        function tone(freq, dur, opts) {
+            if (!soundOn) return;
+            const ac = actx(); if (!ac) return;
+            opts = opts || {};
+            const t0 = ac.currentTime + (opts.delay || 0);
+            const o = ac.createOscillator();
+            const g = ac.createGain();
+            o.type = opts.type || 'sine';
+            o.frequency.setValueAtTime(freq, t0);
+            if (opts.slideTo) o.frequency.exponentialRampToValueAtTime(opts.slideTo, t0 + dur);
+            const vol = opts.vol || 0.12;
+            g.gain.setValueAtTime(0, t0);
+            g.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+            g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+            o.connect(g); g.connect(ac.destination);
+            o.start(t0); o.stop(t0 + dur + 0.05);
+        }
+        const S = {
+            select() { tone(520, 0.1, { type: 'triangle', vol: 0.15 }); tone(780, 0.08, { delay: 0.05, type: 'triangle', vol: 0.1 }); },
+            deselect() { tone(420, 0.08, { type: 'triangle', vol: 0.1 }); },
+            pour() {  // 꼴꼴꼴 물 붓는 소리
+                tone(340, 0.12, { slideTo: 220, vol: 0.18 });
+                tone(300, 0.12, { delay: 0.12, slideTo: 200, vol: 0.16 });
+                tone(380, 0.14, { delay: 0.24, slideTo: 240, vol: 0.14 });
+            },
+            done() { tone(880, 0.15, { type: 'triangle', vol: 0.16 }); tone(1320, 0.28, { delay: 0.1, type: 'triangle', vol: 0.13 }); },
+            item() { tone(700, 0.09, { type: 'triangle' }); tone(950, 0.09, { delay: 0.07, type: 'triangle' }); tone(1250, 0.16, { delay: 0.14, type: 'triangle' }); },
+            undo() { tone(500, 0.1, { slideTo: 300, vol: 0.1 }); },
+            win() {
+                [523, 659, 784, 1047, 1319].forEach((f, i) =>
+                    tone(f, 0.28, { delay: i * 0.13, type: 'triangle', vol: 0.16 }));
+                tone(1568, 0.5, { delay: 0.65, type: 'triangle', vol: 0.14 });
+            },
+            kiss() {  // 쪽~ 💋
+                tone(400, 0.12, { slideTo: 900, vol: 0.16 });
+                tone(1100, 0.1, { delay: 0.13, slideTo: 700, type: 'triangle', vol: 0.14 });
+                tone(1400, 0.2, { delay: 0.25, type: 'triangle', vol: 0.12 });
+            },
+            lose() {  // 뚜둔... 😵
+                tone(392, 0.28, { type: 'triangle', vol: 0.15 });
+                tone(330, 0.28, { delay: 0.25, type: 'triangle', vol: 0.15 });
+                tone(262, 0.5, { delay: 0.5, type: 'triangle', vol: 0.16 });
+            },
+            wrong() { tone(200, 0.18, { type: 'square', vol: 0.07 }); tone(160, 0.22, { delay: 0.15, type: 'square', vol: 0.07 }); }
+        };
+        function toggleSound() {
+            soundOn = !soundOn;
+            safeSave('potionSound', soundOn);
+            document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+            if (soundOn) S.select();
+        }
+
+        let maxCleared = safeLoad('potionMax', 0);   // 클리어한 최고 레벨
+
+        let state = {
+            level: safeLoad('potionLevel3', 1),
+            items: safeLoad('potionItems', { tube: 1, rainbow: 1, eye: 1 }),
+            tubes: [],
+            hidden: [],        // 병마다 바닥부터 가려진 칸 수
+            moves: 0,
+            selected: null,
+            history: [],
+            busy: false,
+            rainbowActive: false,
+            extraTubesUsed: 0,
+            secretUsed: false
+        };
+
+        // ── 두뇌파 모드: 병을 잔뜩 깔고 머리로 승부! ──
+        function numColorsFor(level) {
+            return Math.min(8 + Math.floor((level - 1) / 2), 12);  // L1:8색(병10개!) → L9부터 12색(병14개)
+        }
+        function hiddenTubesFor(level, numColors) {
+            if (level < 5) return 0;                       // 레벨 4까지는 전부 공개 (순수 전략)
+            return Math.min(Math.floor((level - 3) / 2), 2);  // L5부터 비밀 병 최대 2개만
+        }
+        const HIDDEN_DEPTH = 2;   // 비밀 병도 아래 2칸만 가림 (기존 3칸)
+
+        // 미니 솔버: 이 배치가 실제로 풀 수 있는지 전체 탐색으로 확인
+        function isSolvable(startTubes, maxStates) {
+            const kf = ts => ts.map(t => t.join(',')).sort().join('|');
+            const done = t => t.length === UNIT && t.every(c => c === t[0]);
+            const stack = [startTubes];
+            const seen = new Set([kf(startTubes)]);
+            let expanded = 0;
+            while (stack.length) {
+                if (++expanded > maxStates) return false;   // 탐색 한계 → 재생성
+                const cur = stack.pop();
+                if (cur.every(t => t.length === 0 || done(t))) return true;
+                for (let i = 0; i < cur.length; i++) {
+                    const src = cur[i];
+                    if (!src.length || done(src)) continue;
+                    const color = src[src.length - 1];
+                    let run = 0;
+                    for (let k = src.length - 1; k >= 0 && src[k] === color; k--) run++;
+                    for (let j = 0; j < cur.length; j++) {
+                        if (i === j) continue;
+                        const dst = cur[j];
+                        if (dst.length >= UNIT) continue;
+                        if (dst.length && dst[dst.length - 1] !== color) continue;
+                        if (!dst.length && run === src.length) continue;
+                        const amount = Math.min(run, UNIT - dst.length);
+                        const ns = cur.map(t => [...t]);
+                        for (let k = 0; k < amount; k++) { ns[i].pop(); ns[j].push(color); }
+                        const kk = kf(ns);
+                        if (!seen.has(kk)) { seen.add(kk); stack.push(ns); }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function generateLevel(level) {
+            const n = numColorsFor(level);
+            let tubes = null;
+            for (let attempt = 0; attempt < 12; attempt++) {
+                const pool = [];
+                for (let c = 0; c < n; c++)
+                    for (let k = 0; k < UNIT; k++) pool.push(c);
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                const cand = [];
+                for (let t = 0; t < n; t++)
+                    cand.push(pool.slice(t * UNIT, (t + 1) * UNIT));
+                cand.push([]); cand.push([]);
+
+                if (cand.some(t => t.length && t.every(c => c === t[0]))) { continue; }  // 이미 완성된 병 금지
+                if (isSolvable(cand.map(t => [...t]), 150000)) { tubes = cand; break; }  // 풀리는 판만 채택!
+            }
+            if (!tubes) {  // 만일의 폴백 (사실상 발생 안 함)
+                const pool = [];
+                for (let c = 0; c < n; c++) for (let k = 0; k < UNIT; k++) pool.push(c);
+                for (let i = pool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [pool[i], pool[j]] = [pool[j], pool[i]];
+                }
+                tubes = [];
+                for (let t = 0; t < n; t++) tubes.push(pool.slice(t * UNIT, (t + 1) * UNIT));
+                tubes.push([]); tubes.push([]);
+            }
+
+            // 비밀 물약: 채워진 병 중 무작위로 골라 아래 2칸만 ? 처리
+            const hidden = tubes.map(() => 0);
+            const numHidden = hiddenTubesFor(level, n);
+            const order = [];
+            for (let i = 0; i < n; i++) order.push(i);   // 빈 병은 제외
+            for (let i = order.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [order[i], order[j]] = [order[j], order[i]];
+            }
+            for (let k = 0; k < numHidden; k++) hidden[order[k]] = HIDDEN_DEPTH;
+
+            return { tubes, hidden };
+        }
+
+        function topRun(idx) {
+            const tube = state.tubes[idx];
+            const hid = state.hidden[idx];
+            if (!tube.length) return { color: null, count: 0 };
+            const color = tube[tube.length - 1];
+            let count = 0;
+            for (let i = tube.length - 1; i >= hid && tube[i] === color; i--) count++;
+            return { color, count };
+        }
+
+        function canPour(from, to) {
+            const src = state.tubes[from], dst = state.tubes[to];
+            if (!src.length || dst.length >= UNIT) return false;
+            if (state.rainbowActive) return true;    // 🌈 색 무시!
+            const { color } = topRun(from);
+            if (!dst.length) return true;
+            return dst[dst.length - 1] === color;
+        }
+
+        function isTubeDone(tube) {
+            return tube.length === UNIT && tube.every(c => c === tube[0]);
+        }
+        function isWin() {
+            return state.tubes.every(t => t.length === 0 || isTubeDone(t));
+        }
+
+        // 의미 있는 이동이 하나라도 남아 있는지 검사
+        function hasUsefulMove() {
+            for (let i = 0; i < state.tubes.length; i++) {
+                const src = state.tubes[i];
+                if (!src.length || isTubeDone(src)) continue;
+                const { color } = topRun(i);
+                for (let j = 0; j < state.tubes.length; j++) {
+                    if (i === j) continue;
+                    const dst = state.tubes[j];
+                    if (dst.length >= UNIT) continue;
+                    if (!dst.length) {
+                        // 빈 병으로 붓기: 병 전체가 한 색이고 숨김도 없으면 의미 없는 이동
+                        const uniform = state.hidden[i] === 0 && src.every(c => c === src[0]);
+                        if (!uniform) return true;
+                    } else if (dst[dst.length - 1] === color) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkStuck() {
+            if (isWin() || hasUsefulMove()) return;
+            const canUndo = state.history.length > 0;
+            const canTube = state.items.tube > 0 && state.extraTubesUsed < 2;
+            const canRainbow = state.items.rainbow > 0;
+            document.getElementById('goUndoBtn').style.display = canUndo ? '' : 'none';
+            document.getElementById('goTubeBtn').style.display = canTube ? '' : 'none';
+            document.getElementById('goRainbowBtn').style.display = canRainbow ? '' : 'none';
+            document.getElementById('gameOverOverlay').classList.add('show');
+            S.lose();
+        }
+        function closeGameOver() {
+            document.getElementById('gameOverOverlay').classList.remove('show');
+        }
+        function goUndo() { closeGameOver(); undo(); }
+        function goTube() { closeGameOver(); useExtraTube(); }
+        function goRainbow() { closeGameOver(); useRainbow(); }
+        function goRestart() { closeGameOver(); restart(); }
+
+        // 맨 위로 올라온 비밀 물약 공개 + 완성된 병은 전부 공개
+        function revealTops() {
+            state.tubes.forEach((tube, i) => {
+                if (isTubeDone(tube)) { state.hidden[i] = 0; return; }
+                state.hidden[i] = Math.min(state.hidden[i], Math.max(0, tube.length - 1));
+            });
+        }
+
+        // ── 렌더링 ──────────────────────────────
+        function render() {
+            document.getElementById('level').textContent = state.level;
+            document.getElementById('moves').textContent = state.moves;
+            renderItems();
+
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            board.classList.toggle('big', state.tubes.length > 11);
+
+            state.tubes.forEach((tube, idx) => {
+                const el = document.createElement('div');
+                el.className = 'tube';
+                el.id = 'tube-' + idx;
+                if (state.selected === idx) el.classList.add('selected');
+                if (isTubeDone(tube)) el.classList.add('done');
+
+                const glass = document.createElement('div');
+                glass.className = 'glass';
+                const liquid = document.createElement('div');
+                liquid.className = 'liquid';
+
+                // 위→아래로 런 만들기 (비밀 칸은 별도 런)
+                const hid = state.hidden[idx];
+                const runs = [];
+                let i = tube.length - 1;
+                while (i >= 0) {
+                    if (i < hid) {
+                        runs.push({ mystery: true, count: i + 1 });
+                        break;
+                    }
+                    const color = tube[i];
+                    let count = 0;
+                    while (i >= hid && tube[i] === color) { count++; i--; }
+                    runs.push({ color, count });
+                }
+
+                runs.forEach(run => {
+                    const seg = document.createElement('div');
+                    seg.className = 'seg';
+                    seg.style.height = (run.count * SEG_H) + '%';
+                    if (run.mystery) {
+                        seg.classList.add('mystery');
+                        seg.style.background = MYSTERY_BG;
+                        const q = document.createElement('div');
+                        q.className = 'qmark';
+                        q.textContent = '?';
+                        seg.appendChild(q);
+                    } else {
+                        seg.style.background = COLORS[run.color];
+                        if (Math.random() < 0.6) {
+                            const b = document.createElement('div');
+                            b.className = 'bubble';
+                            const size = 3 + Math.random() * 4;
+                            b.style.width = b.style.height = size + 'px';
+                            b.style.left = (15 + Math.random() * 60) + '%';
+                            b.style.bottom = (10 + Math.random() * 40) + '%';
+                            b.style.animationDelay = (Math.random() * 2.5) + 's';
+                            seg.appendChild(b);
+                        }
+                    }
+                    liquid.appendChild(seg);
+                });
+
+                glass.appendChild(liquid);
+                el.appendChild(glass);
+                el.addEventListener('click', () => onTubeClick(idx));
+                board.appendChild(el);
+            });
+        }
+
+        function renderItems() {
+            const map = [
+                ['itemTube', 'cntTube', state.items.tube],
+                ['itemRainbow', 'cntRainbow', state.items.rainbow],
+                ['itemEye', 'cntEye', state.items.eye],
+            ];
+            map.forEach(([btnId, cntId, count]) => {
+                document.getElementById(cntId).textContent = count;
+                document.getElementById(btnId).classList.toggle('empty', count <= 0);
+            });
+            document.getElementById('itemRainbow').classList.toggle('active', state.rainbowActive);
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+        }
+
+        // ── 아이템 ──────────────────────────────
+        function useExtraTube() {
+            if (state.busy) return;
+            if (state.items.tube <= 0) { toast('빈 병 아이템이 없어요 😢 (힌트: 💋 비밀 코드!)'); return; }
+            if (state.extraTubesUsed >= 2) { toast('빈 병은 레벨당 2번까지! 🙅‍♀️'); return; }
+            state.items.tube--;
+            state.extraTubesUsed++;
+            state.tubes.push([]);
+            state.hidden.push(0);
+            S.item();
+            safeSave('potionItems', state.items);
+            render();
+            const newEl = document.getElementById('tube-' + (state.tubes.length - 1));
+            if (newEl) newEl.classList.add('new-tube');
+            toast('➕ 새 병 등장!');
+        }
+
+        function useRainbow() {
+            if (state.busy) return;
+            if (state.rainbowActive) {
+                state.rainbowActive = false;
+                renderItems();
+                toast('🌈 취소했어요');
+                return;
+            }
+            if (state.items.rainbow <= 0) { toast('무지개 물약이 없어요 😢'); return; }
+            state.rainbowActive = true;
+            S.item();
+            renderItems();
+            toast('🌈 다음 붓기는 아무 색이나 OK!');
+        }
+
+        function useEye() {
+            if (state.busy) return;
+            if (state.items.eye <= 0) { toast('돋보기 아이템이 없어요 😢'); return; }
+            if (!state.hidden.some(h => h > 0)) { toast('숨겨진 물약이 없어요 👀'); return; }
+            state.items.eye--;
+            state.hidden = state.hidden.map(() => 0);
+            S.item();
+            safeSave('potionItems', state.items);
+            render();
+            toast('👁️ 모든 비밀 공개!');
+        }
+
+        // ── 인터랙션 ──────────────────────────────
+        function onTubeClick(idx) {
+            if (state.busy) return;
+
+            if (state.selected === null) {
+                if (state.tubes[idx].length === 0) return;
+                state.selected = idx;
+                S.select();
+                render();
+                return;
+            }
+            if (state.selected === idx) {
+                state.selected = null;
+                S.deselect();
+                render();
+                return;
+            }
+            if (canPour(state.selected, idx)) {
+                pour(state.selected, idx);
+            } else {
+                state.selected = state.tubes[idx].length ? idx : null;
+                if (state.selected !== null) S.select(); else S.deselect();
+                render();
+            }
+        }
+
+        function pour(from, to) {
+            state.busy = true;
+            state.history.push({
+                tubes: state.tubes.map(t => [...t]),
+                hidden: [...state.hidden],
+                moves: state.moves
+            });
+
+            const src = state.tubes[from], dst = state.tubes[to];
+            const { color, count } = topRun(from);
+            const space = UNIT - dst.length;
+            // 🌈 무지개여도 한 번에 붓는 양은 같은 색 런만큼
+            const amount = Math.min(count, space);
+            const usedRainbow = state.rainbowActive;
+
+            S.pour();
+            const fromEl = document.getElementById('tube-' + from);
+            const toEl = document.getElementById('tube-' + to);
+            fromEl.classList.remove('selected');
+            fromEl.classList.add('pouring');
+            toEl.classList.add('receiving');
+
+            const fromLiquid = fromEl.querySelector('.liquid');
+            const toLiquid = toEl.querySelector('.liquid');
+
+            const fromTop = fromLiquid.firstElementChild;
+            if (fromTop) {
+                const newH = (count - amount) * SEG_H;
+                requestAnimationFrame(() => { fromTop.style.height = newH + '%'; });
+            }
+
+            const dstRun = topRun(to);
+            if (dst.length && dstRun.color === color) {
+                const toTop = toLiquid.firstElementChild;
+                requestAnimationFrame(() => {
+                    toTop.style.height = ((dstRun.count + amount) * SEG_H) + '%';
+                });
+            } else {
+                const seg = document.createElement('div');
+                seg.className = 'seg';
+                seg.style.height = '0%';
+                seg.style.background = COLORS[color];
+                toLiquid.insertBefore(seg, toLiquid.firstElementChild);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        seg.style.height = (amount * SEG_H) + '%';
+                    });
+                });
+            }
+
+            setTimeout(() => {
+                for (let k = 0; k < amount; k++) {
+                    src.pop();
+                    dst.push(color);
+                }
+                if (usedRainbow) {
+                    state.items.rainbow--;
+                    state.rainbowActive = false;
+                    safeSave('potionItems', state.items);
+                }
+                revealTops();
+                state.moves++;
+                state.selected = null;
+                state.busy = false;
+                render();
+
+                if (isTubeDone(dst)) S.done();   // 병 하나 완성! 🎵
+                if (isWin()) setTimeout(showWin, 350);
+                else setTimeout(checkStuck, 300);   // 막혔으면 게임 오버
+            }, 450);
+        }
+
+        function undo() {
+            if (state.busy || !state.history.length) return;
+            const prev = state.history.pop();
+            state.tubes = prev.tubes;
+            state.hidden = prev.hidden;
+            state.moves = prev.moves;
+            state.selected = null;
+            S.undo();
+            render();
+            setTimeout(checkStuck, 200);
+        }
+
+        function restart() {
+            if (state.busy) return;
+            startLevel(state.level);
+        }
+
+        // ── 승리 & 보상 ──────────────────────────
+        const REWARDS = [
+            { key: 'tube', emoji: '➕', name: '빈 병 추가' },
+            { key: 'rainbow', emoji: '🌈', name: '무지개 물약' },
+            { key: 'eye', emoji: '👁️', name: '비밀 보기' },
+        ];
+
+        function showWin() {
+            const reward = REWARDS[Math.floor(Math.random() * REWARDS.length)];
+            state.items[reward.key]++;
+            safeSave('potionItems', state.items);
+
+            document.getElementById('winText').textContent =
+                state.moves + '번 만에 성공! 소현이 최고! 💕';
+            document.getElementById('rewardText').textContent =
+                '🎁 보상: ' + reward.emoji + ' ' + reward.name + ' +1';
+            document.getElementById('winOverlay').classList.add('show');
+            S.win();
+            dropConfetti();
+        }
+
+        // ── 레벨 선택 🎯 ──────────────────────────
+        const MAX_LEVEL = 100;
+        function openLevelSelect() {
+            if (state.busy) return;
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            const showUpTo = Math.max(30, maxCleared + 10, state.level + 10);
+            for (let lv = 1; lv <= Math.min(showUpTo, MAX_LEVEL); lv++) {
+                const b = document.createElement('button');
+                b.className = 'level-btn';
+                if (lv <= maxCleared) { b.classList.add('cleared'); b.textContent = '⭐' + lv; }
+                else b.textContent = lv;
+                if (lv === state.level) b.classList.add('current');
+                b.onclick = () => selectLevel(lv);
+                grid.appendChild(b);
+            }
+            document.getElementById('levelSelectOverlay').classList.add('show');
+        }
+        function closeLevelSelect() {
+            document.getElementById('levelSelectOverlay').classList.remove('show');
+        }
+        function selectLevel(lv) {
+            closeLevelSelect();
+            state.level = lv;
+            safeSave('potionLevel3', lv);
+            S.select();
+            startLevel(lv);
+            toast('🎯 레벨 ' + lv + ' 시작!');
+        }
+
+        // ── 비밀 코드 💋 ──────────────────────────
+        function openSecret() {
+            document.getElementById('secretOverlay').classList.add('show');
+            const input = document.getElementById('secretInput');
+            input.value = '';
+            setTimeout(() => input.focus(), 150);
+        }
+        function closeSecret() {
+            document.getElementById('secretOverlay').classList.remove('show');
+        }
+        function submitSecret() {
+            const v = document.getElementById('secretInput').value.trim().toUpperCase();
+            if (v === 'KISS' || v === '뽀뽀') {
+                if (state.secretUsed) {
+                    closeSecret();
+                    toast('이번 레벨에선 이미 썼어요! 다음 레벨에서 또 뽀뽀 💋');
+                    return;
+                }
+                state.secretUsed = true;
+                state.items.tube += 3;
+                safeSave('potionItems', state.items);
+                closeSecret();
+                S.kiss();
+                dropConfetti(['💋', '💖', '💕', '😘', '💗', '🩷']);
+                renderItems();
+                toast('💋 뽀뽀 확인! 빈 병 +3 획득!');
+            } else {
+                S.wrong();
+                toast('땡! 남편한테 뽀뽀부터 하고 오세요 💋ㅋㅋ');
+            }
+        }
+        document.getElementById('secretInput').addEventListener('keydown', e => {
+            if (e.key === 'Enter') submitSecret();
+        });
+
+        function dropConfetti(emojiList) {
+            const emojis = emojiList || ['🎉', '💖', '✨', '🌟', '🧪', '💜', '🎊', '⭐'];
+            for (let i = 0; i < 36; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.animationDuration = (2 + Math.random() * 2.5) + 's';
+                c.style.animationDelay = (Math.random() * 1.2) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5000);
+            }
+        }
+
+        function nextLevel() {
+            document.getElementById('winOverlay').classList.remove('show');
+            maxCleared = Math.max(maxCleared, state.level);
+            safeSave('potionMax', maxCleared);
+            state.level++;
+            safeSave('potionLevel3', state.level);
+            startLevel(state.level);
+        }
+
+        function startLevel(level) {
+            const gen = generateLevel(level);
+            state.tubes = gen.tubes;
+            state.hidden = gen.hidden;
+            state.moves = 0;
+            state.selected = null;
+            state.history = [];
+            state.busy = false;
+            state.rainbowActive = false;
+            state.extraTubesUsed = 0;
+            state.secretUsed = false;
+            render();
+        }
+
+        // ── 배경 별 ──────────────────────────────
+        (function makeStars() {
+            const wrap = document.getElementById('stars');
+            for (let i = 0; i < 40; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const size = 1 + Math.random() * 2.5;
+                s.style.width = s.style.height = size + 'px';
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 100 + '%';
+                s.style.animationDelay = (Math.random() * 3) + 's';
+                wrap.appendChild(s);
+            }
+        })();
+
+        document.getElementById('soundBtn').textContent = soundOn ? '🔊' : '🔇';
+        startLevel(state.level);
+    </script>
+</body>
+</html>

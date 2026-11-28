@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8">
+<style>html,body{margin:0;background:#1a1410;overflow:hidden}canvas{display:block}</style>
+<canvas id=c width=780 height=1688 style="width:390px;height:844px"></canvas>
+<script>
+const W=780,H=1688,ink='#2a1c18',cream='#fff8e8',sub='#8a7a70';
+const g=document.getElementById('c').getContext('2d');
+function rr(a,b,w,h,r){g.beginPath();g.roundRect(a,b,w,h,r)}
+function T(t,a,b,s,col,al){g.font='bold '+s+'px sans-serif';g.textAlign=al||'left';g.fillStyle=col;g.fillText(t,a,b)}
+function card(a,b,w,h,r,bd,fill){g.fillStyle='rgba(30,18,12,.30)';rr(a+3,b+7,w,h,r);g.fill();
+ g.fillStyle=fill||cream;rr(a,b,w,h,r);g.fill();g.lineWidth=5;g.strokeStyle=bd||ink;rr(a,b,w,h,r);g.stroke()}
+
+// 배경 — 가게 안 (나무 벽 + 선반)
+g.fillStyle='#4a3326';g.fillRect(0,0,W,H);
+for(let y=0;y<H;y+=46){g.fillStyle=y%92?'#523a2b':'#4a3326';g.fillRect(0,y,W,44)}
+g.fillStyle='rgba(255,227,108,.07)';g.fillRect(0,0,W,520);
+// 선반 위 소품 실루엣
+for(let i=0;i<9;i++){const X=40+i*84;g.fillStyle='rgba(255,248,232,.09)';
+ rr(X,120,56,70,8);g.fill()}
+g.fillStyle='#7a5230';g.fillRect(0,196,W,14);
+g.fillStyle='#9a6b3f';g.fillRect(0,196,W,5);
+
+// 헤더
+card(22,34,96,96,24,ink); T('←',70,100,44,ink,'center');
+card(134,34,384,96,24,'#e8974d'); T('🏪',160,100,38); T('잡화점',218,98,36,ink);
+card(534,34,224,96,24,'#c85068'); T('💰',556,96,32); T('230',608,94,34,'#c85068'); T('원',700,94,20,sub);
+
+// 주인 대사
+(function(){const a=22,b=152,w=736,h=112;
+ card(a,b,w,h,26,ink);
+ T('👵',46,226,48);
+ T('마담 뤼시',124,196,22,'#c85068');
+ T('"오늘은 신발이 잘 나가요. 많이 걸을 거잖아?"',124,234,22,ink);})();
+
+// 상품
+const items=[
+ ['👟','튼튼한 신발','이동 속도 +15% · 영구',150,'#4a8a38','살 수 있어요'],
+ ['🍬','뽀뽀사탕 ×3','체력 1칸 회복 · 소모품',40,'#4a8a38','살 수 있어요'],
+ ['⚡','기력 드링크','대결을 기력 2칸으로 시작',60,'#4a8a38','살 수 있어요'],
+ ['🐾','펫 간식','펫 친밀도 +1 (하루 1번)',80,'#4a8a38','살 수 있어요'],
+ ['📷','기념 필름','도시 사진 1장 — 앨범에 남아요',120,'#4a8a38','살 수 있어요'],
+ ['🗝️','지도 조각','이 도시의 숨은 장소가 보여요',250,'#a89088','230원 — 20원 모자라요'],
+];
+let y=292;
+for(const[em,nm,ds,price,col,note]of items){
+ const h=168, can=price<=230;
+ card(22,y,736,h,26,can?ink:'#b8a898',can?cream:'#efe6d8');
+ // 아이콘 타일
+ g.fillStyle=can?'#ffe9c8':'#e4dacb';rr(46,y+26,116,116,22);g.fill();
+ g.lineWidth=4;g.strokeStyle=can?ink:'#b8a898';rr(46,y+26,116,116,22);g.stroke();
+ T(em,104,y+108,56,ink,'center');
+ T(nm,186,y+70,30,can?ink:'#9a8c7e');
+ T(ds,186,y+108,20,sub);
+ T(note,186,y+142,18,can?'#4a8a38':'#c85068');
+ // 가격 버튼
+ const bw=176,bx=758-bw-26,by=y+44,bh=86;
+ g.fillStyle='rgba(12,6,4,.35)';rr(bx+4,by+8,bw,bh,22);g.fill();
+ g.fillStyle=can?'#c85068':'#b8a898';rr(bx,by,bw,bh,22);g.fill();
+ g.fillStyle=can?cream:'#efe6d8';rr(bx+6,by+6,bw-12,bh-16,17);g.fill();
+ T('💰 '+price,bx+bw/2,by+50,30,can?'#c85068':'#9a8c7e','center');
+ y+=h+18;
+}
+
+// 하단 안내 바
+card(22,1526,736,118,26,'#4aa8d8');
+T('💡',50,1596,36);
+T('돈은 어디서 나와?',108,1572,20,sub);
+T('월급 박치기 · 의뢰 · 재료 팔기 · 사진 보상',108,1612,24,ink);
+</script>

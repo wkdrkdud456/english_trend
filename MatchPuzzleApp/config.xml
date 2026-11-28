@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.sohyun.matchpuzzle" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Match Puzzle</name>
+    <description>
+        Match Puzzle - A fun color-matching puzzle game for everyone! Match 3+ same-colored tiles to score points and progress through levels. Made with love by Donghun for Sohyun ❤️
+    </description>
+    <author email="wkdrkdud456@gmail.com">
+        Donghun
+    </author>
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+</widget>
